@@ -326,6 +326,29 @@ void mp_engine_set_defaults(mp_config_t* cfg) {
         cfg->smax[i] = 0;
     }
     cfg->scale = 0;
+    cfg->voice_mode = MP_1V;
+    cfg->sound = 0;
+}
+
+// True if every field is within the ranges the engine and grid render assume
+// (all values are used as array indices somewhere). Persisted config that fails
+// this -- e.g. an uninitialized / stale-layout flash scene -- must be replaced
+// with defaults before use, or out-of-range indices would corrupt memory.
+bool mp_engine_config_valid(const mp_config_t* cfg) {
+    if (cfg->voice_mode > MP_8T) return false;
+    if (cfg->sound > 1) return false;
+    if (cfg->scale >= 16) return false;
+    for (uint8_t i = 0; i < MP_ROWS; i++) {
+        if (cfg->count[i] > 15 || cfg->min[i] > 15 || cfg->max[i] > 15)
+            return false;
+        if (cfg->speed[i] < 0 || cfg->speed[i] > 7) return false;
+        if (cfg->smin[i] > 7 || cfg->smax[i] > 7) return false;
+        if (cfg->rules[i] > MP_RULE_STOP) return false;
+        if (cfg->rule_dests[i] >= MP_ROWS) return false;
+        if (cfg->rule_dest_targets[i] > 3) return false;
+        // trigger/toggle/sync are bitmasks -- any value is valid.
+    }
+    return true;
 }
 
 void mp_engine_reset(mp_engine_t* e) {
@@ -374,8 +397,6 @@ void mp_engine_init(mp_engine_t* e, const mp_output_t* out,
     e->out = *out;
     e->rnd = rnd;
     e->rnd_ctx = rnd_ctx;
-    e->cfg.voice_mode = MP_1V;
-    e->cfg.sound = 0;
     mp_engine_set_defaults(&e->cfg);
     mp_engine_reset(e);
 }

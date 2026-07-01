@@ -95,6 +95,32 @@ static void beat(void) {
 
 // ---- tests ----
 
+// Defaults are valid; out-of-range persisted config is rejected (so the mode
+// falls back to defaults instead of indexing out of bounds).
+TEST config_validity(void) {
+    mp_config_t c;
+    mp_engine_set_defaults(&c);
+    ASSERT(mp_engine_config_valid(&c));
+    ASSERT_EQ(MP_1V, c.voice_mode);  // set_defaults must init voice_mode/sound
+    ASSERT_EQ(0, c.sound);
+
+    c.count[3] = 200;  // off-grid column -> would index OOB
+    ASSERT_FALSE(mp_engine_config_valid(&c));
+
+    mp_engine_set_defaults(&c);
+    c.rule_dests[0] = 50;  // off-array row index
+    ASSERT_FALSE(mp_engine_config_valid(&c));
+
+    mp_engine_set_defaults(&c);
+    c.voice_mode = 9;
+    ASSERT_FALSE(mp_engine_config_valid(&c));
+
+    mp_engine_set_defaults(&c);
+    c.speed[2] = 40;  // speed column (col-8) out of range
+    ASSERT_FALSE(mp_engine_config_valid(&c));
+    PASS();
+}
+
 TEST defaults_match_ansible(void) {
     mp_config_t c;
     mp_engine_set_defaults(&c);
@@ -540,6 +566,7 @@ TEST grid_refresh_positions(void) {
 }
 
 SUITE(meadowphysics_suite) {
+    RUN_TEST(config_validity);
     RUN_TEST(defaults_match_ansible);
     RUN_TEST(countdown_period);
     RUN_TEST(speed_divides);

@@ -82,6 +82,10 @@ void set_meadowphysics_mode(void) {
     // running sequence.
     if (memcmp(&mp_eng.cfg, &scene_state.mp, sizeof(mp_config_t)) != 0) {
         mp_eng.cfg = scene_state.mp;
+        // A stale/old-layout flash scene can hold out-of-range values that
+        // would index out of bounds; fall back to defaults if so.
+        if (!mp_engine_config_valid(&mp_eng.cfg))
+            mp_engine_set_defaults(&mp_eng.cfg);
         mp_engine_reset(&mp_eng);
         stopped = false;
     }

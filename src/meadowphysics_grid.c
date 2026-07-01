@@ -141,63 +141,73 @@ void mp_grid_process_key(mp_engine_t* e, mp_grid_state_t* g, uint8_t x,
     }
 }
 
+// Bounded LED write: row masked to 0..MP_ROWS-1, column dropped if >= 16.
+// Guarantees no out-of-bounds write to the 128-byte buffer even if a config
+// value (used as a row or column here) is out of range.
+static inline void led_set(uint8_t* led, uint8_t row, uint8_t col, uint8_t v) {
+    if (col < MP_GRID_COLS) led[(row & (MP_ROWS - 1)) * MP_GRID_COLS + col] = v;
+}
+
 void mp_grid_refresh(mp_engine_t* e, mp_grid_state_t* g, uint8_t* led,
                      uint8_t vari) {
     mp_config_t* m = &e->cfg;
     mp_runtime_t* r = &e->rt;
-    uint8_t er = g->edit_row;
+    uint8_t er = g->edit_row & (MP_ROWS - 1);
 
     memset(led, 0, MP_ROWS * MP_GRID_COLS);
 
     if (g->edit_mode == MP_GRID_POSITIONS) {
         for (uint8_t i = 0; i < MP_ROWS; i++) {
             for (uint8_t c = m->min[i]; c <= m->max[i] && c < MP_GRID_COLS; c++)
-                led[i * 16 + c] = MP_LED_DIM;
-            led[i * 16 + m->count[i]] = MP_LED_MED;
-            if (r->position[i] >= 0) led[i * 16 + r->position[i]] = MP_LED_BRI;
+                led_set(led, i, c, MP_LED_DIM);
+            led_set(led, i, m->count[i], MP_LED_MED);
+            if (r->position[i] >= 0)
+                led_set(led, i, r->position[i], MP_LED_BRI);
         }
     }
     else if (g->edit_mode == MP_GRID_SPEED) {
         for (uint8_t i = 0; i < MP_ROWS; i++) {
-            if (r->position[i] >= 0) led[i * 16 + r->position[i]] = MP_LED_DIM;
-            if (r->position[i] != -1) led[i * 16 + 2] = 2;
+            if (r->position[i] >= 0)
+                led_set(led, i, r->position[i], MP_LED_DIM);
+            if (r->position[i] != -1) led_set(led, i, 2, 2);
 
             for (uint8_t s = m->smin[i];
                  s <= m->smax[i] && s + 8 < MP_GRID_COLS; s++)
-                led[i * 16 + s + 8] = MP_LED_DIM;
-            led[i * 16 + m->speed[i] + 8] = MP_LED_MED;
+                led_set(led, i, s + 8, MP_LED_DIM);
+            led_set(led, i, m->speed[i] + 8, MP_LED_MED);
 
-            if (m->sound) led[i * 16 + 4] = 2;
+            if (m->sound) led_set(led, i, 4, 2);
 
-            led[i * 16 + 5] =
-                (m->toggle[er] & (1 << i)) ? MP_LED_BRI : MP_LED_DIM;
-            led[i * 16 + 6] =
-                (m->trigger[er] & (1 << i)) ? MP_LED_BRI : MP_LED_DIM;
-            led[i * 16 + 3] =
-                (m->sync[er] & (1 << i)) ? MP_LED_MED : MP_LED_DIM;
+            led_set(led, i, 5,
+                    (m->toggle[er] & (1 << i)) ? MP_LED_BRI : MP_LED_DIM);
+            led_set(led, i, 6,
+                    (m->trigger[er] & (1 << i)) ? MP_LED_BRI : MP_LED_DIM);
+            led_set(led, i, 3,
+                    (m->sync[er] & (1 << i)) ? MP_LED_MED : MP_LED_DIM);
         }
-        led[er * 16] = MP_LED_BRI;
+        led_set(led, er, 0, MP_LED_BRI);
     }
     else {  // MP_GRID_RULES
         for (uint8_t i = 0; i < MP_ROWS; i++)
-            if (r->position[i] >= 0) led[i * 16 + r->position[i]] = MP_LED_DIM;
+            if (r->position[i] >= 0)
+                led_set(led, i, r->position[i], MP_LED_DIM);
 
-        led[er * 16] = MP_LED_MED;
-        led[er * 16 + 1] = MP_LED_MED;
+        led_set(led, er, 0, MP_LED_MED);
+        led_set(led, er, 1, MP_LED_MED);
 
         uint8_t dest = m->rule_dests[er];
         uint8_t tgt = m->rule_dest_targets[er];
-        led[dest * 16 + 4] = (tgt == 2) ? MP_LED_DIM : MP_LED_BRI;
-        led[dest * 16 + 5] = (tgt == 1) ? MP_LED_DIM : MP_LED_BRI;
-        led[dest * 16 + 6] = MP_LED_DIM;
+        led_set(led, dest, 4, (tgt == 2) ? MP_LED_DIM : MP_LED_BRI);
+        led_set(led, dest, 5, (tgt == 1) ? MP_LED_DIM : MP_LED_BRI);
+        led_set(led, dest, 6, MP_LED_DIM);
 
         for (uint8_t c = 8; c < 16; c++)
-            led[m->rules[er] * 16 + c] = MP_LED_DIM;
+            led_set(led, m->rules[er], c, MP_LED_DIM);
 
         for (uint8_t i = 0; i < MP_ROWS; i++) {
             uint8_t bits = mp_rule_sign[m->rules[er] & 0x7][i];
             for (uint8_t b = 0; b < 8; b++)
-                if (bits & (1 << b)) led[i * 16 + 8 + b] = MP_LED_BRI;
+                if (bits & (1 << b)) led_set(led, i, 8 + b, MP_LED_BRI);
         }
     }
 

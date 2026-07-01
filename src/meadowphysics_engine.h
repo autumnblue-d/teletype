@@ -108,6 +108,11 @@ typedef struct {
 // triggers and syncs itself). Range values assume a 16-wide grid.
 void mp_engine_set_defaults(mp_config_t* cfg);
 
+// True if every field is within the valid range (all are used as array
+// indices). Persisted/stale config that fails this must be replaced with
+// defaults before use to prevent out-of-bounds indexing.
+bool mp_engine_config_valid(const mp_config_t* cfg);
+
 // Initialize the engine: bind outputs + RNG, load defaults, arm all rows.
 void mp_engine_init(mp_engine_t* e, const mp_output_t* out,
                     uint32_t (*rnd)(void* ctx), void* rnd_ctx);
