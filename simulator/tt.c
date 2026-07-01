@@ -86,7 +86,7 @@ void tele_cv_cal(uint8_t i, int32_t b, int32_t m) {
     printf("\n");
 }
 
-void tele_ii_tx(uint8_t addr, uint8_t *data, uint8_t l) {
+void tele_ii_tx(uint8_t addr, uint8_t* data, uint8_t l) {
     printf("II_tx  addr:%" PRIu8 " l:%" PRIu8, addr, l);
     printf("\n");
     for (size_t i = 0; i < l; i++) {
@@ -97,6 +97,8 @@ void tele_ii_tx(uint8_t addr, uint8_t *data, uint8_t l) {
 void tele_vars_updated() {}
 
 void device_flip() {}
+void meadowphysics_op_reset(int16_t channel) {}
+void meadowphysics_op_stop(int16_t channel) {}
 
 void set_live_submode(uint8_t submode) {
     printf("SET_LIVE_SUBMODE submode:%" PRIu8, submode);
@@ -122,7 +124,7 @@ int16_t get_dashboard_value(uint8_t index) {
 
 void reset_midi_counter() {}
 
-void tele_ii_rx(uint8_t addr, uint8_t *data, uint8_t l) {
+void tele_ii_rx(uint8_t addr, uint8_t* data, uint8_t l) {
     printf("II_rx  addr:%" PRIu8 " l:%" PRIu8, addr, l);
     printf("\n");
 }
@@ -164,7 +166,7 @@ void grid_key_press(uint8_t x, uint8_t y, uint8_t z) {
 }
 
 int main() {
-    char *in;
+    char* in;
     time_t t;
     error_t status;
     int i;

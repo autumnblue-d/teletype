@@ -1,11 +1,11 @@
 ["MP.PRESET"]
 prototype = "MP.PRESET x"
-short = "set Meadowphysics to preset `x` (indexed from `0`)"
+short = "no-op on native Meadowphysics (state is per-scene; kept for compatibility)"
 
 ["MP.RESET"]
 prototype = "MP.RESET x"
-short = "reset countdown for channel `x` (`0` = all, `1-8` = individual channels)"
+short = "re-arm native Meadowphysics counters (`0` = all, `1-8` = individual rows)"
 
 ["MP.STOP"]
 prototype = "MP.STOP x"
-short = "reset channel `x` (`0` = all, `1-8` = individual channels)"
+short = "stop native Meadowphysics counters (`0` = all, `1-8` = individual rows)"

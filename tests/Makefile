@@ -8,6 +8,9 @@ tests: main.o \
 	turtle_tests.o \
 	drum_helpers_tests.o \
 	serialize_scene_tests.o \
+	meadowphysics_tests.o ../src/meadowphysics_engine.o \
+	../src/meadowphysics_binding.o ../src/meadowphysics_clock.o \
+	../src/meadowphysics_grid.o \
 	../src/teletype.o ../src/command.o ../src/helpers.o ../src/drum_helpers.o \
 	../src/every.o ../src/match_token.o ../src/scanner.o \
 	../src/state.o ../src/table.o ../src/turtle.o ../src/chaos.o \

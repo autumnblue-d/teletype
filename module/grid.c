@@ -5,6 +5,7 @@
 #include "font.h"
 #include "globals.h"
 #include "live_mode.h"
+#include "meadowphysics_mode.h"
 #include "pattern_mode.h"
 #include "preset_r_mode.h"
 #include "state.h"
@@ -27,7 +28,8 @@ typedef enum {
     G_LIVE_GF,
     G_EDIT,
     G_TRACKER,
-    G_PRESET
+    G_PRESET,
+    G_MEADOWPHYSICS
 } grid_control_mode_t;
 
 // clang-format off
@@ -225,6 +227,7 @@ void grid_set_control_mode(u8 control, u8 mode, scene_state_t *ss) {
         tt_script = get_edit_script();
     }
     else if (mode == M_PATTERN) { tt_mode = G_TRACKER; }
+    else if (mode == M_MEADOWPHYSICS) { tt_mode = G_MEADOWPHYSICS; }
     else if (mode == M_PRESET_W || mode == M_PRESET_R) { tt_mode = G_PRESET; }
     control_mode_on = control;
     grid_clear_held_keys();
@@ -1051,6 +1054,13 @@ void grid_process_key(scene_state_t *ss, u8 _x, u8 _y, u8 z, u8 emulated) {
     u8 x = SG.rotate && !emulated ? size_x - _x - 1 : _x;
     u8 y = SG.rotate && !emulated ? size_y - _y - 1 : _y;
 
+    // Meadowphysics owns the whole grid while active.
+    if (meadowphysics_active()) {
+        meadowphysics_grid_key(x, y, z);
+        ss->grid.grid_dirty = 1;
+        return;
+    }
+
     if (SG.clear_held) {
         grid_clear_held_keys();
         SG.clear_held = 0;
@@ -1398,6 +1408,13 @@ void grid_refresh(scene_state_t *ss) {
 
     if (size_x == 0) size_x = 16;
     if (size_y == 0) size_y = 8;
+
+    // Meadowphysics owns the whole grid while active (renders its own buffer).
+    if (meadowphysics_active()) {
+        meadowphysics_grid_render();
+        ss->grid.grid_dirty = 0;
+        return;
+    }
 
     grid_fill_area(0, 0, size_x, size_y, 0);
 

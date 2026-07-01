@@ -11,7 +11,10 @@
 // this
 #include "teletype.h"
 
-#define FIRSTRUN_KEY 0x22
+// Bumped 0x22 -> 0x23 for the Meadowphysics port: SCENE_SLOTS 32->30 and the
+// added per-scene mp_config_t change the nvram layout, so existing flash must
+// be reinitialized on upgrade (there is no per-scene version/migration path).
+#define FIRSTRUN_KEY 0x23
 
 static grid_data_t grid_data;
 
@@ -21,8 +24,8 @@ static __attribute__((__section__(".flash_nvram"))) nvram_data_t f;
 nvram_data_t f;
 #endif
 
-static void pack_grid(scene_state_t *scene);
-static void unpack_grid(scene_state_t *scene);
+static void pack_grid(scene_state_t* scene);
+static void unpack_grid(scene_state_t* scene);
 
 u8 is_flash_fresh() {
     return f.fresh != FIRSTRUN_KEY;
@@ -65,32 +68,34 @@ void flash_prepare() {
 
         cal_data_t blank_cal_data;
         init_cal_data(&blank_cal_data);
-        flashc_memcpy((void *)&f.cal, &blank_cal_data, sizeof(blank_cal_data),
+        flashc_memcpy((void*)&f.cal, &blank_cal_data, sizeof(blank_cal_data),
                       true);
         device_config_t device_config = { .flip = 0 };
-        flashc_memcpy((void *)&f.device_config, &device_config,
+        flashc_memcpy((void*)&f.device_config, &device_config,
                       sizeof(device_config), true);
         flash_update_last_saved_scene(0);
         flash_update_last_mode(M_LIVE);
-        flashc_memset8((void *)&f.fresh, FIRSTRUN_KEY, 1, true);
+        flashc_memset8((void*)&f.fresh, FIRSTRUN_KEY, 1, true);
     }
 }
 
-void flash_write(uint8_t preset_no, scene_state_t *scene,
+void flash_write(uint8_t preset_no, scene_state_t* scene,
                  char (*text)[SCENE_TEXT_LINES][SCENE_TEXT_CHARS]) {
     if (preset_no >= SCENE_SLOTS) return;
-    flashc_memcpy((void *)&f.scenes[preset_no].scripts, ss_scripts_ptr(scene),
+    flashc_memcpy((void*)&f.scenes[preset_no].scripts, ss_scripts_ptr(scene),
                   ss_scripts_size(EDITABLE_SCRIPT_COUNT), true);
-    flashc_memcpy((void *)&f.scenes[preset_no].patterns, ss_patterns_ptr(scene),
+    flashc_memcpy((void*)&f.scenes[preset_no].patterns, ss_patterns_ptr(scene),
                   ss_patterns_size(), true);
     pack_grid(scene);
-    flashc_memcpy((void *)&f.scenes[preset_no].grid_data, &grid_data,
+    flashc_memcpy((void*)&f.scenes[preset_no].grid_data, &grid_data,
                   sizeof(grid_data_t), true);
-    flashc_memcpy((void *)&f.scenes[preset_no].text, text,
+    flashc_memcpy((void*)&f.scenes[preset_no].text, text,
                   SCENE_TEXT_LINES * SCENE_TEXT_CHARS, true);
+    flashc_memcpy((void*)&f.scenes[preset_no].mp, &scene->mp,
+                  sizeof(mp_config_t), true);
 }
 
-void flash_read(uint8_t preset_no, scene_state_t *scene,
+void flash_read(uint8_t preset_no, scene_state_t* scene,
                 char (*text)[SCENE_TEXT_LINES][SCENE_TEXT_CHARS],
                 uint8_t init_pattern, uint8_t init_grid,
                 uint8_t init_i2c_op_address) {
@@ -115,6 +120,7 @@ void flash_read(uint8_t preset_no, scene_state_t *scene,
 
     if (init_i2c_op_address) scene->i2c_op_address = -1;
     ss_midi_init(scene);
+    memcpy(&scene->mp, &f.scenes[preset_no].mp, sizeof(mp_config_t));
 }
 
 uint8_t flash_last_saved_scene() {
@@ -123,10 +129,10 @@ uint8_t flash_last_saved_scene() {
 
 void flash_update_last_saved_scene(uint8_t preset_no) {
     if (preset_no >= SCENE_SLOTS) return;
-    flashc_memset8((void *)&f.last_scene, preset_no, 1, true);
+    flashc_memset8((void*)&f.last_scene, preset_no, 1, true);
 }
 
-const char *flash_scene_text(uint8_t preset_no, size_t line) {
+const char* flash_scene_text(uint8_t preset_no, size_t line) {
     return f.scenes[preset_no].text[line];
 }
 
@@ -138,24 +144,24 @@ void flash_update_last_mode(tele_mode_t mode) {
     // flashc_memset8((void *)&f.last_mode, mode, sizeof(tele_mode_t), true);
 }
 
-void flash_update_cal(cal_data_t *cal) {
-    flashc_memcpy((void *)&f.cal, cal, sizeof(cal_data_t), true);
+void flash_update_cal(cal_data_t* cal) {
+    flashc_memcpy((void*)&f.cal, cal, sizeof(cal_data_t), true);
 }
 
-void flash_get_cal(cal_data_t *cal) {
+void flash_get_cal(cal_data_t* cal) {
     *cal = f.cal;
 }
 
-void flash_update_device_config(device_config_t *device_config) {
-    flashc_memcpy((void *)&f.device_config, device_config,
+void flash_update_device_config(device_config_t* device_config) {
+    flashc_memcpy((void*)&f.device_config, device_config,
                   sizeof(device_config_t), true);
 }
 
-void flash_get_device_config(device_config_t *device_config) {
+void flash_get_device_config(device_config_t* device_config) {
     *device_config = f.device_config;
 }
 
-static void pack_grid(scene_state_t *scene) {
+static void pack_grid(scene_state_t* scene) {
     uint8_t byte = 0;
     uint8_t byte_count = 0;
     for (uint16_t i = 0; i < GRID_BUTTON_COUNT; i++) {
@@ -170,7 +176,7 @@ static void pack_grid(scene_state_t *scene) {
         grid_data.fader_states[i] = scene->grid.fader[i].value;
 }
 
-static void unpack_grid(scene_state_t *scene) {
+static void unpack_grid(scene_state_t* scene) {
     for (uint16_t i = 0; i < GRID_BUTTON_COUNT; i++) {
         scene->grid.button[i].state =
             0 != (grid_data.button_states[i >> 3] & (1 << (i & 7)));

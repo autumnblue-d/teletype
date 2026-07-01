@@ -7,6 +7,7 @@
 
 #include "command.h"
 #include "every.h"
+#include "meadowphysics_engine.h"
 #include "random.h"
 #include "scale.h"
 #include "script.h"
@@ -271,103 +272,105 @@ typedef struct {
     cal_data_t cal;
     int8_t i2c_op_address;
     scene_midi_t midi;
+    mp_config_t mp;  // Meadowphysics per-scene config
 } scene_state_t;
 
-extern void ss_init(scene_state_t *ss);
-extern void ss_variables_init(scene_state_t *ss);
-extern void ss_patterns_init(scene_state_t *ss);
-extern void ss_pattern_init(scene_state_t *ss, size_t pattern_no);
-extern void ss_grid_init(scene_state_t *ss);
-extern void ss_grid_common_init(grid_common_t *gc);
-extern void ss_rand_init(scene_state_t *ss);
-extern void ss_midi_init(scene_state_t *ss);
-extern void ss_cal_init(scene_state_t *ss);
+extern void ss_init(scene_state_t* ss);
+extern void ss_variables_init(scene_state_t* ss);
+extern void ss_patterns_init(scene_state_t* ss);
+extern void ss_pattern_init(scene_state_t* ss, size_t pattern_no);
+extern void ss_grid_init(scene_state_t* ss);
+extern void ss_grid_common_init(grid_common_t* gc);
+extern void ss_rand_init(scene_state_t* ss);
+extern void ss_midi_init(scene_state_t* ss);
+extern void ss_cal_init(scene_state_t* ss);
+extern void ss_mp_init(scene_state_t* ss);
 
-extern void ss_set_in(scene_state_t *ss, int16_t value);
-extern void ss_set_param(scene_state_t *ss, int16_t value);
-extern void ss_set_scene(scene_state_t *ss, int16_t value);
-extern uint8_t ss_get_script_pol(scene_state_t *ss, size_t idx);
-extern void ss_set_script_pol(scene_state_t *ss, size_t idx, uint8_t pol);
+extern void ss_set_in(scene_state_t* ss, int16_t value);
+extern void ss_set_param(scene_state_t* ss, int16_t value);
+extern void ss_set_scene(scene_state_t* ss, int16_t value);
+extern uint8_t ss_get_script_pol(scene_state_t* ss, size_t idx);
+extern void ss_set_script_pol(scene_state_t* ss, size_t idx, uint8_t pol);
 
-extern bool ss_get_mute(scene_state_t *ss, uint8_t idx);
-extern void ss_set_mute(scene_state_t *ss, uint8_t idx, bool value);
+extern bool ss_get_mute(scene_state_t* ss, uint8_t idx);
+extern void ss_set_mute(scene_state_t* ss, uint8_t idx, bool value);
 
-extern int16_t ss_get_pattern_idx(scene_state_t *ss, size_t pattern);
-extern void ss_set_pattern_idx(scene_state_t *ss, size_t pattern, int16_t i);
-extern int16_t ss_get_pattern_len(scene_state_t *ss, size_t pattern);
-extern void ss_set_pattern_len(scene_state_t *ss, size_t pattern, int16_t l);
-extern uint16_t ss_get_pattern_wrap(scene_state_t *ss, size_t pattern);
-extern void ss_set_pattern_wrap(scene_state_t *ss, size_t pattern,
+extern int16_t ss_get_pattern_idx(scene_state_t* ss, size_t pattern);
+extern void ss_set_pattern_idx(scene_state_t* ss, size_t pattern, int16_t i);
+extern int16_t ss_get_pattern_len(scene_state_t* ss, size_t pattern);
+extern void ss_set_pattern_len(scene_state_t* ss, size_t pattern, int16_t l);
+extern uint16_t ss_get_pattern_wrap(scene_state_t* ss, size_t pattern);
+extern void ss_set_pattern_wrap(scene_state_t* ss, size_t pattern,
                                 uint16_t wrap);
-extern int16_t ss_get_pattern_start(scene_state_t *ss, size_t pattern);
-extern void ss_set_pattern_start(scene_state_t *ss, size_t pattern,
+extern int16_t ss_get_pattern_start(scene_state_t* ss, size_t pattern);
+extern void ss_set_pattern_start(scene_state_t* ss, size_t pattern,
                                  int16_t start);
-extern int16_t ss_get_pattern_end(scene_state_t *ss, size_t pattern);
-extern void ss_set_pattern_end(scene_state_t *ss, size_t pattern, int16_t end);
-extern int16_t ss_get_pattern_val(scene_state_t *ss, size_t pattern,
+extern int16_t ss_get_pattern_end(scene_state_t* ss, size_t pattern);
+extern void ss_set_pattern_end(scene_state_t* ss, size_t pattern, int16_t end);
+extern int16_t ss_get_pattern_val(scene_state_t* ss, size_t pattern,
                                   size_t idx);
-extern void ss_set_pattern_val(scene_state_t *ss, size_t pattern, size_t idx,
+extern void ss_set_pattern_val(scene_state_t* ss, size_t pattern, size_t idx,
                                int16_t val);
-extern scene_pattern_t *ss_patterns_ptr(scene_state_t *ss);
+extern scene_pattern_t* ss_patterns_ptr(scene_state_t* ss);
 extern size_t ss_patterns_size(void);
 
-uint8_t ss_get_script_len(scene_state_t *ss, uint8_t idx);
-const tele_command_t *ss_get_script_command(scene_state_t *ss,
+uint8_t ss_get_script_len(scene_state_t* ss, uint8_t idx);
+const tele_command_t* ss_get_script_command(scene_state_t* ss,
                                             uint8_t script_idx, size_t c_idx);
-void ss_copy_script_command(tele_command_t *dest, scene_state_t *ss,
+void ss_copy_script_command(tele_command_t* dest, scene_state_t* ss,
                             uint8_t script_idx, size_t c_idx);
-bool ss_get_script_comment(scene_state_t *ss, uint8_t script_idx, size_t c_idx);
-void ss_set_script_comment(scene_state_t *ss, uint8_t script_idx, size_t c_idx,
+bool ss_get_script_comment(scene_state_t* ss, uint8_t script_idx, size_t c_idx);
+void ss_set_script_comment(scene_state_t* ss, uint8_t script_idx, size_t c_idx,
                            uint8_t on);
-void ss_toggle_script_comment(scene_state_t *ss, uint8_t script_idx,
+void ss_toggle_script_comment(scene_state_t* ss, uint8_t script_idx,
                               size_t c_idx);
-void ss_overwrite_script_command(scene_state_t *ss, uint8_t script_idx,
-                                 size_t command_idx, const tele_command_t *cmd);
-void ss_insert_script_command(scene_state_t *ss, uint8_t script_idx,
-                              size_t command_idx, const tele_command_t *cmd);
-void ss_delete_script_command(scene_state_t *ss, uint8_t script_idx,
+void ss_overwrite_script_command(scene_state_t* ss, uint8_t script_idx,
+                                 size_t command_idx, const tele_command_t* cmd);
+void ss_insert_script_command(scene_state_t* ss, uint8_t script_idx,
+                              size_t command_idx, const tele_command_t* cmd);
+void ss_delete_script_command(scene_state_t* ss, uint8_t script_idx,
                               size_t command_idx);
-void ss_clear_script(scene_state_t *ss, size_t script_idx);
+void ss_clear_script(scene_state_t* ss, size_t script_idx);
 
-scene_script_t *ss_scripts_ptr(scene_state_t *ss);
+scene_script_t* ss_scripts_ptr(scene_state_t* ss);
 size_t ss_scripts_size(uint8_t script_count);
-int16_t ss_get_script_last(scene_state_t *ss, uint8_t idx);
-void ss_update_script_last(scene_state_t *ss, uint8_t idx);
-every_count_t *ss_get_every(scene_state_t *ss, uint8_t idx, uint8_t line);
-void ss_sync_every(scene_state_t *ss, int16_t count);
-bool every_is_now(scene_state_t *ss, every_count_t *e);
-bool skip_is_now(scene_state_t *ss, every_count_t *e);
-scene_turtle_t *ss_turtle_get(scene_state_t *);
-void ss_turtle_set(scene_state_t *, scene_turtle_t *);
-int16_t ss_turtle_get_val(scene_state_t *, scene_turtle_t *);
-void ss_turtle_set_val(scene_state_t *, scene_turtle_t *, int16_t);
+int16_t ss_get_script_last(scene_state_t* ss, uint8_t idx);
+void ss_update_script_last(scene_state_t* ss, uint8_t idx);
+every_count_t* ss_get_every(scene_state_t* ss, uint8_t idx, uint8_t line);
+void ss_sync_every(scene_state_t* ss, int16_t count);
+bool every_is_now(scene_state_t* ss, every_count_t* e);
+bool skip_is_now(scene_state_t* ss, every_count_t* e);
+scene_turtle_t* ss_turtle_get(scene_state_t*);
+void ss_turtle_set(scene_state_t*, scene_turtle_t*);
+int16_t ss_turtle_get_val(scene_state_t*, scene_turtle_t*);
+void ss_turtle_set_val(scene_state_t*, scene_turtle_t*, int16_t);
 
-void ss_set_param_scale(scene_state_t *, int16_t, int16_t);
-void ss_set_in_scale(scene_state_t *, int16_t, int16_t);
-void ss_set_fader_scale(scene_state_t *ss, int16_t fader, int16_t min,
+void ss_set_param_scale(scene_state_t*, int16_t, int16_t);
+void ss_set_in_scale(scene_state_t*, int16_t, int16_t);
+void ss_set_fader_scale(scene_state_t* ss, int16_t fader, int16_t min,
                         int16_t max);
-void ss_update_in_scale(scene_state_t *);
-void ss_update_param_scale(scene_state_t *);
-void ss_update_fader_scale(scene_state_t *ss, int16_t fader);
-void ss_update_fader_scale_all(scene_state_t *ss);
+void ss_update_in_scale(scene_state_t*);
+void ss_update_param_scale(scene_state_t*);
+void ss_update_fader_scale(scene_state_t* ss, int16_t fader);
+void ss_update_fader_scale_all(scene_state_t* ss);
 
-int16_t ss_get_param(scene_state_t *);
-int16_t ss_get_in(scene_state_t *);
-int16_t ss_get_in_min(scene_state_t *);
-int16_t ss_get_in_max(scene_state_t *);
-void ss_set_in_min(scene_state_t *, int16_t);
-void ss_set_in_max(scene_state_t *, int16_t);
-void ss_reset_in_cal(scene_state_t *);
-int16_t ss_get_param_min(scene_state_t *);
-int16_t ss_get_param_max(scene_state_t *);
-void ss_set_param_min(scene_state_t *, int16_t);
-void ss_set_param_max(scene_state_t *, int16_t);
-void ss_reset_param_cal(scene_state_t *);
-int16_t ss_get_fader_min(scene_state_t *ss, int16_t fader);
-int16_t ss_get_fader_max(scene_state_t *ss, int16_t fader);
-void ss_set_fader_min(scene_state_t *ss, int16_t fader, int16_t min);
-void ss_set_fader_max(scene_state_t *ss, int16_t fader, int16_t max);
-void ss_reset_fader_cal(scene_state_t *ss, int16_t fader);
+int16_t ss_get_param(scene_state_t*);
+int16_t ss_get_in(scene_state_t*);
+int16_t ss_get_in_min(scene_state_t*);
+int16_t ss_get_in_max(scene_state_t*);
+void ss_set_in_min(scene_state_t*, int16_t);
+void ss_set_in_max(scene_state_t*, int16_t);
+void ss_reset_in_cal(scene_state_t*);
+int16_t ss_get_param_min(scene_state_t*);
+int16_t ss_get_param_max(scene_state_t*);
+void ss_set_param_min(scene_state_t*, int16_t);
+void ss_set_param_max(scene_state_t*, int16_t);
+void ss_reset_param_cal(scene_state_t*);
+int16_t ss_get_fader_min(scene_state_t* ss, int16_t fader);
+int16_t ss_get_fader_max(scene_state_t* ss, int16_t fader);
+void ss_set_fader_min(scene_state_t* ss, int16_t fader, int16_t min);
+void ss_set_fader_max(scene_state_t* ss, int16_t fader, int16_t max);
+void ss_reset_fader_cal(scene_state_t* ss, int16_t fader);
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -395,15 +398,15 @@ typedef struct {
     bool overflow;
 } exec_state_t;
 
-extern void es_init(exec_state_t *es);
-extern size_t es_depth(exec_state_t *es);
-extern size_t es_push(exec_state_t *es);
-extern size_t es_push_fparams(exec_state_t *es, int16_t param1, int16_t param2);
-extern size_t es_pop(exec_state_t *es);
-extern void es_set_script_number(exec_state_t *es, uint8_t script_number);
-extern void es_set_line_number(exec_state_t *es, uint8_t line_number);
-extern uint8_t es_get_line_number(exec_state_t *es);
-extern exec_vars_t *es_variables(exec_state_t *es);
+extern void es_init(exec_state_t* es);
+extern size_t es_depth(exec_state_t* es);
+extern size_t es_push(exec_state_t* es);
+extern size_t es_push_fparams(exec_state_t* es, int16_t param1, int16_t param2);
+extern size_t es_pop(exec_state_t* es);
+extern void es_set_script_number(exec_state_t* es, uint8_t script_number);
+extern void es_set_line_number(exec_state_t* es, uint8_t line_number);
+extern uint8_t es_get_line_number(exec_state_t* es);
+extern exec_vars_t* es_variables(exec_state_t* es);
 
 ////////////////////////////////////////////////////////////////////////////////
 // COMMAND STATE ///////////////////////////////////////////////////////////////
@@ -418,17 +421,17 @@ typedef struct {
     command_state_stack_t stack;
 } command_state_t;
 
-extern void cs_init(command_state_t *cs);
-extern int16_t cs_stack_size(command_state_t *cs);
+extern void cs_init(command_state_t* cs);
+extern int16_t cs_stack_size(command_state_t* cs);
 
 // by declaring the following static inline, each compilation unit (i.e. C
 // file), gets its own copy of the function
-static inline int16_t cs_pop(command_state_t *cs) {
+static inline int16_t cs_pop(command_state_t* cs) {
     cs->stack.top--;
     return cs->stack.values[cs->stack.top];
 }
 
-static inline void cs_push(command_state_t *cs, int16_t data) {
+static inline void cs_push(command_state_t* cs, int16_t data) {
     cs->stack.values[cs->stack.top] = data;
     cs->stack.top++;
 }

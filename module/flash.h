@@ -7,7 +7,11 @@
 #include "line_editor.h"
 #include "teletype.h"
 
-#define SCENE_SLOTS 32
+// Reduced from 32 to 30 to reclaim ~12 KB of NVRAM: this lets the flash NVRAM
+// region shrink (see __flash_nvram_size__ in config.mk), freeing program flash
+// for the Meadowphysics mode, while still leaving room for MP's per-scene data
+// (Phase 7). See MEADOWPHYSICS_PORT_PLAN.md.
+#define SCENE_SLOTS 30
 #define BUTTON_STATE_SIZE (GRID_BUTTON_COUNT >> 3)
 
 typedef struct {
@@ -21,6 +25,7 @@ typedef struct {
     scene_pattern_t patterns[PATTERN_COUNT];
     grid_data_t grid_data;
     char text[SCENE_TEXT_LINES][SCENE_TEXT_CHARS];
+    mp_config_t mp;  // Meadowphysics per-scene config
 } nvram_scene_t;
 
 typedef struct {
@@ -34,22 +39,22 @@ typedef struct {
 
 u8 is_flash_fresh(void);
 void flash_prepare(void);
-void flash_read(uint8_t preset_no, scene_state_t *scene,
+void flash_read(uint8_t preset_no, scene_state_t* scene,
                 char (*text)[SCENE_TEXT_LINES][SCENE_TEXT_CHARS],
                 uint8_t init_pattern, uint8_t init_grid,
                 uint8_t init_i2c_op_address);
-void flash_write(uint8_t preset_no, scene_state_t *scene,
+void flash_write(uint8_t preset_no, scene_state_t* scene,
                  char (*text)[SCENE_TEXT_LINES][SCENE_TEXT_CHARS]);
 uint8_t flash_last_saved_scene(void);
 void flash_update_last_saved_scene(uint8_t preset_no);
-const char *flash_scene_text(uint8_t preset_no, size_t line);
+const char* flash_scene_text(uint8_t preset_no, size_t line);
 tele_mode_t flash_last_mode(void);
 void flash_update_last_mode(tele_mode_t mode);
-void flash_update_cal(cal_data_t *);
-void flash_get_cal(cal_data_t *);
-void flash_update_cal(cal_data_t *);
-void flash_get_cal(cal_data_t *);
-void flash_update_device_config(device_config_t *);
-void flash_get_device_config(device_config_t *);
+void flash_update_cal(cal_data_t*);
+void flash_get_cal(cal_data_t*);
+void flash_update_cal(cal_data_t*);
+void flash_get_cal(cal_data_t*);
+void flash_update_device_config(device_config_t*);
+void flash_get_device_config(device_config_t*);
 
 #endif

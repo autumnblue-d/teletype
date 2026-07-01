@@ -1,0 +1,207 @@
+// Meadowphysics grid surface -- see meadowphysics_grid.h.
+// Ported from Ansible handler_MPGridKey (NORMAL branch) and refresh_mp
+// (ansible/src/ansible_grid.c). Globals -> engine/grid-state fields;
+// monomeLedBuffer -> the passed-in `led`.
+
+#include "meadowphysics_grid.h"
+
+#include <string.h>  // memset
+
+// LED brightness levels (Ansible L0/L1/L2).
+#define MP_LED_DIM 4
+#define MP_LED_MED 8
+#define MP_LED_BRI 12
+
+#define MP_GRID_COLS 16
+
+// Rule glyphs (8 rules x 8 rows of an 8-wide bitmap), from Ansible `sign`.
+static const uint8_t mp_rule_sign[8][8] = {
+    { 0, 0, 0, 0, 0, 0, 0, 0 },              // o  none
+    { 0, 24, 24, 126, 126, 24, 24, 0 },      // +  inc
+    { 0, 0, 0, 126, 126, 0, 0, 0 },          // -  dec
+    { 0, 96, 96, 126, 126, 96, 96, 0 },      // >  max
+    { 0, 6, 6, 126, 126, 6, 6, 0 },          // <  min
+    { 0, 102, 102, 24, 24, 102, 102, 0 },    // *  rnd
+    { 0, 120, 120, 102, 102, 30, 30, 0 },    // <> pole
+    { 0, 126, 126, 102, 102, 126, 126, 0 },  // [] stop
+};
+
+void mp_grid_state_init(mp_grid_state_t* g) {
+    g->edit_mode = MP_GRID_POSITIONS;
+    g->edit_row = 0;
+    g->kcount = 0;
+    for (uint8_t i = 0; i < MP_ROWS; i++) g->scount[i] = 0;
+}
+
+void mp_grid_process_key(mp_engine_t* e, mp_grid_state_t* g, uint8_t x,
+                         uint8_t y, uint8_t z) {
+    if (y >= MP_ROWS) return;
+
+    mp_config_t* m = &e->cfg;
+    mp_runtime_t* r = &e->rt;
+
+    // column 0: hold to enter speed sub-mode; also selects edit_row
+    if (x == 0) {
+        g->kcount += (z << 1) - 1;
+        if (g->kcount < 0) g->kcount = 0;
+
+        if (g->kcount == 1 && z == 1)
+            g->edit_mode = MP_GRID_SPEED;
+        else if (g->kcount == 0) {
+            g->edit_mode = MP_GRID_POSITIONS;
+            g->scount[y] = 0;
+        }
+
+        if (z == 1 && g->edit_mode == MP_GRID_SPEED) g->edit_row = y;
+    }
+    // column 1: while in speed sub-mode, hold to enter rules sub-mode
+    else if (x == 1 && g->edit_mode != MP_GRID_POSITIONS) {
+        if (g->edit_mode == MP_GRID_SPEED && z == 1) {
+            g->edit_mode = MP_GRID_RULES;
+            g->edit_row = y;
+        }
+        else if (g->edit_mode == MP_GRID_RULES && z == 0)
+            g->edit_mode = MP_GRID_SPEED;
+    }
+    // positions: set count (1st press) / range (2nd press) / manual push
+    else if (g->edit_mode == MP_GRID_POSITIONS) {
+        g->scount[y] += (z << 1) - 1;
+        if (g->scount[y] < 0) g->scount[y] = 0;
+
+        if (z == 1 && g->scount[y] == 1) {
+            r->position[y] = x;
+            m->count[y] = x;
+            m->min[y] = x;
+            m->max[y] = x;
+            r->tick[y] = m->speed[y];
+            if (m->sound) r->pushed[y] = 1;
+        }
+        else if (z == 1 && g->scount[y] == 2) {
+            if (x < m->count[y]) {
+                m->min[y] = x;
+                m->max[y] = m->count[y];
+            }
+            else {
+                m->max[y] = x;
+                m->min[y] = m->count[y];
+            }
+        }
+    }
+    // speed + trigger/toggle/sync/sound
+    else if (g->edit_mode == MP_GRID_SPEED) {
+        g->scount[y] += (z << 1) - 1;
+        if (g->scount[y] < 0) g->scount[y] = 0;
+
+        if (z == 1) {
+            if (x > 7) {  // right half: speed value (1st press) / range (2nd)
+                if (g->scount[y] == 1) {
+                    m->smin[y] = x - 8;
+                    m->smax[y] = x - 8;
+                    m->speed[y] = x - 8;
+                    r->tick[y] = m->speed[y];
+                }
+                else if (g->scount[y] == 2) {
+                    if (x - 8 < m->smin[y]) {
+                        m->smax[y] = m->smin[y];
+                        m->smin[y] = x - 8;
+                    }
+                    else
+                        m->smax[y] = x - 8;
+                }
+            }
+            else if (x == 5) {  // toggle bit for edit_row -> row y
+                m->toggle[g->edit_row] ^= 1 << y;
+                m->trigger[g->edit_row] &= ~(1 << y);
+            }
+            else if (x == 6) {  // trigger bit
+                m->trigger[g->edit_row] ^= 1 << y;
+                m->toggle[g->edit_row] &= ~(1 << y);
+            }
+            else if (x == 4) {  // sound (manual-play) toggle
+                m->sound ^= 1;
+            }
+            else if (x == 2) {  // stop/start row y
+                if (r->position[y] == -1)
+                    r->position[y] = m->count[y];
+                else
+                    r->position[y] = -1;
+            }
+            else if (x == 3) {  // sync bit
+                m->sync[g->edit_row] ^= (1 << y);
+            }
+        }
+    }
+    // rules: destination + target (cols 4-6), rule select (cols 7+)
+    else if (g->edit_mode == MP_GRID_RULES && z == 1) {
+        if (x > 3 && x < 7) {
+            m->rule_dests[g->edit_row] = y;
+            m->rule_dest_targets[g->edit_row] = x - 3;
+        }
+        else if (x > 6) { m->rules[g->edit_row] = y; }
+    }
+}
+
+void mp_grid_refresh(mp_engine_t* e, mp_grid_state_t* g, uint8_t* led,
+                     uint8_t vari) {
+    mp_config_t* m = &e->cfg;
+    mp_runtime_t* r = &e->rt;
+    uint8_t er = g->edit_row;
+
+    memset(led, 0, MP_ROWS * MP_GRID_COLS);
+
+    if (g->edit_mode == MP_GRID_POSITIONS) {
+        for (uint8_t i = 0; i < MP_ROWS; i++) {
+            for (uint8_t c = m->min[i]; c <= m->max[i] && c < MP_GRID_COLS; c++)
+                led[i * 16 + c] = MP_LED_DIM;
+            led[i * 16 + m->count[i]] = MP_LED_MED;
+            if (r->position[i] >= 0) led[i * 16 + r->position[i]] = MP_LED_BRI;
+        }
+    }
+    else if (g->edit_mode == MP_GRID_SPEED) {
+        for (uint8_t i = 0; i < MP_ROWS; i++) {
+            if (r->position[i] >= 0) led[i * 16 + r->position[i]] = MP_LED_DIM;
+            if (r->position[i] != -1) led[i * 16 + 2] = 2;
+
+            for (uint8_t s = m->smin[i];
+                 s <= m->smax[i] && s + 8 < MP_GRID_COLS; s++)
+                led[i * 16 + s + 8] = MP_LED_DIM;
+            led[i * 16 + m->speed[i] + 8] = MP_LED_MED;
+
+            if (m->sound) led[i * 16 + 4] = 2;
+
+            led[i * 16 + 5] =
+                (m->toggle[er] & (1 << i)) ? MP_LED_BRI : MP_LED_DIM;
+            led[i * 16 + 6] =
+                (m->trigger[er] & (1 << i)) ? MP_LED_BRI : MP_LED_DIM;
+            led[i * 16 + 3] =
+                (m->sync[er] & (1 << i)) ? MP_LED_MED : MP_LED_DIM;
+        }
+        led[er * 16] = MP_LED_BRI;
+    }
+    else {  // MP_GRID_RULES
+        for (uint8_t i = 0; i < MP_ROWS; i++)
+            if (r->position[i] >= 0) led[i * 16 + r->position[i]] = MP_LED_DIM;
+
+        led[er * 16] = MP_LED_MED;
+        led[er * 16 + 1] = MP_LED_MED;
+
+        uint8_t dest = m->rule_dests[er];
+        uint8_t tgt = m->rule_dest_targets[er];
+        led[dest * 16 + 4] = (tgt == 2) ? MP_LED_DIM : MP_LED_BRI;
+        led[dest * 16 + 5] = (tgt == 1) ? MP_LED_DIM : MP_LED_BRI;
+        led[dest * 16 + 6] = MP_LED_DIM;
+
+        for (uint8_t c = 8; c < 16; c++)
+            led[m->rules[er] * 16 + c] = MP_LED_DIM;
+
+        for (uint8_t i = 0; i < MP_ROWS; i++) {
+            uint8_t bits = mp_rule_sign[m->rules[er] & 0x7][i];
+            for (uint8_t b = 0; b < 8; b++)
+                if (bits & (1 << b)) led[i * 16 + 8 + b] = MP_LED_BRI;
+        }
+    }
+
+    if (!vari)  // mono grid: any lit cell to full brightness (B5 fallback)
+        for (uint16_t i = 0; i < MP_ROWS * MP_GRID_COLS; i++)
+            if (led[i]) led[i] = 15;
+}

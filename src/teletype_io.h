@@ -40,8 +40,8 @@ extern void tele_has_delays(bool has_delays);
 extern void tele_has_stack(bool has_stack);
 
 extern void tele_cv_off(uint8_t i, int16_t v);
-extern void tele_ii_tx(uint8_t addr, uint8_t *data, uint8_t l);
-extern void tele_ii_rx(uint8_t addr, uint8_t *data, uint8_t l);
+extern void tele_ii_tx(uint8_t addr, uint8_t* data, uint8_t l);
+extern void tele_ii_rx(uint8_t addr, uint8_t* data, uint8_t l);
 extern void tele_scene(uint8_t i, uint8_t init_grid, uint8_t init_pattern);
 
 // called when a pattern is updated
@@ -65,6 +65,10 @@ extern void grid_key_press(uint8_t x, uint8_t y, uint8_t z);
 
 // manage device config
 extern void device_flip(void);
+
+// meadowphysics ops (native engine): channel 0 = all rows, 1-8 = one row
+extern void meadowphysics_op_reset(int16_t channel);
+extern void meadowphysics_op_stop(int16_t channel);
 
 // live screen / dashboard
 extern void set_live_submode(uint8_t submode);

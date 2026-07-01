@@ -3,6 +3,7 @@
 #include "drum_helpers_tests.h"
 #include "greatest/greatest.h"
 #include "match_token_tests.h"
+#include "meadowphysics_tests.h"
 #include "op_mod_tests.h"
 #include "parser_tests.h"
 #include "process_tests.h"
@@ -30,8 +31,8 @@ void tele_has_delays(bool i) {}
 void tele_has_stack(bool i) {}
 void tele_cv_off(uint8_t i, int16_t v) {}
 void tele_cv_cal(uint8_t i, int32_t b, int32_t m) {}
-void tele_ii_tx(uint8_t addr, uint8_t *data, uint8_t l) {}
-void tele_ii_rx(uint8_t addr, uint8_t *data, uint8_t l) {}
+void tele_ii_tx(uint8_t addr, uint8_t* data, uint8_t l) {}
+void tele_ii_rx(uint8_t addr, uint8_t* data, uint8_t l) {}
 void tele_scene(uint8_t i, uint8_t init_grid, uint8_t init_pattern) {}
 void tele_pattern_updated() {}
 void tele_kill() {}
@@ -52,10 +53,12 @@ int16_t get_dashboard_value(uint8_t index) {
 void reset_midi_counter() {}
 void tele_save_calibration() {}
 void grid_key_press(uint8_t x, uint8_t y, uint8_t z) {}
+void meadowphysics_op_reset(int16_t channel) {}
+void meadowphysics_op_stop(int16_t channel) {}
 
 GREATEST_MAIN_DEFS();
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     GREATEST_MAIN_BEGIN();
 
     RUN_SUITE(match_token_suite);
@@ -65,6 +68,7 @@ int main(int argc, char **argv) {
     RUN_SUITE(turtle_suite);
     RUN_SUITE(drum_helpers_suite);
     RUN_SUITE(serialize_scene_suite);
+    RUN_SUITE(meadowphysics_suite);
 
     GREATEST_MAIN_END();
 }

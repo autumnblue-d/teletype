@@ -69,6 +69,7 @@ CSRCS = \
 	../module/help_mode.c  					\
 	../module/line_editor.c					\
 	../module/live_mode.c   				\
+	../module/meadowphysics_mode.c   			\
 	../module/pattern_mode.c   				\
 	../module/preset_r_mode.c   				\
 	../module/preset_w_mode.c   				\
@@ -78,6 +79,10 @@ CSRCS = \
 	../src/helpers.c					\
 	../src/drum_helpers.c					\
 	../src/match_token.c					\
+	../src/meadowphysics_engine.c				\
+	../src/meadowphysics_binding.c				\
+	../src/meadowphysics_clock.c				\
+	../src/meadowphysics_grid.c				\
 	../src/scanner.c					\
 	../src/scale.c						\
 	../src/scene_serialization.c				\
@@ -261,7 +266,10 @@ CPPFLAGS = -D BOARD=USER_BOARD -D UHD_ENABLE
 
 # Extra flags to use when linking
 # NVRAM size may need to change if additional data is to be stored in scenes.
-LDFLAGS = -Wl,-e,_trampoline,--defsym=__flash_nvram_size__=200K
+# Reduced 200K -> 190K alongside SCENE_SLOTS 32 -> 30 (flash.h): the smaller
+# region still holds the 30-slot NVRAM (incl. Meadowphysics per-scene data,
+# Phase 7) and frees ~10K of program flash below it for the MP mode code.
+LDFLAGS = -Wl,-e,_trampoline,--defsym=__flash_nvram_size__=190K
 
 # Pre- and post-build commands
 PREBUILD_CMD =

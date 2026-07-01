@@ -43,6 +43,7 @@
 #include "help_mode.h"
 #include "keyboard_helper.h"
 #include "live_mode.h"
+#include "meadowphysics_mode.h"
 #include "pattern_mode.h"
 #include "preset_r_mode.h"
 #include "preset_w_mode.h"
@@ -496,6 +497,11 @@ void handler_MscConnect(int32_t data) {
 
 void handler_Trigger(int32_t data) {
     u8 input = device_config.flip ? 7 - data : data;
+    // external clock (A3): route the configured Tr input to MP when it owns the
+    // clock; if MP consumes the edge, skip the normal script dispatch.
+    if (input == MP_EXT_CLOCK_INPUT &&
+        meadowphysics_external_clock(gpio_get_pin_value(A00 + data)))
+        return;
     if (!ss_get_mute(&scene_state, input)) {
         bool tr_state = gpio_get_pin_value(A00 + data);
         if (tr_state) {
@@ -524,6 +530,9 @@ void handler_ScreenRefresh(int32_t data) {
         case M_HELP: screen_dirty = screen_refresh_help(); break;
         case M_LIVE: screen_dirty = screen_refresh_live(); break;
         case M_EDIT: screen_dirty = screen_refresh_edit(); break;
+        case M_MEADOWPHYSICS:
+            screen_dirty = screen_refresh_meadowphysics();
+            break;
     }
 
     u8 grid = 0;
@@ -554,8 +563,12 @@ void handler_EventTimer(int32_t data) {
 }
 
 void handler_AppCustom(int32_t data) {
-    // If we need multiple custom event handlers then we can use an enum in the
-    // data argument. For now, we're just using it for the metro
+    // data selects the custom event source: 0 = metro, 1 = meadowphysics clock.
+    if (data == 1) {
+        meadowphysics_clock_tick();
+        scene_state.grid.grid_dirty = 1;  // redraw MP grid on each tick
+        return;
+    }
     if (ss_get_script_len(&scene_state, METRO_SCRIPT)) {
         set_metro_icon(true);
         run_script(&scene_state, METRO_SCRIPT);
@@ -764,6 +777,9 @@ void check_events(void) {
 
 // defined in globals.h
 void set_mode(tele_mode_t m) {
+    // leaving MP: stop its clock, release output ownership, gates low
+    if (mode == M_MEADOWPHYSICS && m != M_MEADOWPHYSICS)
+        meadowphysics_mode_exit();
     last_mode = mode;
     switch (m) {
         case M_LIVE:
@@ -777,6 +793,10 @@ void set_mode(tele_mode_t m) {
         case M_PATTERN:
             set_pattern_mode();
             mode = M_PATTERN;
+            break;
+        case M_MEADOWPHYSICS:
+            set_meadowphysics_mode();
+            mode = M_MEADOWPHYSICS;
             break;
         case M_PRESET_W:
             set_preset_w_mode();
@@ -839,6 +859,9 @@ void process_keypress(uint8_t key, uint8_t mod_key, bool is_held_key,
             process_live_keys(key, mod_key, is_held_key, false, &scene_state);
             break;
         case M_PATTERN: process_pattern_keys(key, mod_key, is_held_key); break;
+        case M_MEADOWPHYSICS:
+            process_meadowphysics_keys(key, mod_key, is_held_key);
+            break;
         case M_PRESET_W:
             process_preset_w_keys(key, mod_key, is_held_key);
             break;
@@ -885,6 +908,14 @@ bool process_global_keys(uint8_t k, uint8_t m, bool is_held_key) {
         if (mode == M_HELP)
             set_last_mode();
         else { set_mode(M_HELP); }
+        return true;
+    }
+    // <alt>-M: toggle meadowphysics mode
+    else if (match_alt(m, k, HID_M)) {
+        if (mode == M_MEADOWPHYSICS)
+            set_last_mode();
+        else
+            set_mode(M_MEADOWPHYSICS);
         return true;
     }
     // <F1> through <F8>: run corresponding script
@@ -1038,6 +1069,7 @@ void tele_metro_reset() {
 }
 
 void tele_tr(uint8_t i, int16_t v) {
+    if (meadowphysics_suppresses_output()) return;
     uint32_t pin = B08 + (device_config.flip ? 3 - i : i);
 
     if (v)
@@ -1075,6 +1107,7 @@ void trPulseTimer_callback(void* obj) {
 }
 
 void tele_cv(uint8_t i, int16_t v, uint8_t s) {
+    if (meadowphysics_suppresses_output()) return;
     int16_t t = v + aout[i].off;
     if (t < 0)
         t = 0;
