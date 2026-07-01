@@ -19,6 +19,8 @@ runs on its own internal clock (or an external clock on trigger input 1).
 - `V` — cycle voice mode (`1V` `2V` `4V` `8T`)
 - `X` — toggle external clock (trigger input 1)
 - `-` / `=` — tempo down / up
+- `[` / `]` — scale (7 diatonic modes + chromatic); counter rows map to scale
+  degrees, so pitch (1V/2V/4V) follows the selected scale
 
 ### Grid (16×8)
 

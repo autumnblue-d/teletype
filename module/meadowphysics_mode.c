@@ -20,6 +20,7 @@
 #include "events.h"
 #include "font.h"
 #include "monome.h"  // monomeLedBuffer, monome_is_vari
+#include "music.h"   // SCALE_INT (diatonic mode intervals)
 #include "region.h"
 #include "timers.h"
 #include "util.h"  // rnd, itoa
@@ -35,6 +36,13 @@
 
 // tempo nudge per key press (ms of edge interval)
 #define MP_TEMPO_STEP 4
+
+// scales: 7 diatonic modes (from libavr32 SCALE_INT) + chromatic
+#define MP_SCALE_COUNT 8
+static const char* const mp_scale_name[MP_SCALE_COUNT] = {
+    "IONIAN", "DORIAN",  "PHRYG",   "LYDIAN",
+    "MIXOLY", "AEOLIAN", "LOCRIAN", "CHROMA"
+};
 
 static mp_engine_t mp_eng;
 static mp_clock_t mp_clk;
@@ -70,6 +78,20 @@ static void run_clock(uint8_t phase) {
     dirty = true;
 }
 
+// Recompute the engine's pitch table from the selected scale. Rows map to
+// scale degrees over an octave; scale 0-6 are the diatonic modes (SCALE_INT),
+// 7 is chromatic. Called on mode enter and whenever the scale changes.
+static void mp_apply_scale(void) {
+    uint8_t iv[8];
+    uint8_t s = mp_eng.cfg.scale;
+    iv[0] = 0;
+    if (s < 7)
+        for (uint8_t i = 0; i < 7; i++) iv[i + 1] = SCALE_INT[s][i];
+    else  // chromatic
+        for (uint8_t i = 1; i < 8; i++) iv[i] = 1;
+    mp_engine_calc_scale(&mp_eng, iv);
+}
+
 void set_meadowphysics_mode(void) {
     if (!initialized) {
         mp_engine_init(&mp_eng, mp_binding_output(), &mp_rnd, NULL);
@@ -89,6 +111,8 @@ void set_meadowphysics_mode(void) {
         mp_engine_reset(&mp_eng);
         stopped = false;
     }
+    if (mp_eng.cfg.scale >= MP_SCALE_COUNT) mp_eng.cfg.scale = 0;
+    mp_apply_scale();  // populate the pitch table from cfg.scale
     active = true;
     dirty = true;
     if (!timer_enabled) {
@@ -215,6 +239,19 @@ void process_meadowphysics_keys(uint8_t key, uint8_t mod_key,
         set_period(mp_clk.period > MP_TEMPO_STEP ? mp_clk.period - MP_TEMPO_STEP
                                                  : MP_CLOCK_PERIOD_MIN);
     }
+    else if (match_no_mod(mod_key, key,
+                          HID_OPEN_BRACKET)) {  // '[' : prev scale
+        mp_eng.cfg.scale =
+            (mp_eng.cfg.scale + MP_SCALE_COUNT - 1) % MP_SCALE_COUNT;
+        mp_apply_scale();
+        dirty = true;
+    }
+    else if (match_no_mod(mod_key, key,
+                          HID_CLOSE_BRACKET)) {  // ']' : next scale
+        mp_eng.cfg.scale = (mp_eng.cfg.scale + 1) % MP_SCALE_COUNT;
+        mp_apply_scale();
+        dirty = true;
+    }
 }
 
 // Brightness levels for the OLED (label / value / title).
@@ -294,8 +331,12 @@ uint8_t screen_refresh_meadowphysics(void) {
         font_string_region_clip(&line[5], mp_voice_name[mp_eng.cfg.voice_mode],
                                 48, 0, MP_S_VALUE, 0);
         font_string_region_clip(&line[6], "SCALE", 0, 0, MP_S_LABEL, 0);
-        mp_num(6, 48, mp_eng.cfg.scale, MP_S_VALUE);
-        font_string_region_clip(&line[7], "V:VOICE X:EXTCLK", 0, 0, MP_S_DIM,
+        font_string_region_clip(
+            &line[6],
+            mp_scale_name[mp_eng.cfg.scale < MP_SCALE_COUNT ? mp_eng.cfg.scale
+                                                            : 0],
+            48, 0, MP_S_VALUE, 0);
+        font_string_region_clip(&line[7], "V:VOICE [ ]:SCALE", 0, 0, MP_S_DIM,
                                 0);
     }
     else {  // MP_VIEW_POSITIONS: detail for the selected row
