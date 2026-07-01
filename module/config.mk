@@ -145,6 +145,7 @@ CSRCS = \
 	../libavr32/src/usb/ftdi/uhi_ftdi.c			\
 	../libavr32/src/usb/hid/hid.c				\
 	../libavr32/src/usb/hid/uhi_hid.c			\
+	../libavr32/src/usb/hub/uhi_hub.c			\
 	../libavr32/src/usb/midi/uhi_midi.c			\
 	../libavr32/src/usb/midi/midi.c				\
 	../libavr32/src/usb/msc/msc.c				\
@@ -186,6 +187,7 @@ INC_PATH = \
 	../src/usb/cdc						\
 	../src/usb/ftdi						\
 	../src/usb/hid						\
+	../src/usb/hub						\
 	../src/usb/midi						\
 	../src/usb/msc						\
 	../conf							\
