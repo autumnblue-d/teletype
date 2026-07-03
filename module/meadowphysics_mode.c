@@ -50,11 +50,11 @@ static mp_grid_state_t mp_grid;
 static softTimer_t mpClockTimer = { .next = NULL, .prev = NULL };
 
 static bool initialized = false;  // engine/clock constructed once per session
-static bool active = false;       // MP mode currently front-most
-static bool writing = false;  // inside our own output write (ownership gate)
+static bool active = false;  // MP view is front-most (drives keyboard + grid)
+static bool mp_running = false;  // engine playing: clock ticking, owns CV/TR
+static bool writing = false;     // inside our own output write (ownership gate)
 static bool timer_enabled = false;
-static bool stopped = false;  // transport: all rows parked
-static bool dirty = true;     // screen needs redraw
+static bool dirty = true;  // screen needs redraw
 static uint8_t view = MP_VIEW_POSITIONS;
 
 // RNG adapter for the MP_RULE_RND rule (engine takes an injected source).
@@ -92,64 +92,90 @@ static void mp_apply_scale(void) {
     mp_engine_calc_scale(&mp_eng, iv);
 }
 
-void set_meadowphysics_mode(void) {
-    if (!initialized) {
-        mp_engine_init(&mp_eng, mp_binding_output(), &mp_rnd, NULL);
-        mp_clock_init(&mp_clk);
-        mp_grid_state_init(&mp_grid);
-        initialized = true;
-    }
-    // Load this scene's MP config. Re-arm only if it actually changed (e.g. a
-    // scene was loaded while away), so a quick mode toggle doesn't restart a
-    // running sequence.
-    if (memcmp(&mp_eng.cfg, &scene_state.mp, sizeof(mp_config_t)) != 0) {
-        mp_eng.cfg = scene_state.mp;
-        // A stale/old-layout flash scene can hold out-of-range values that
-        // would index out of bounds; fall back to defaults if so.
-        if (!mp_engine_config_valid(&mp_eng.cfg))
-            mp_engine_set_defaults(&mp_eng.cfg);
-        mp_engine_reset(&mp_eng);
-        stopped = false;
-    }
+// Load the current scene's MP config into the engine, sanitize it, arm the
+// counters, and rebuild the pitch table.
+static void mp_load_from_scene(void) {
+    mp_eng.cfg = scene_state.mp;
+    // A stale/old-layout flash scene can hold out-of-range values that would
+    // index out of bounds; fall back to defaults if so.
+    if (!mp_engine_config_valid(&mp_eng.cfg))
+        mp_engine_set_defaults(&mp_eng.cfg);
     if (mp_eng.cfg.scale >= MP_SCALE_COUNT) mp_eng.cfg.scale = 0;
-    mp_apply_scale();  // populate the pitch table from cfg.scale
-    active = true;
-    dirty = true;
-    if (!timer_enabled) {
-        timer_add(&mpClockTimer, mp_clk.period, &mpClockTimer_callback, NULL);
-        timer_enabled = true;
-    }
+    mp_engine_reset(&mp_eng);
+    mp_apply_scale();
 }
 
+// Construct the engine/clock/grid once per session and load the scene config.
+static void mp_init_once(void) {
+    if (initialized) return;
+    mp_engine_init(&mp_eng, mp_binding_output(), &mp_rnd, NULL);
+    mp_clock_init(&mp_clk);
+    mp_grid_state_init(&mp_grid);
+    mp_load_from_scene();
+    initialized = true;
+}
+
+// Enter the MP view (front-most). Does NOT start the engine -- MP runs
+// independently of whether you're looking at it (see meadowphysics_toggle_run).
+void set_meadowphysics_mode(void) {
+    mp_init_once();
+    // If the scene's MP config changed while we were away (e.g. a scene was
+    // loaded), reload it; otherwise leave a running sequence undisturbed.
+    if (memcmp(&mp_eng.cfg, &scene_state.mp, sizeof(mp_config_t)) != 0)
+        mp_load_from_scene();
+    active = true;
+    dirty = true;
+}
+
+// Leave the MP view. The engine keeps running in the background (MP owns the
+// outputs until explicitly stopped); we only relinquish the keyboard/grid.
 void meadowphysics_mode_exit(void) {
-    // Persist the working config back to the scene so a subsequent scene save
-    // (preset-write mode) captures it. You always leave MP before saving.
+    // Persist the working config back to the scene so a later scene save
+    // captures it.
     scene_state.mp = mp_eng.cfg;
-    if (timer_enabled) {
-        timer_remove(&mpClockTimer);
-        timer_enabled = false;
-    }
     active = false;
-    // Release ownership, force gates low; CV left at its last value (decision
-    // #2 note 4). active is now false, so these writes pass the ownership gate.
-    for (uint8_t i = 0; i < 4; i++) tele_tr(i, 0);
+}
+
+// Play/pause the engine (Space in the MP view, or alt-P from anywhere).
+// Running owns the CV/TR outputs; stopping releases them back to scripts.
+void meadowphysics_toggle_run(void) {
+    mp_init_once();
+    if (mp_running) {
+        mp_running = false;
+        if (timer_enabled) {
+            timer_remove(&mpClockTimer);
+            timer_enabled = false;
+        }
+        // Release ownership: gates low. mp_running is now false, so these
+        // writes pass the suppression gate; CV is left at its last value.
+        for (uint8_t i = 0; i < 4; i++) tele_tr(i, 0);
+    }
+    else {
+        mp_running = true;
+        if (!timer_enabled) {
+            timer_add(&mpClockTimer, mp_clk.period, &mpClockTimer_callback,
+                      NULL);
+            timer_enabled = true;
+        }
+    }
+    dirty = true;
 }
 
 void meadowphysics_clock_tick(void) {
-    if (!active) return;
+    if (!mp_running) return;
     uint8_t phase;
     if (mp_clock_internal_fire(&mp_clk, &phase)) run_clock(phase);
 }
 
 bool meadowphysics_external_clock(uint8_t level) {
-    if (!active || !mp_clk.external) return false;
+    if (!mp_running || !mp_clk.external) return false;
     uint8_t phase;
     if (mp_clock_external_edge(&mp_clk, level, &phase)) run_clock(phase);
     return true;
 }
 
 bool meadowphysics_suppresses_output(void) {
-    return active && !writing;
+    return mp_running && !writing;
 }
 
 bool meadowphysics_active(void) {
@@ -172,7 +198,6 @@ void meadowphysics_op_reset(int16_t channel) {
         mp_engine_reset(&mp_eng);
     else if (channel <= MP_ROWS)
         mp_engine_reset_row(&mp_eng, channel - 1);
-    stopped = false;
     dirty = true;
 }
 
@@ -208,20 +233,10 @@ void process_meadowphysics_keys(uint8_t key, uint8_t mod_key,
         dirty = true;
     }
     else if (match_no_mod(mod_key, key, HID_SPACEBAR)) {
-        // transport: stop all rows, or re-arm them
-        if (stopped) {
-            mp_engine_reset(&mp_eng);
-            stopped = false;
-        }
-        else {
-            mp_engine_stop(&mp_eng);
-            stopped = true;
-        }
-        dirty = true;
+        meadowphysics_toggle_run();  // play / pause
     }
     else if (match_no_mod(mod_key, key, HID_R)) {
-        mp_engine_reset(&mp_eng);
-        stopped = false;
+        mp_engine_reset(&mp_eng);  // reset counters (independent of run state)
         dirty = true;
     }
     else if (match_no_mod(mod_key, key, HID_V)) {
@@ -296,7 +311,7 @@ uint8_t screen_refresh_meadowphysics(void) {
     font_string_region_clip(&line[1], "VOICE", 0, 0, MP_S_LABEL, 0);
     font_string_region_clip(&line[1], mp_voice_name[mp_eng.cfg.voice_mode], 42,
                             0, MP_S_VALUE, 0);
-    font_string_region_clip(&line[1], stopped ? "STOP" : "RUN", 96, 0,
+    font_string_region_clip(&line[1], mp_running ? "RUN" : "STOP", 96, 0,
                             MP_S_VALUE, 0);
 
     font_string_region_clip(&line[2], "CLOCK", 0, 0, MP_S_LABEL, 0);

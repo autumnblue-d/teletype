@@ -16,9 +16,14 @@
 // claims exclusive output ownership, and starts the clock timer.
 void set_meadowphysics_mode(void);
 
-// Leave MP mode (called from set_mode when switching away). Stops the clock
-// timer, releases output ownership, and forces gates low.
+// Leave the MP view (called from set_mode when switching away). The engine
+// keeps running in the background; this only relinquishes the keyboard/grid.
 void meadowphysics_mode_exit(void);
+
+// Play/pause the MP engine, independent of which view is front-most. Bound to
+// Space in the MP view and to a global key (alt-P) elsewhere. While running,
+// MP owns the CV/TR outputs; stopping releases them back to scripts.
+void meadowphysics_toggle_run(void);
 
 // Keyboard handler (dispatched from process_keypress).
 void process_meadowphysics_keys(uint8_t key, uint8_t mod_key, bool is_held_key);

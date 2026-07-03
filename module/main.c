@@ -566,7 +566,8 @@ void handler_AppCustom(int32_t data) {
     // data selects the custom event source: 0 = metro, 1 = meadowphysics clock.
     if (data == 1) {
         meadowphysics_clock_tick();
-        scene_state.grid.grid_dirty = 1;  // redraw MP grid on each tick
+        // redraw the grid only while the MP view owns it
+        if (mode == M_MEADOWPHYSICS) scene_state.grid.grid_dirty = 1;
         return;
     }
     if (ss_get_script_len(&scene_state, METRO_SCRIPT)) {
@@ -916,6 +917,11 @@ bool process_global_keys(uint8_t k, uint8_t m, bool is_held_key) {
             set_last_mode();
         else
             set_mode(M_MEADOWPHYSICS);
+        return true;
+    }
+    // <alt>-P: play/pause meadowphysics from any mode (it runs in background)
+    else if (match_alt(m, k, HID_P)) {
+        meadowphysics_toggle_run();
         return true;
     }
     // <F1> through <F8>: run corresponding script
