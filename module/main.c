@@ -42,6 +42,7 @@
 #include "grid.h"
 #include "help_mode.h"
 #include "keyboard_helper.h"
+#include "kria_mode.h"
 #include "live_mode.h"
 #include "meadowphysics_mode.h"
 #include "pattern_mode.h"
@@ -502,6 +503,9 @@ void handler_Trigger(int32_t data) {
     if (input == MP_EXT_CLOCK_INPUT &&
         meadowphysics_external_clock(gpio_get_pin_value(A00 + data)))
         return;
+    if (input == KR_EXT_CLOCK_INPUT &&
+        kria_external_clock(gpio_get_pin_value(A00 + data)))
+        return;
     if (!ss_get_mute(&scene_state, input)) {
         bool tr_state = gpio_get_pin_value(A00 + data);
         if (tr_state) {
@@ -533,6 +537,7 @@ void handler_ScreenRefresh(int32_t data) {
         case M_MEADOWPHYSICS:
             screen_dirty = screen_refresh_meadowphysics();
             break;
+        case M_KRIA: screen_dirty = screen_refresh_kria(); break;
     }
 
     u8 grid = 0;
@@ -569,6 +574,20 @@ void handler_AppCustom(int32_t data) {
         // keep the grid animating whenever MP drives it (its view, or while
         // it's playing in the background)
         if (meadowphysics_owns_grid()) scene_state.grid.grid_dirty = 1;
+        return;
+    }
+    // Kria: 2 = clock tick, 10-13 = note-off, 20-23 = repeat (see kria_mode.h).
+    if (data == 2) {
+        kria_clock_tick();
+        if (kria_owns_grid()) scene_state.grid.grid_dirty = 1;
+        return;
+    }
+    if (data >= 10 && data < 14) {
+        kria_service_note_off((uint8_t)(data - 10));
+        return;
+    }
+    if (data >= 20 && data < 24) {
+        kria_service_repeat((uint8_t)(data - 20));
         return;
     }
     if (ss_get_script_len(&scene_state, METRO_SCRIPT)) {
@@ -782,6 +801,9 @@ void set_mode(tele_mode_t m) {
     // leaving MP: stop its clock, release output ownership, gates low
     if (mode == M_MEADOWPHYSICS && m != M_MEADOWPHYSICS)
         meadowphysics_mode_exit();
+    // leaving Kria: persist edits, relinquish keyboard/grid (engine keeps
+    // running in the background if it was playing)
+    if (mode == M_KRIA && m != M_KRIA) kria_mode_exit();
     last_mode = mode;
     switch (m) {
         case M_LIVE:
@@ -799,6 +821,10 @@ void set_mode(tele_mode_t m) {
         case M_MEADOWPHYSICS:
             set_meadowphysics_mode();
             mode = M_MEADOWPHYSICS;
+            break;
+        case M_KRIA:
+            set_kria_mode();
+            mode = M_KRIA;
             break;
         case M_PRESET_W:
             set_preset_w_mode();
@@ -864,6 +890,7 @@ void process_keypress(uint8_t key, uint8_t mod_key, bool is_held_key,
         case M_MEADOWPHYSICS:
             process_meadowphysics_keys(key, mod_key, is_held_key);
             break;
+        case M_KRIA: process_kria_keys(key, mod_key, is_held_key); break;
         case M_PRESET_W:
             process_preset_w_keys(key, mod_key, is_held_key);
             break;
@@ -923,6 +950,14 @@ bool process_global_keys(uint8_t k, uint8_t m, bool is_held_key) {
     // <alt>-P: play/pause meadowphysics from any mode (it runs in background)
     else if (match_alt(m, k, HID_P)) {
         meadowphysics_toggle_run();
+        return true;
+    }
+    // <alt>-K: toggle kria mode
+    else if (match_alt(m, k, HID_K)) {
+        if (mode == M_KRIA)
+            set_last_mode();
+        else
+            set_mode(M_KRIA);
         return true;
     }
     // <F1> through <F8>: run corresponding script
@@ -1077,6 +1112,7 @@ void tele_metro_reset() {
 
 void tele_tr(uint8_t i, int16_t v) {
     if (meadowphysics_suppresses_output(i)) return;
+    if (kria_suppresses_output(i)) return;
     uint32_t pin = B08 + (device_config.flip ? 3 - i : i);
 
     if (v)
@@ -1115,6 +1151,7 @@ void trPulseTimer_callback(void* obj) {
 
 void tele_cv(uint8_t i, int16_t v, uint8_t s) {
     if (meadowphysics_suppresses_output(i)) return;
+    if (kria_suppresses_output(i)) return;
     int16_t t = v + aout[i].off;
     if (t < 0)
         t = 0;

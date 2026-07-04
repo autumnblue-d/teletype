@@ -67,4 +67,8 @@ void flash_get_device_config(device_config_t*);
 void flash_get_scale_bank(uint8_t (*bank)[8]);
 void flash_update_scale_bank(uint8_t (*bank)[8]);
 
+// Global Kria song bank (single instance in nvram_data_t; not per-scene).
+void flash_get_kria(kria_config_t* dst);
+void flash_update_kria(const kria_config_t* src);
+
 #endif

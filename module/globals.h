@@ -27,6 +27,7 @@ typedef enum {
     M_EDIT,
     M_PATTERN,
     M_MEADOWPHYSICS,
+    M_KRIA,
     M_PRESET_W,
     M_PRESET_R,
     M_HELP

@@ -16,7 +16,11 @@
 // per-scene mp_config_t), then -> 0x24 for the global MP scale bank in
 // nvram_data_t. Each layout change forces a flash reinit on upgrade (no
 // per-scene migration path).
-#define FIRSTRUN_KEY 0x24
+// 0x24 -> 0x25: nvram layout changed for Kria (SCENE_SLOTS 30->20 + global
+// kria_config_t bank). The bump forces a clean re-init on upgrade even without
+// a chip erase. The Kria bank itself isn't seeded here (an erased/invalid bank
+// fails kria_engine_config_valid and the mode falls back to defaults on load).
+#define FIRSTRUN_KEY 0x25
 
 static grid_data_t grid_data;
 
@@ -172,6 +176,14 @@ void flash_get_scale_bank(uint8_t (*bank)[8]) {
 
 void flash_update_scale_bank(uint8_t (*bank)[8]) {
     flashc_memcpy((void*)&f.scale_bank, bank, sizeof(f.scale_bank), true);
+}
+
+void flash_get_kria(kria_config_t* dst) {
+    memcpy(dst, &f.kria, sizeof(f.kria));
+}
+
+void flash_update_kria(const kria_config_t* src) {
+    flashc_memcpy((void*)&f.kria, src, sizeof(f.kria), true);
 }
 
 void flash_update_device_config(device_config_t* device_config) {
