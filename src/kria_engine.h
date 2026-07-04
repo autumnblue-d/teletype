@@ -54,9 +54,15 @@
 #define KR_SYNC_TIMEDIV 0x01
 
 // i2c follower bits for kria_config_t.i2c_enable / i2c_route (see kria_i2c.h).
+// Only TXo + JF are wired for output today; the rest are reserved so the i2c
+// view can match Ansible's follower layout (grid_KR_ii).
 #define KR_I2C_TXO 0x01
 #define KR_I2C_JF 0x02
-#define KR_I2C_ALL 0x03
+#define KR_I2C_ER301 0x04    // reserved (not yet emitting)
+#define KR_I2C_DISTING 0x08  // reserved
+#define KR_I2C_WSYN 0x10     // reserved
+#define KR_I2C_CROW 0x20     // reserved
+#define KR_I2C_ALL 0x03      // default routing = the implemented followers
 
 typedef struct {
     uint8_t tr[16];

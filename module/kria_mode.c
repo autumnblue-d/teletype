@@ -401,33 +401,34 @@ static void km_config_key(uint8_t x, uint8_t y, uint8_t z) {
         kgrid.note_div_sync = !kgrid.note_div_sync;
 }
 
-// i2c view (Ansible's follower routing): row 0 = follower enable (TXo at col 0,
-// JF at col 2); rows 2/3 = per-track routing for TXo / JF (cols 0-3 = tracks).
+// i2c view -- matches Ansible's Kria ii follower layout (grid_KR_ii): the
+// follower toggles sit in a vertical block at columns 5-6. Bright = enabled;
+// multiple can be active. Only TELEXo + Just Friends emit today; the other four
+// are shown dim as placeholders in their Ansible positions.
+//   col 5: Just Friends (y2), TELEXo (y3), ER-301 (y4), Disting EX (y5)
+//   col 6: W/syn (y2), Crow (y3)
+#define KM_LP 2  // placeholder (not-yet-implemented follower)
+
 static void km_i2c_render(void) {
     uint8_t* led = monomeLedBuffer;
-    uint8_t t;
     memset(led, 0, 128);
-    led[0] = (eng.cfg.i2c_enable & KR_I2C_TXO) ? KM_LB : KM_LD;   // (0,0) TXo on
-    led[2] = (eng.cfg.i2c_enable & KR_I2C_JF) ? KM_LB : KM_LD;    // (2,0) JF on
-    for (t = 0; t < KRIA_NUM_TRACKS; t++) {
-        led[32 + t] = (eng.cfg.i2c_route[t] & KR_I2C_TXO) ? KM_LB : KM_LD;  // row2
-        led[48 + t] = (eng.cfg.i2c_route[t] & KR_I2C_JF) ? KM_LB : KM_LD;   // row3
-    }
+    led[16 * 2 + 5] = (eng.cfg.i2c_enable & KR_I2C_JF) ? KM_LB : KM_LD;   // JF
+    led[16 * 3 + 5] = (eng.cfg.i2c_enable & KR_I2C_TXO) ? KM_LB : KM_LD;  // TXo
+    led[16 * 4 + 5] = KM_LP;  // ER-301  (reserved)
+    led[16 * 5 + 5] = KM_LP;  // Disting EX (reserved)
+    led[16 * 2 + 6] = KM_LP;  // W/syn (reserved)
+    led[16 * 3 + 6] = KM_LP;  // Crow  (reserved)
     km_view_finalize(led);
 }
 
 static void km_i2c_key(uint8_t x, uint8_t y, uint8_t z) {
     if (!z) return;
-    if (y == 0 && x == 0)
-        eng.cfg.i2c_enable ^= KR_I2C_TXO;
-    else if (y == 0 && x == 2)
+    if (x == 5 && y == 2)
         eng.cfg.i2c_enable ^= KR_I2C_JF;
-    else if (y == 2 && x < KRIA_NUM_TRACKS)
-        eng.cfg.i2c_route[x] ^= KR_I2C_TXO;
-    else if (y == 3 && x < KRIA_NUM_TRACKS)
-        eng.cfg.i2c_route[x] ^= KR_I2C_JF;
+    else if (x == 5 && y == 3)
+        eng.cfg.i2c_enable ^= KR_I2C_TXO;
     else
-        return;
+        return;  // reserved followers: no-op until implemented
     cfg_dirty = true;
 }
 
