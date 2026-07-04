@@ -67,8 +67,6 @@ static uint32_t clock_delta = KR_CLOCK_PERIOD_DEFAULT;
 #define KM_VIEW_TIME 1
 #define KM_VIEW_CONFIG 2
 #define KM_VIEW_I2C 3
-#define KM_ROUGH_STEP 64  // ms per rough tempo step
-#define KM_FINE_STEP 4    // ms per fine tempo step
 static uint8_t km_view = KM_VIEW_SEQ;
 static uint8_t km_rough = 0;
 static uint8_t km_fine = 0;
@@ -331,81 +329,123 @@ static void km_view_finalize(uint8_t* led) {
     }
 }
 
+// tempo <-> rough/fine (Ansible: period = 20 + rough*16 + fine).
 static void km_sync_rc_from_period(void) {
-    int d = (int)clk.period - KR_CLOCK_PERIOD_MIN;
+    int d = (int)clk.period - 20;
     if (d < 0) d = 0;
-    km_rough = d / KM_ROUGH_STEP;
+    km_rough = d / 16;
     if (km_rough > 15) km_rough = 15;
-    km_fine = (d - km_rough * KM_ROUGH_STEP) / KM_FINE_STEP;
-    if (km_fine > 15) km_fine = 15;
+    km_fine = d % 16;
+}
+static void km_apply_rc(void) {
+    km_set_period((uint16_t)(20 + km_rough * 16 + km_fine));
 }
 
-static void km_apply_tempo_rc(void) {
-    km_set_period((uint16_t)(KR_CLOCK_PERIOD_MIN + km_rough * KM_ROUGH_STEP +
-                             km_fine * KM_FINE_STEP));
-}
-
-// Time view: rough tempo on row 1, fine on row 2 (matches Ansible Key 1).
+// Time view -- matches Ansible refresh_clock (grid_time_interval1.3): pulse
+// indicator (row 0), rough (row 1) / fine (row 2) selected cells, DEC/INC
+// keyset (row 4 x6-9), the note-division-sync box (cols 0-3 rows 4-7), the
+// sync-mode block (x7-8 rows 6-7) and division-sync (x12 r5 / x12-15 r7).
 static void km_time_render(void) {
     uint8_t* led = monomeLedBuffer;
     uint8_t i;
     memset(led, 0, 128);
-    for (i = 0; i < 16; i++) led[16 + i] = KM_LD;
-    led[16 + km_rough] = KM_LB;
-    for (i = 0; i < 16; i++) led[32 + i] = KM_LD;
-    led[32 + km_fine] = KM_LB;
-    led[0] = KM_LB;  // top-left marker: Time view active
+    led[eng.rt.clock_count & 0x0f] = KM_LD;  // pulse indicator (row 0)
+    if (clk.external) {
+        memset(led + 16, 3, 16);  // ext: division-mult row (cosmetic)
+    }
+    else {
+        led[16 + km_rough] = 12;  // rough (row 1)
+        led[32 + km_fine] = 8;    // fine (row 2)
+        led[64 + 6] = 7;          // DEC/INC keyset (row 4)
+        led[64 + 7] = 3;
+        led[64 + 8] = 3;
+        led[64 + 9] = 7;
+    }
+    i = kgrid.note_div_sync ? 7 : 3;  // note-division-sync box (cols 0-3, r4-7)
+    led[64 + 0] = i; led[80 + 0] = i; led[96 + 0] = i; led[112 + 0] = i;
+    led[64 + 1] = i; led[64 + 2] = i; led[64 + 3] = i;
+    led[80 + 3] = i; led[96 + 3] = i; led[112 + 3] = i;
+    led[112 + 2] = i; led[112 + 1] = i;
+    i = (eng.cfg.sync_mode & KR_SYNC_TIMEDIV) ? 7 : 3;  // sync-mode (x7-8, r6-7)
+    led[96 + 7] = i; led[96 + 8] = i; led[112 + 7] = i; led[112 + 8] = i;
+    led[80 + 12] = (kgrid.div_sync == 1) ? 7 : 3;  // division-sync: track (x12 r5)
+    i = (kgrid.div_sync == 2) ? 7 : 3;             // all (x12-15 r7)
+    led[112 + 12] = i; led[112 + 13] = i; led[112 + 14] = i; led[112 + 15] = i;
     km_view_finalize(led);
 }
 
 static void km_time_key(uint8_t x, uint8_t y, uint8_t z) {
     if (!z) return;
-    if (y == 1) {
-        km_rough = x;
-        km_apply_tempo_rc();
+    if (!clk.external) {
+        if (y == 1) {
+            km_rough = x;
+            km_apply_rc();
+        }
+        else if (y == 2) {
+            km_fine = x;
+            km_apply_rc();
+        }
+        else if (y == 4 && x >= 6 && x <= 9) {  // incremental time adjust
+            int inc = (x == 6) ? -4 : (x == 7) ? -1 : (x == 8) ? 1 : 4;
+            int p = (int)clk.period + inc;
+            if (p < KR_CLOCK_PERIOD_MIN) p = KR_CLOCK_PERIOD_MIN;
+            km_set_period((uint16_t)p);
+            km_sync_rc_from_period();
+        }
     }
-    else if (y == 2) {
-        km_fine = x;
-        km_apply_tempo_rc();
+    if (y >= 4 && x <= 3) kgrid.note_div_sync ^= 1;
+    if (x >= 7 && x <= 8 && y >= 6) {
+        eng.cfg.sync_mode ^= KR_SYNC_TIMEDIV;
+        cfg_dirty = true;
     }
+    if (x >= 12 && y == 5) kgrid.div_sync = (kgrid.div_sync == 1) ? 0 : 1;
+    if (x >= 12 && y == 7) kgrid.div_sync = (kgrid.div_sync == 2) ? 0 : 2;
 }
 
-// Config view (matches Ansible Key 2): note-sync, loop-sync, note-tie,
-// meta-reset, plus the tmul fan-out flags. Cells are lit bright when
-// on/selected, dim otherwise.
+// Config view -- matches Ansible refresh_kria_config (grid_KR_config):
+// brightness (row 0 x0-2), the note-sync box (cols 2-5 rows 2-5), loop-sync
+// (x10 r3 = track, x10-13 r5 = all), note-tie (x8 r7), tuning (x14 r7),
+// meta-reset (x15 r7).
 static void km_config_render(void) {
     uint8_t* led = monomeLedBuffer;
-    uint8_t m;
+    uint8_t i;
     memset(led, 0, 128);
-    led[0] = kgrid.note_sync ? KM_LB : KM_LD;       // (0,0) note sync
-    for (m = 0; m < 3; m++)                          // (2, 0..2) loop sync
-        led[16 * m + 2] = (kgrid.loop_sync == m) ? KM_LB : KM_LD;
-    led[4] = eng.cfg.dur_tie_mode ? KM_LB : KM_LD;   // (4,0) note tie
-    led[6] = eng.cfg.meta_reset_all ? KM_LB : KM_LD;  // (6,0) meta reset
-    for (m = 0; m < 3; m++)                          // (8, 0..2) div sync
-        led[16 * m + 8] = (kgrid.div_sync == m) ? KM_LB : KM_LD;
-    led[10] = kgrid.note_div_sync ? KM_LB : KM_LD;   // (10,0) note div sync
+    memset(led, 4, 3);                        // brightness options (row 0 x0-2)
+    led[monome_is_vari() ? 2 : 0] = 12;       // current grid type (auto)
+    i = kgrid.note_sync ? 7 : 3;              // note-sync box (cols 2-5, r2-5)
+    led[32 + 2] = i; led[32 + 3] = i; led[32 + 4] = i; led[32 + 5] = i;
+    led[48 + 2] = i; led[48 + 5] = i;
+    led[64 + 2] = i; led[64 + 5] = i;
+    led[80 + 2] = i; led[80 + 3] = i; led[80 + 4] = i; led[80 + 5] = i;
+    led[48 + 10] = (kgrid.loop_sync == 1) ? 7 : 3;  // loop-sync: track (x10 r3)
+    i = (kgrid.loop_sync == 2) ? 7 : 3;             // all (x10-13 r5)
+    led[80 + 10] = i; led[80 + 11] = i; led[80 + 12] = i; led[80 + 13] = i;
+    led[112 + 8] = eng.cfg.dur_tie_mode ? 8 : 4;    // note-tie (x8 r7)
+    led[112 + 14] = 4;                              // tuning button (x14 r7)
+    led[112 + 15] = eng.cfg.meta_reset_all ? 8 : 4;  // meta-reset (x15 r7)
     km_view_finalize(led);
 }
 
 static void km_config_key(uint8_t x, uint8_t y, uint8_t z) {
     if (!z) return;
-    if (x == 0 && y == 0)
-        kgrid.note_sync = !kgrid.note_sync;
-    else if (x == 2 && y < 3)
-        kgrid.loop_sync = y;
-    else if (x == 4 && y == 0) {
+    if (x < 8 && y > 0 && y < 7)
+        kgrid.note_sync ^= 1;
+    else if (y == 0 && x < 3) {
+        // grid brightness is auto-detected here; kept for layout parity
+    }
+    else if (y == 3)
+        kgrid.loop_sync = (kgrid.loop_sync == 1) ? 0 : 1;
+    else if (y == 5)
+        kgrid.loop_sync = (kgrid.loop_sync == 2) ? 0 : 2;
+    else if (y == 7 && x == 8) {
         eng.cfg.dur_tie_mode = !eng.cfg.dur_tie_mode;
         cfg_dirty = true;
     }
-    else if (x == 6 && y == 0) {
+    else if (y == 7 && x == 15) {
         eng.cfg.meta_reset_all = !eng.cfg.meta_reset_all;
         cfg_dirty = true;
     }
-    else if (x == 8 && y < 3)
-        kgrid.div_sync = y;
-    else if (x == 10 && y == 0)
-        kgrid.note_div_sync = !kgrid.note_div_sync;
+    // x==14 (tuning) not ported
 }
 
 // The i2c view (Ansible ii toggle + per-follower config pages) is shared with
