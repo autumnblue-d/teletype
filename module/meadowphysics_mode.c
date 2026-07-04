@@ -174,8 +174,21 @@ bool meadowphysics_external_clock(uint8_t level) {
     return true;
 }
 
-bool meadowphysics_suppresses_output(void) {
-    return mp_running && !writing;
+// How many output channels (CV and TR, 0-indexed) MP claims for the current
+// voice mode: 1V uses 1, 2V uses 2, 4V/8T use all 4. The rest are free.
+static uint8_t mp_owned_channels(void) {
+    switch (mp_eng.cfg.voice_mode) {
+        case MP_1V: return 1;
+        case MP_2V: return 2;
+        default: return 4;  // 4V, 8T
+    }
+}
+
+// True if a script write to output channel `ch` must be suppressed: MP is
+// playing, this isn't MP's own write, and `ch` is one MP uses in this voice
+// mode. Channels MP doesn't use stay free for scripts.
+bool meadowphysics_suppresses_output(uint8_t ch) {
+    return mp_running && !writing && ch < mp_owned_channels();
 }
 
 // MP drives the monome grid when it's the front view OR while it's playing --
@@ -245,6 +258,10 @@ void process_meadowphysics_keys(uint8_t key, uint8_t mod_key,
     }
     else if (match_no_mod(mod_key, key, HID_V)) {
         mp_eng.cfg.voice_mode = (mp_eng.cfg.voice_mode + 1) & 0x3;
+        // release gates on channels the new (narrower) voice mode no longer
+        // uses, so scripts get clean TR channels
+        if (mp_running)
+            for (uint8_t i = mp_owned_channels(); i < 4; i++) tele_tr(i, 0);
         dirty = true;
     }
     else if (match_no_mod(mod_key, key, HID_X)) {

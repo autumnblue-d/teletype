@@ -41,9 +41,10 @@ void meadowphysics_clock_tick(void);
 // otherwise (input is handled normally).
 bool meadowphysics_external_clock(uint8_t level);
 
-// Exclusive output ownership (decision #1): true when script CV/TR writes must
-// be suppressed -- MP mode is active and not currently in its own write.
-bool meadowphysics_suppresses_output(void);
+// Output ownership: true when a script write to CV/TR channel `ch` (0-3) must
+// be suppressed -- MP is playing and uses `ch` in the current voice mode.
+// Channels MP doesn't use (e.g. CV2-4/TR2-4 in 1V) stay free for scripts.
+bool meadowphysics_suppresses_output(uint8_t ch);
 
 // True when MP should drive the monome grid: while its view is front-most, or
 // while it's playing (so a running sequence keeps animating the grid even from

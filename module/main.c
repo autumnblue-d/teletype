@@ -1076,7 +1076,7 @@ void tele_metro_reset() {
 }
 
 void tele_tr(uint8_t i, int16_t v) {
-    if (meadowphysics_suppresses_output()) return;
+    if (meadowphysics_suppresses_output(i)) return;
     uint32_t pin = B08 + (device_config.flip ? 3 - i : i);
 
     if (v)
@@ -1114,7 +1114,7 @@ void trPulseTimer_callback(void* obj) {
 }
 
 void tele_cv(uint8_t i, int16_t v, uint8_t s) {
-    if (meadowphysics_suppresses_output()) return;
+    if (meadowphysics_suppresses_output(i)) return;
     int16_t t = v + aout[i].off;
     if (t < 0)
         t = 0;

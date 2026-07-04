@@ -9,10 +9,12 @@ destination row's count and/or speed.
 
 `alt-M` shows/hides the Meadowphysics view; `alt-P` (or `space` in the MP view)
 plays/pauses the sequencer. The engine runs **independently of the view**, so
-you can leave MP playing and switch to Edit to work on scripts. **While playing,
-Meadowphysics owns the four CV and four TR outputs** (script CV/TR is
-suppressed); pausing releases them back to scripts. It runs on its own internal
-clock, or an external clock on trigger input 1.
+you can leave MP playing and switch to Edit to work on scripts. While playing,
+Meadowphysics owns **only the CV/TR channels its voice mode uses** — 1 in `1V`,
+2 in `2V`, all 4 in `4V`/`8T` — and script writes to those are suppressed. The
+**remaining outputs stay free for scripts** (e.g. in `1V`, CV 2–4 and TR 2–4;
+in `2V`, CV 3–4 and TR 3–4). Pausing releases everything back to scripts. It
+runs on its own internal clock, or an external clock on trigger input 1.
 
 ### Keys
 
