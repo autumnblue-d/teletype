@@ -58,6 +58,8 @@ static bool mp_running = false;  // engine playing: clock ticking, owns CV/TR
 static bool writing = false;     // inside our own output write (ownership gate)
 static bool timer_enabled = false;
 static bool dirty = true;  // screen needs redraw
+static bool mp_bank_dirty =
+    false;  // scale bank edited, not yet flushed to flash
 static uint8_t view = MP_VIEW_POSITIONS;
 
 // RNG adapter for the MP_RULE_RND rule (engine takes an injected source).
@@ -85,6 +87,14 @@ static void run_clock(uint8_t phase) {
 // map to scale degrees). Called on mode enter and whenever the scale changes.
 static void mp_apply_scale(void) {
     mp_engine_calc_scale(&mp_eng, mp_scale_bank[mp_eng.cfg.scale]);
+}
+
+// Persist the scale bank to flash if edited. Batched (called on leaving the
+// Config view / MP mode) rather than per keystroke, to spare flash wear.
+static void mp_flush_bank(void) {
+    if (!mp_bank_dirty) return;
+    flash_update_scale_bank(mp_scale_bank);
+    mp_bank_dirty = false;
 }
 
 // Load the current scene's MP config into the engine, sanitize it, arm the
@@ -129,6 +139,7 @@ void meadowphysics_mode_exit(void) {
     // Persist the working config back to the scene so a later scene save
     // captures it.
     scene_state.mp = mp_eng.cfg;
+    mp_flush_bank();  // save any scale edits
     active = false;
 }
 
@@ -204,9 +215,9 @@ static bool mp_scale_editor_active(void) {
 void meadowphysics_grid_key(uint8_t x, uint8_t y, uint8_t z) {
     if (!meadowphysics_owns_grid()) return;
     if (mp_scale_editor_active()) {
-        bool edited = mp_grid_scale_key(&mp_eng, mp_scale_bank, x, y, z);
-        mp_apply_scale();  // slot or interval change updates the live scale
-        if (edited) flash_update_scale_bank(mp_scale_bank);  // persist
+        if (mp_grid_scale_key(&mp_eng, mp_scale_bank, x, y, z))
+            mp_bank_dirty = true;  // flushed on leaving the Config view / mode
+        mp_apply_scale();          // slot or interval change updates live scale
     }
     else { mp_grid_process_key(&mp_eng, &mp_grid, x, y, z); }
     dirty = true;
@@ -250,10 +261,12 @@ void process_meadowphysics_keys(uint8_t key, uint8_t mod_key,
 
     if (match_no_mod(mod_key, key, HID_1)) {
         view = MP_VIEW_POSITIONS;
+        mp_flush_bank();  // leaving the Config view: save scale edits
         dirty = true;
     }
     else if (match_no_mod(mod_key, key, HID_2)) {
         view = MP_VIEW_CLOCK;
+        mp_flush_bank();
         dirty = true;
     }
     else if (match_no_mod(mod_key, key, HID_3)) {
