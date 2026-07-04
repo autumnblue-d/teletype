@@ -9,3 +9,7 @@ short = "re-arm native Meadowphysics counters (`0` = all, `1-8` = individual row
 ["MP.STOP"]
 prototype = "MP.STOP x"
 short = "stop native Meadowphysics counters (`0` = all, `1-8` = individual rows)"
+
+["MP.RUN"]
+prototype = "MP.RUN x"
+short = "start (`x` = 1) or stop (`x` = 0) the native Meadowphysics engine"

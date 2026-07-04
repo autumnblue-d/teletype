@@ -36,116 +36,106 @@ Get or change the app that is active on Ansible. Numbering:
  - `6` = teletype expander
 """
 
+["KR.RUN"]
+prototype = "KR.RUN x"
+short = "start (`x` = 1) or stop (`x` = 0) the on-board Kria sequencer"
+
 ["KR.PRE"]
 prototype = "KR.PRE"
 prototype_set = "KR.PRE x"
-short = "return current preset / load preset `x`"
+short = "no-op on native Kria (single global song; kept for compatibility)"
 
 ["KR.PERIOD"]
 prototype = "KR.PERIOD"
 prototype_set = "KR.PERIOD x"
-short = "get/set internal clock period"
+short = "get/set the internal clock period in ms"
 
 ["KR.PAT"]
 prototype = "KR.PAT"
 prototype_set = "KR.PAT x"
-short = "get/set current pattern"
+short = "get/set the active pattern (0-15)"
 
 ["KR.SCALE"]
 prototype = "KR.SCALE"
 prototype_set = "KR.SCALE x"
-short = "get/set current scale"
+short = "get/set the current pattern's scale (bank slot 0-15)"
 
 ["KR.POS"]
 prototype = "KR.POS x y"
 prototype_set = "KR.POS x y z"
-short = "get/set position `z` for track `z`, parameter `y`"
+short = "get/set the play position for track `x`, parameter `y` (set to `z`)"
 description = """
-Set position to `z` for track `x`, parameter `y`.
-
-A value of `0` for `x` means all tracks.
-
-A value of `0` for `y` means all parameters
+Get or set the current step position for track `x` (0-3), parameter `y`.
 
 Parameters:
 
- - `0` = all
- - `1` = trigger
- - `2` = note
- - `3` = octave
- - `4` = length
+ - `0` = trigger
+ - `1` = note
+ - `2` = octave
+ - `3` = duration
+ - `4` = repeat
+ - `5` = alt note
+ - `6` = glide
 """
 
 ["KR.L.ST"]
 prototype = "KR.L.ST x y"
 prototype_set = "KR.L.ST x y z"
-short = "get loop start for track `x`, parameter `y` / set to `z`"
+short = "get/set loop start for track `x`, parameter `y` (set to `z`, 0-15)"
 
 ["KR.L.LEN"]
 prototype = "KR.L.LEN x y"
 prototype_set = "KR.L.LEN x y z"
-short = "get length of track `x`, parameter `y` / set to `z`"
+short = "get/set loop length for track `x`, parameter `y` (set to `z`, 1-16)"
 
 ["KR.RES"]
 prototype = "KR.RES x y"
-short = "reset position to loop start for track `x`, parameter `y`"
+short = "reset all tracks to their loop start (args accepted for compatibility)"
 
 ["KR.CV"]
-prototype = "KR.CV x "
-short = "get the current CV value for channel `x`"
+prototype = "KR.CV x"
+short = "get the current pitch (in semitones) for track `x` (1-indexed)"
 
 ["KR.MUTE"]
 prototype = "KR.MUTE x"
 prototype_set = "KR.MUTE x y"
-short = "get/set mute state for channel `x` (`1` = muted, `0` = unmuted)"
+short = "get/set mute state for track `x` (`1` = muted, `0` = unmuted)"
 
 ["KR.TMUTE"]
 prototype = "KR.TMUTE x"
-short = "toggle mute state for channel `x`"
+short = "toggle mute state for track `x`"
 
 ["KR.CLK"]
 prototype = "KR.CLK x"
-short = "advance the clock for channel `x` (channel must have teletype clocking enabled)"
+short = "advance track `x` one step (track must have teletype clocking enabled)"
 
 ["KR.PG"]
 prototype = "KR.PG"
 prototype_set = "KR.PG x"
-short = "get/set the active page"
-description = """
-Get or change the current parameter page. Numbering:
-
- - `0` = trigger
- - `1` = ratchet
- - `2` = note
- - `3` = alt note
- - `4` = octave
- - `5` = glide
- - `6` = duration
- - `7` = TBD
- - `8` = scale
- - `9` = pattern
-"""
+short = "no-op on native Kria (page selection is grid-only; kept for compatibility)"
 
 ["KR.CUE"]
 prototype = "KR.CUE"
 prototype_set = "KR.CUE x"
-short = "get/set the cued pattern"
-description = """
-Get or change the cued pattern. Numbered from 0.
-"""
+short = "get/set the cued pattern (0-15), applied at the next cue step"
 
 ["KR.DIR"]
-prototype = "KR.DIR"
-prototype_set = "KR.DIR x"
-short = "get/set the step direction"
+prototype = "KR.DIR x"
+prototype_set = "KR.DIR x y"
+short = "get/set the play direction for track `x`"
 description = """
-Get or change the step direction. Numbered from 0.
+Get or set the play direction for track `x` (0-3):
+
+ - `0` = forward
+ - `1` = reverse
+ - `2` = triangle
+ - `3` = drunk
+ - `4` = random
 """
 
 ["KR.DUR"]
-prototype = "KR.DUR x "
-short = "get the current duration value for channel `x`"
-
+prototype = "KR.DUR x"
+short = "get the current duration value for track `x` (1-indexed)"
 
 ["ME.PRE"]
 prototype = "ME.PRE"
