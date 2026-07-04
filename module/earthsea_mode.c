@@ -5,6 +5,7 @@
 // this
 #include "globals.h"
 #include "keyboard_helper.h"
+#include "mode_persist.h"  // shared save confirmation + flush
 
 // teletype
 #include "teletype.h"
@@ -63,13 +64,16 @@ static bool es_engaged(void) {
     return active || eng.rt.mode == es_playing;
 }
 
-// Flush the shared i2c follower bank to flash if it was edited.
-static void em_flush_i2c(void) {
+// Flush the shared i2c follower bank to flash if it was edited. Returns true
+// if it wrote.
+static bool em_flush_i2c(void) {
     if (kria_i2c_take_dirty()) {
         kria_i2c_fstate_t t[KRIA_I2C_FOLLOWERS];
         kria_i2c_save(t);
         flash_update_kria_i2c(t);
+        return true;
     }
+    return false;
 }
 
 // ---- output vtable (binding + fixed-edge note-off timer) ----
@@ -129,6 +133,7 @@ static void em_pos_cb(void* o) {
     // keep the playback position bar moving (internal clock only)
     if (es_engaged() && eng.rt.mode == es_playing && !eng.rt.clock_external)
         scene_state.grid.grid_dirty = 1;
+    if (mode_confirm_tick()) dirty = true;  // erase the SAVED banner
 }
 
 // ---- play-timer management (event-loop context) ----
@@ -165,11 +170,20 @@ static void em_load_flash(void) {
     if (!es_engine_config_valid(&eng.cfg)) es_engine_set_defaults(&eng.cfg);
 }
 
-static void em_save_flash(void) {
-    flash_update_es(&eng.cfg);
-    flash_update_scale_bank(es_scale_bank);  // shared bank, small
-    em_flush_i2c();
-    cfg_dirty = false;
+// Persist the Earthsea bank (+ shared scale bank) and i2c follower bank if
+// dirty. The single save path -- used by mode exit, the S key, and a scene
+// save (via mode_persist_flush_all_dirty). Returns true if anything was
+// written.
+bool earthsea_flush_if_dirty(void) {
+    bool wrote = false;
+    if (cfg_dirty) {
+        flash_update_es(&eng.cfg);
+        flash_update_scale_bank(es_scale_bank);  // shared bank, small
+        cfg_dirty = false;
+        wrote = true;
+    }
+    if (em_flush_i2c()) wrote = true;
+    return wrote;
 }
 
 static void em_init_once(void) {
@@ -191,8 +205,7 @@ void set_earthsea_mode(void) {
 }
 
 void earthsea_mode_exit(void) {
-    if (cfg_dirty) em_save_flash();
-    em_flush_i2c();
+    earthsea_flush_if_dirty();  // bank + scale + i2c follower bank
     kria_i2c_oled_exit();  // don't leave the MIDI editor open across exit
     em_view = EM_VIEW_ES;
     active = false;
@@ -377,7 +390,8 @@ void process_earthsea_keys(uint8_t key, uint8_t mod_key, bool is_held_key) {
         em_select_pattern(eng.cfg.p_select + 1);
     }
     else if (match_no_mod(mod_key, key, HID_S)) {  // explicit save
-        em_save_flash();
+        earthsea_flush_if_dirty();
+        mode_confirm_show("SAVED");
     }
     else if (match_no_mod(mod_key, key, HID_1)) {  // earthsea surface
         em_view = EM_VIEW_ES;
@@ -527,7 +541,9 @@ uint8_t screen_refresh_earthsea(void) {
     static const char* const mode_name[] = { "STOP", "ARM", "REC", "PLAY" };
     const es_pattern_t* p = &eng.cfg.p[eng.cfg.p_select];
 
-    font_string_region_clip(&line[0], "EARTHSEA", 0, 0, EM_S_TITLE, 0);
+    const char* cmsg;
+    const char* title = mode_confirm_active(&cmsg) ? cmsg : "EARTHSEA";
+    font_string_region_clip(&line[0], title, 0, 0, EM_S_TITLE, 0);
     font_string_region_clip(&line[0],
                             em_view == EM_VIEW_I2C ? "I2C" : "", 66, 0,
                             EM_S_VALUE, 0);

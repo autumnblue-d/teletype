@@ -70,6 +70,7 @@ CSRCS = \
 	../module/line_editor.c					\
 	../module/live_mode.c   				\
 	../module/meadowphysics_mode.c   			\
+	../module/mode_persist.c				\
 	../module/kria_mode.c   				\
 	../module/kria_i2c_oled.c   				\
 	../module/earthsea_mode.c				\

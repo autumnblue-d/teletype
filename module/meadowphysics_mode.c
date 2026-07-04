@@ -5,6 +5,7 @@
 // this
 #include "globals.h"
 #include "keyboard_helper.h"
+#include "mode_persist.h"  // shared save confirmation
 
 // teletype
 #include "teletype.h"
@@ -55,6 +56,8 @@ static mp_engine_t mp_eng;
 static mp_clock_t mp_clk;
 static mp_grid_state_t mp_grid;
 static softTimer_t mpClockTimer = { .next = NULL, .prev = NULL };
+static softTimer_t mpUiTimer = { .next = NULL,
+                                 .prev = NULL };  // banner self-clear tick
 
 static bool initialized = false;  // engine/clock constructed once per session
 static bool active = false;  // MP view is front-most (drives keyboard + grid)
@@ -111,6 +114,13 @@ static void mp_flush_bank(void) {
     mp_bank_dirty = false;
 }
 
+// Always-on UI tick (MP has no other periodic timer while stopped): clears the
+// transient "SAVED" banner after its delay.
+static void mp_ui_cb(void* o) {
+    (void)o;
+    if (mode_confirm_tick()) dirty = true;
+}
+
 // Load the current scene's MP config into the engine, sanitize it, arm the
 // counters, and rebuild the pitch table.
 static void mp_load_from_scene(void) {
@@ -158,6 +168,7 @@ static void mp_init_once(void) {
     mp_grid_state_init(&mp_grid);
     flash_get_scale_bank(mp_scale_bank);  // load bank before apply_scale
     mp_load_from_scene();
+    timer_add(&mpUiTimer, 100, &mp_ui_cb, NULL);  // banner self-clear
     initialized = true;
 }
 
@@ -367,6 +378,18 @@ void process_meadowphysics_keys(uint8_t key, uint8_t mod_key,
         mp_engine_reset(&mp_eng);  // reset counters (independent of run state)
         dirty = true;
     }
+    else if (match_no_mod(mod_key, key, HID_S)) {  // save the current scene
+        // MP config is per-scene, so "save" = commit the whole active scene to
+        // flash (the config rides along in flash_write). Mirrors preset_w's
+        // alt-<enter>, giving MP the same one-key save as Kria/Earthsea.
+        scene_state.mp = mp_eng.cfg;
+        mp_flush_bank();  // shared scale bank, if edited
+        mp_flush_i2c();   // shared follower bank, if edited
+        flash_write(preset_select, &scene_state, &scene_text);
+        flash_update_last_saved_scene(preset_select);
+        mode_confirm_show("SAVED");
+        dirty = true;
+    }
     else if (match_no_mod(mod_key, key, HID_V)) {
         mp_eng.cfg.voice_mode = (mp_eng.cfg.voice_mode + 1) & 0x3;
         // release gates on channels the new (narrower) voice mode no longer
@@ -435,7 +458,14 @@ uint8_t screen_refresh_meadowphysics(void) {
     for (uint8_t i = 0; i < 8; i++) region_fill(&line[i], 0);
 
     // --- header (all views) ---
-    font_string_region_clip(&line[0], "MEADOWPHYSICS", 0, 0, MP_S_TITLE, 0);
+    const char* cmsg;
+    const char* title = mode_confirm_active(&cmsg) ? cmsg : "MEADOWPHYSICS";
+    font_string_region_clip(&line[0], title, 0, 0, MP_S_TITLE, 0);
+    // Active scene number: MP config is per-scene (unlike Kria/Earthsea global
+    // banks), so surface which slot a save lands in.
+    char scenebuf[6] = { 'S' };
+    itoa(preset_select, scenebuf + 1, 10);
+    font_string_region_clip(&line[0], scenebuf, 82, 0, MP_S_DIM, 0);
     // view tabs, active one bright
     font_string_region_clip(&line[0], "P", 104, 0,
                             view == MP_VIEW_POSITIONS ? MP_S_TITLE : MP_S_DIM,

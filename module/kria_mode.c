@@ -5,6 +5,7 @@
 // this
 #include "globals.h"
 #include "keyboard_helper.h"
+#include "mode_persist.h"  // shared save confirmation + flush
 
 // teletype
 #include "teletype.h"
@@ -73,13 +74,32 @@ static uint8_t km_view = KM_VIEW_SEQ;
 static uint8_t km_rough = 0;
 static uint8_t km_fine = 0;
 
-// Flush the shared i2c follower bank to flash if it was edited.
-static void km_flush_i2c(void) {
+// Flush the shared i2c follower bank to flash if it was edited. Returns true
+// if it wrote.
+static bool km_flush_i2c(void) {
     if (kria_i2c_take_dirty()) {
         kria_i2c_fstate_t t[KRIA_I2C_FOLLOWERS];
         kria_i2c_save(t);
         flash_update_kria_i2c(t);
+        return true;
     }
+    return false;
+}
+
+// Persist the Kria song bank (+ shared scale bank) and i2c follower bank if
+// dirty. The single save path -- used by mode exit, the S key, and a scene
+// save (via mode_persist_flush_all_dirty). Returns true if anything was
+// written.
+bool kria_flush_if_dirty(void) {
+    bool wrote = false;
+    if (cfg_dirty) {
+        flash_update_kria(&eng.cfg);
+        flash_update_scale_bank(kria_scale_bank);
+        cfg_dirty = false;
+        wrote = true;
+    }
+    if (km_flush_i2c()) wrote = true;
+    return wrote;
 }
 
 static void km_set_period(uint16_t p);  // defined in the keyboard section
@@ -151,6 +171,7 @@ static void km_altblink_cb(void* o) {
     kgrid.alt_blink ^= 1;
     kgrid.meta_lock_blink ^= 1;
     if ((active || kria_running)) scene_state.grid.grid_dirty = 1;
+    if (mode_confirm_tick()) dirty = true;  // erase the SAVED banner
 }
 
 // Schedule the note-off (and, on the initial clock fire, the first repeat) for
@@ -232,12 +253,7 @@ void set_kria_mode(void) {
 void kria_mode_exit(void) {
     // Persist edits (song is a global bank, not per-scene). ~18 KB flash write
     // only when something changed; may briefly stall -- prefer saving stopped.
-    if (cfg_dirty) {
-        flash_update_kria(&eng.cfg);
-        flash_update_scale_bank(kria_scale_bank);  // shared bank, small
-        cfg_dirty = false;
-    }
-    km_flush_i2c();         // persist follower-bank edits
+    kria_flush_if_dirty();  // song + scale + i2c follower bank
     kria_i2c_oled_exit();   // don't leave the MIDI editor open across mode exit
     km_view = KM_VIEW_SEQ;  // next entry starts on the sequencer
     active = false;
@@ -558,10 +574,8 @@ void process_kria_keys(uint8_t key, uint8_t mod_key, bool is_held_key) {
                                                  : KR_CLOCK_PERIOD_MIN);
     }
     else if (match_no_mod(mod_key, key, HID_S)) {  // explicit save
-        flash_update_kria(&eng.cfg);
-        flash_update_scale_bank(kria_scale_bank);
-        km_flush_i2c();
-        cfg_dirty = false;
+        kria_flush_if_dirty();
+        mode_confirm_show("SAVED");
         dirty = true;
     }
     else if (match_no_mod(mod_key, key, HID_1)) {  // sequencer view
@@ -789,7 +803,9 @@ uint8_t screen_refresh_kria(void) {
 
     for (uint8_t i = 0; i < 8; i++) region_fill(&line[i], 0);
 
-    font_string_region_clip(&line[0], "KRIA", 0, 0, KM_S_TITLE, 0);
+    const char* cmsg;
+    const char* title = mode_confirm_active(&cmsg) ? cmsg : "KRIA";
+    font_string_region_clip(&line[0], title, 0, 0, KM_S_TITLE, 0);
     font_string_region_clip(&line[0], km_view_name[km_view], 54, 0, KM_S_VALUE,
                             0);
     font_string_region_clip(&line[0], kria_running ? "RUN" : "STOP", 100, 0,

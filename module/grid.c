@@ -8,6 +8,7 @@
 #include "kria_mode.h"
 #include "live_mode.h"
 #include "meadowphysics_mode.h"
+#include "mode_persist.h"
 #include "pattern_mode.h"
 #include "preset_r_mode.h"
 #include "state.h"
@@ -842,6 +843,7 @@ static u8 grid_control_process_key(scene_state_t* ss, u8 x, u8 y, u8 z,
         else if (y == 7 && x == 4 && !from_held) {
             if (preset_write) {
                 flash_write(preset_select, ss, &scene_text);
+                mode_persist_flush_all_dirty();  // commit global banks too
                 flash_update_last_saved_scene(preset_select);
                 preset_write = 0;
                 restore_last_mode(ss);
