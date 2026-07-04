@@ -388,7 +388,7 @@ void handler_Front(int32_t data) {
 
         if (mode != M_PRESET_R) {
             front_timer = 0;
-            set_preset_r_mode(adc[1] >> 7);
+            set_preset_r_mode((adc[1] * SCENE_SLOTS) >> 12);
             set_mode(M_PRESET_R);
         }
         else
@@ -422,7 +422,10 @@ void handler_PollADC(int32_t data) {
         ss_set_param(&scene_state, adc[1] << 2);
     }
     else if (mode == M_PRESET_R && !(grid_connected && grid_control_mode)) {
-        uint8_t preset = adc[1] >> 6;
+        // Map full knob travel onto SCENE_SLOTS at 2x resolution; LSB is the
+        // deadzone bit (hysteresis), high bits are the scene index. Was a
+        // hardcoded >>6 (2x32) back when SCENE_SLOTS==32.
+        uint8_t preset = (adc[1] * (SCENE_SLOTS << 1)) >> 12;
         uint8_t deadzone = preset & 1;
         preset >>= 1;
         if (!deadzone || abs(preset - get_preset()) > 1)
@@ -845,7 +848,7 @@ void set_mode(tele_mode_t m) {
             mode = M_PRESET_W;
             break;
         case M_PRESET_R:
-            set_preset_r_mode(adc[1] >> 7);
+            set_preset_r_mode((adc[1] * SCENE_SLOTS) >> 12);
             mode = M_PRESET_R;
             break;
         case M_HELP:
