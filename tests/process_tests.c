@@ -359,6 +359,60 @@ TEST test_P_ROT_3() {
     PASS();
 }
 
+// parse, validate and run a single line, asserting it does not error. Used for
+// the value-less MO.* ops (they send MIDI via a stub, so there is no return
+// value to check — this proves tokenizing, op-table wiring and arg popping).
+TEST mo_run_ok(scene_state_t* ss, char* line) {
+    exec_state_t es;
+    es_init(&es);
+    es_push(&es);
+    es_variables(&es)->script_number = 0;
+
+    tele_command_t cmd;
+    char error_msg[TELE_ERROR_MSG_LENGTH];
+    ASSERT_EQm(line, parse(line, &cmd, error_msg), E_OK);
+    ASSERT_EQm(line, validate(&cmd, error_msg), E_OK);
+    process_command(ss, &es, &cmd);
+    PASS();
+}
+
+TEST test_MO() {
+    scene_state_t ss;
+    ss_init(&ss);
+
+    // MO.CH round-trips through the module-level default channel
+    char* set5[2] = { "MO.CH 5", "MO.CH" };
+    CHECK_CALL(process_helper_state(&ss, 2, set5, 5));
+
+    // boundary channels 1 and 16 are accepted
+    char* set1[2] = { "MO.CH 1", "MO.CH" };
+    CHECK_CALL(process_helper_state(&ss, 2, set1, 1));
+    char* set16[2] = { "MO.CH 16", "MO.CH" };
+    CHECK_CALL(process_helper_state(&ss, 2, set16, 16));
+
+    // out-of-range channels are rejected, leaving the default unchanged
+    char* rej[3] = { "MO.CH 8", "MO.CH 0", "MO.CH" };
+    CHECK_CALL(process_helper_state(&ss, 3, rej, 8));
+    char* rej2[3] = { "MO.CH 8", "MO.CH 17", "MO.CH" };
+    CHECK_CALL(process_helper_state(&ss, 3, rej2, 8));
+
+    // all message-sending ops parse, validate and execute (stubbed send)
+    CHECK_CALL(mo_run_ok(&ss, "MO.N 60 100"));
+    CHECK_CALL(mo_run_ok(&ss, "MO.N# 3 60 100"));
+    CHECK_CALL(mo_run_ok(&ss, "MO.NO 60"));
+    CHECK_CALL(mo_run_ok(&ss, "MO.NO# 3 60"));
+    CHECK_CALL(mo_run_ok(&ss, "MO.CC 74 64"));
+    CHECK_CALL(mo_run_ok(&ss, "MO.CC# 3 74 64"));
+    CHECK_CALL(mo_run_ok(&ss, "MO.PB 8192"));
+    CHECK_CALL(mo_run_ok(&ss, "MO.PRG 5"));
+    CHECK_CALL(mo_run_ok(&ss, "MO.CLK"));
+    CHECK_CALL(mo_run_ok(&ss, "MO.START"));
+    CHECK_CALL(mo_run_ok(&ss, "MO.STOP"));
+    CHECK_CALL(mo_run_ok(&ss, "MO.CONT"));
+
+    PASS();
+}
+
 SUITE(process_suite) {
     RUN_TEST(test_numbers);
     RUN_TEST(test_ADD);
@@ -375,4 +429,5 @@ SUITE(process_suite) {
     RUN_TEST(test_blank_command);
     RUN_TEST(test_P_ROT_1);
     RUN_TEST(test_P_ROT_3);
+    RUN_TEST(test_MO);
 }

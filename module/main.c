@@ -1183,6 +1183,15 @@ void reset_midi_counter() {
     midi_clock_counter = 0;
 }
 
+// Send a MIDI message from the MO.* ops to a connected USB MIDI device.
+// midi_write_packet() no-ops safely when no device is connected, and always
+// sends a 3-byte payload (unused bytes are 0); cable 0 is the USB virtual
+// cable.
+void tele_midi_out(uint8_t* pack, uint8_t len) {
+    (void)len;
+    midi_write_packet(0, pack);
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // main
 

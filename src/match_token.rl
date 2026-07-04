@@ -1042,6 +1042,19 @@
         "MI.CCH"      => { MATCH_OP(E_OP_MI_CCH); };
         "MI.CLKD"     => { MATCH_OP(E_OP_MI_CLKD); };
         "MI.CLKR"     => { MATCH_OP(E_OP_MI_CLKR); };
+        "MO.CH"       => { MATCH_OP(E_OP_MO_CH); };
+        "MO.N"        => { MATCH_OP(E_OP_MO_N); };
+        "MO.N#"       => { MATCH_OP(E_OP_MO_N_POUND); };
+        "MO.NO"       => { MATCH_OP(E_OP_MO_NO); };
+        "MO.NO#"      => { MATCH_OP(E_OP_MO_NO_POUND); };
+        "MO.CC"       => { MATCH_OP(E_OP_MO_CC); };
+        "MO.CC#"      => { MATCH_OP(E_OP_MO_CC_POUND); };
+        "MO.PB"       => { MATCH_OP(E_OP_MO_PB); };
+        "MO.PRG"      => { MATCH_OP(E_OP_MO_PRG); };
+        "MO.CLK"      => { MATCH_OP(E_OP_MO_CLK); };
+        "MO.START"    => { MATCH_OP(E_OP_MO_START); };
+        "MO.STOP"     => { MATCH_OP(E_OP_MO_STOP); };
+        "MO.CONT"     => { MATCH_OP(E_OP_MO_CONT); };
 
         # MODS
         # controlflow

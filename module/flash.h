@@ -7,7 +7,7 @@
 #include "line_editor.h"
 #include "teletype.h"
 
-#define SCENE_SLOTS 32
+#define SCENE_SLOTS 30
 #define BUTTON_STATE_SIZE (GRID_BUTTON_COUNT >> 3)
 
 typedef struct {

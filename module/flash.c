@@ -11,7 +11,7 @@
 // this
 #include "teletype.h"
 
-#define FIRSTRUN_KEY 0x22
+#define FIRSTRUN_KEY 0x23
 
 static grid_data_t grid_data;
 

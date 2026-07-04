@@ -42,6 +42,10 @@ extern void tele_has_stack(bool has_stack);
 extern void tele_cv_off(uint8_t i, int16_t v);
 extern void tele_ii_tx(uint8_t addr, uint8_t *data, uint8_t l);
 extern void tele_ii_rx(uint8_t addr, uint8_t *data, uint8_t l);
+
+// send a raw MIDI message (pack[0]=status, pack[1..]=data) to a connected
+// USB MIDI device; len is the message length in bytes (1-3)
+extern void tele_midi_out(uint8_t *pack, uint8_t len);
 extern void tele_scene(uint8_t i, uint8_t init_grid, uint8_t init_pattern);
 
 // called when a pattern is updated

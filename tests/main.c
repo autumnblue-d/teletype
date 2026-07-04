@@ -50,6 +50,7 @@ int16_t get_dashboard_value(uint8_t index) {
     return 0;
 }
 void reset_midi_counter() {}
+void tele_midi_out(uint8_t *pack, uint8_t len) {}
 void tele_save_calibration() {}
 void grid_key_press(uint8_t x, uint8_t y, uint8_t z) {}
 

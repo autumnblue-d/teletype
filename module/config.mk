@@ -261,7 +261,7 @@ CPPFLAGS = -D BOARD=USER_BOARD -D UHD_ENABLE
 
 # Extra flags to use when linking
 # NVRAM size may need to change if additional data is to be stored in scenes.
-LDFLAGS = -Wl,-e,_trampoline,--defsym=__flash_nvram_size__=200K
+LDFLAGS = -Wl,-e,_trampoline,--defsym=__flash_nvram_size__=190K
 
 # Pre- and post-build commands
 PREBUILD_CMD =
