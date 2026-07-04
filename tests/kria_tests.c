@@ -7,7 +7,10 @@
 #include <string.h>
 
 #include "greatest/greatest.h"
+#include "kria_binding.h"
+#include "kria_clock.h"
 #include "kria_engine.h"
+#include "music.h"  // ET
 
 // ---- recording output vtable ----
 
@@ -287,6 +290,82 @@ TEST repeat_retriggers_on_set_bits(void) {
     PASS();
 }
 
+// ---- binding tests ----
+
+TEST note_to_cv_matches_et(void) {
+    ASSERT_EQ(0, kria_note_to_cv(0));
+    ASSERT_EQ((int16_t)ET[12], kria_note_to_cv(12));
+    ASSERT_EQ((int16_t)ET[60], kria_note_to_cv(60));
+    // negative semitones map below 0V
+    ASSERT_EQ(-(int16_t)ET[12], kria_note_to_cv(-12));
+    // clamped to +/-127
+    ASSERT_EQ((int16_t)ET[127], kria_note_to_cv(200));
+    ASSERT_EQ(-(int16_t)ET[127], kria_note_to_cv(-200));
+    PASS();
+}
+
+TEST binding_output_vtable_is_wired(void) {
+    const kria_output_t* o = kria_binding_output();
+    ASSERT(o != NULL);
+    ASSERT(o->tr != NULL);
+    ASSERT(o->cv != NULL);
+    ASSERT(o->cv_slew != NULL);
+    PASS();
+}
+
+// ---- clock tests ----
+
+TEST clock_internal_toggles_phase(void) {
+    kria_clock_t c;
+    uint8_t ph = 99;
+    kria_clock_init(&c);
+    ASSERT_EQ(1, kria_clock_internal_fire(&c, &ph));
+    ASSERT_EQ(1, ph);
+    ASSERT_EQ(1, kria_clock_internal_fire(&c, &ph));
+    ASSERT_EQ(0, ph);
+    // external edge ignored while internal
+    ASSERT_EQ(0, kria_clock_external_edge(&c, 1, &ph));
+    PASS();
+}
+
+TEST clock_external_follows_level(void) {
+    kria_clock_t c;
+    uint8_t ph = 99;
+    kria_clock_init(&c);
+    kria_clock_set_external(&c, true);
+    ASSERT_EQ(0, kria_clock_internal_fire(&c, &ph));  // suppressed
+    ASSERT_EQ(1, kria_clock_external_edge(&c, 1, &ph));
+    ASSERT_EQ(1, ph);
+    ASSERT_EQ(1, kria_clock_external_edge(&c, 0, &ph));
+    ASSERT_EQ(0, ph);
+    PASS();
+}
+
+TEST clock_period_is_clamped(void) {
+    kria_clock_t c;
+    kria_clock_init(&c);
+    kria_clock_set_period(&c, 5);
+    ASSERT_EQ(KR_CLOCK_PERIOD_MIN, c.period);
+    kria_clock_set_period(&c, 5000);
+    ASSERT_EQ(KR_CLOCK_PERIOD_MAX, c.period);
+    kria_clock_set_period(&c, 120);
+    ASSERT_EQ(120, c.period);
+    PASS();
+}
+
+TEST clock_scaling_matches_ansible(void) {
+    // dur_unscaled=16, clock_delta=100, tmul_tr=1:
+    //   scale = 100*1/384 = 0.2604; 16*0.2604 = 4.16 -> 4
+    ASSERT_EQ(4, kria_clock_scale_duration(16, 100, 1));
+    // repeat ticks = 100*1/2 = 50
+    ASSERT_EQ(50, kria_clock_repeat_ticks(100, 1, 2));
+    // tmul multiplies the reference length
+    ASSERT_EQ(100, kria_clock_repeat_ticks(100, 2, 2));
+    // rpt=0 is guarded (treated as 1)
+    ASSERT_EQ(200, kria_clock_repeat_ticks(200, 1, 0));
+    PASS();
+}
+
 SUITE(kria_suite) {
     RUN_TEST(defaults_are_valid);
     RUN_TEST(config_valid_rejects_bad);
@@ -301,4 +380,10 @@ SUITE(kria_suite) {
     RUN_TEST(meta_sequencer_chains_patterns);
     RUN_TEST(falling_edge_is_ignored);
     RUN_TEST(repeat_retriggers_on_set_bits);
+    RUN_TEST(note_to_cv_matches_et);
+    RUN_TEST(binding_output_vtable_is_wired);
+    RUN_TEST(clock_internal_toggles_phase);
+    RUN_TEST(clock_external_follows_level);
+    RUN_TEST(clock_period_is_clamped);
+    RUN_TEST(clock_scaling_matches_ansible);
 }

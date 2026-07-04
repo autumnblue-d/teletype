@@ -12,6 +12,7 @@ tests: main.o \
 	../src/meadowphysics_binding.o ../src/meadowphysics_clock.o \
 	../src/meadowphysics_grid.o \
 	kria_tests.o ../src/kria_engine.o \
+	../src/kria_binding.o ../src/kria_clock.o \
 	../src/teletype.o ../src/command.o ../src/helpers.o ../src/drum_helpers.o \
 	../src/every.o ../src/match_token.o ../src/scanner.o \
 	../src/state.o ../src/table.o ../src/turtle.o ../src/chaos.o \

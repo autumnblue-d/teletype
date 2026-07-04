@@ -83,6 +83,9 @@ CSRCS = \
 	../src/meadowphysics_binding.c				\
 	../src/meadowphysics_clock.c				\
 	../src/meadowphysics_grid.c				\
+	../src/kria_engine.c					\
+	../src/kria_binding.c					\
+	../src/kria_clock.c					\
 	../src/scanner.c					\
 	../src/scale.c						\
 	../src/scene_serialization.c				\
