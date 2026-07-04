@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "globals.h"
+#include "kria_engine.h"
 #include "line_editor.h"
 #include "teletype.h"
 
@@ -11,7 +12,10 @@
 // region shrink (see __flash_nvram_size__ in config.mk), freeing program flash
 // for the Meadowphysics mode, while still leaving room for MP's per-scene data
 // (Phase 7). See MEADOWPHYSICS_PORT_PLAN.md.
-#define SCENE_SLOTS 30
+// Kria (Scenario B): reduced 30 -> 20. Dropping 10 scenes (~63 KB) funds the
+// 16-pattern global Kria bank (~18.5 KB) and leaves ~49 KB of program flash for
+// Kria code. See KRIA_PORT_PLAN.md §0.
+#define SCENE_SLOTS 20
 #define BUTTON_STATE_SIZE (GRID_BUTTON_COUNT >> 3)
 
 typedef struct {
@@ -38,6 +42,7 @@ typedef struct {
     cal_data_t cal;
     device_config_t device_config;
     uint8_t scale_bank[MP_SCALE_SLOTS][8];
+    kria_config_t kria;  // Kria global preset bank (single song), not per-scene
 } nvram_data_t;
 
 u8 is_flash_fresh(void);
