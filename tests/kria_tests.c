@@ -10,6 +10,7 @@
 #include "kria_binding.h"
 #include "kria_clock.h"
 #include "kria_engine.h"
+#include "kria_grid.h"
 #include "music.h"  // ET
 
 // ---- recording output vtable ----
@@ -366,6 +367,85 @@ TEST clock_scaling_matches_ansible(void) {
     PASS();
 }
 
+// ---- grid tests ----
+
+TEST grid_defaults(void) {
+    kria_grid_state_t G;
+    kria_grid_state_init(&G);
+    ASSERT_EQ(KR_P_TR, G.mode);
+    ASSERT_EQ(KR_MOD_NONE, G.mod_mode);
+    ASSERT_EQ(1, G.note_sync);
+    ASSERT_EQ(2, G.loop_sync);
+    PASS();
+}
+
+TEST grid_bottom_row_selects_mode_and_track(void) {
+    kria_grid_state_t G;
+    kria_engine_set_defaults(&E.cfg);
+    kria_engine_init(&E, &OUT, test_rnd, &RND, NULL);
+    kria_grid_state_init(&G);
+
+    kria_grid_process_key(&E, &G, 5, 7, 1);  // x5 toggles mTr<->mRpt
+    ASSERT_EQ(KR_P_RPT, G.mode);
+    kria_grid_process_key(&E, &G, 5, 7, 1);
+    ASSERT_EQ(KR_P_TR, G.mode);
+    kria_grid_process_key(&E, &G, 2, 7, 1);  // x0-3 select track
+    ASSERT_EQ(2, G.track);
+    PASS();
+}
+
+TEST grid_tr_page_toggles_step(void) {
+    kria_grid_state_t G;
+    kria_engine_set_defaults(&E.cfg);
+    kria_engine_init(&E, &OUT, test_rnd, &RND, NULL);
+    kria_grid_state_init(&G);  // mode = mTr, modNone
+
+    // on the tr page the row y IS the track; toggle track 1 step 3
+    kria_grid_process_key(&E, &G, 3, 1, 1);
+    ASSERT_EQ(1, E.cfg.p[0].t[1].tr[3]);
+    kria_grid_process_key(&E, &G, 3, 1, 1);
+    ASSERT_EQ(0, E.cfg.p[0].t[1].tr[3]);
+    PASS();
+}
+
+TEST grid_loop_gesture_sets_range(void) {
+    kria_grid_state_t G;
+    kria_engine_set_defaults(&E.cfg);
+    kria_engine_init(&E, &OUT, test_rnd, &RND, NULL);
+    kria_grid_state_init(&G);
+    G.mode = KR_P_NOTE;
+    G.mod_mode = KR_MOD_LOOP;
+    G.loop_sync = 0;  // this param only
+
+    kria_grid_process_key(&E, &G, 2, 3, 1);  // first press -> loop_first
+    kria_grid_process_key(&E, &G, 5, 3, 1);  // second press -> range 2..5
+    ASSERT_EQ(2, E.cfg.p[0].t[0].lstart[KR_P_NOTE]);
+    ASSERT_EQ(5, E.cfg.p[0].t[0].lend[KR_P_NOTE]);
+    kria_grid_process_key(&E, &G, 2, 3, 0);
+    kria_grid_process_key(&E, &G, 5, 3, 0);
+    PASS();
+}
+
+TEST grid_render_smoke(void) {
+    kria_grid_state_t G;
+    uint8_t led[128];
+    kria_engine_set_defaults(&E.cfg);
+    E.cfg.p[0].t[0].tr[3] = 1;
+    kria_engine_init(&E, &OUT, test_rnd, &RND, NULL);
+    kria_grid_state_init(&G);  // mTr page
+
+    kria_grid_refresh(&E, &G, led, 1);
+    ASSERT(led[0 * 16 + 3] > 0);      // the trigger cell is lit
+    ASSERT(led[112 + 0] > 0);         // bottom-row track 0 select
+    // every cell within range
+    for (int i = 0; i < 128; i++) ASSERT(led[i] <= 15);
+
+    // non-varibright: lit cells forced to full
+    kria_grid_refresh(&E, &G, led, 0);
+    ASSERT_EQ(15, led[0 * 16 + 3]);
+    PASS();
+}
+
 SUITE(kria_suite) {
     RUN_TEST(defaults_are_valid);
     RUN_TEST(config_valid_rejects_bad);
@@ -386,4 +466,9 @@ SUITE(kria_suite) {
     RUN_TEST(clock_external_follows_level);
     RUN_TEST(clock_period_is_clamped);
     RUN_TEST(clock_scaling_matches_ansible);
+    RUN_TEST(grid_defaults);
+    RUN_TEST(grid_bottom_row_selects_mode_and_track);
+    RUN_TEST(grid_tr_page_toggles_step);
+    RUN_TEST(grid_loop_gesture_sets_range);
+    RUN_TEST(grid_render_smoke);
 }
