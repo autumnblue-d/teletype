@@ -200,7 +200,7 @@ const char* help3[HELP3_LENGTH] = { "3/19 PARAMETERS",
                                     "FB.C.R X",
                                     "   RESET FADER X CALIBRATION" };
 
-#define HELP4_LENGTH 95
+#define HELP4_LENGTH 109
 const char* help4[HELP4_LENGTH] = { "4/19 DATA AND TABLES",
                                     " ",
                                     "ALL PARAMS HAVE 16B RANGE",
@@ -295,7 +295,21 @@ const char* help4[HELP4_LENGTH] = { "4/19 DATA AND TABLES",
                                     "DRUM VELOCITY OP - DR.V",
                                     "DR.V P S",
                                     "   P = PATTERN (0-19)",
-                                    "   S = STEP (0-15)"                                     
+                                    "   S = STEP (0-15)",
+                                    "GRIDS PATTERN OP - GR.P",
+                                    "GR.P I X Y D S",
+                                    "   I = INSTR 0-2 BD/SD/HH",
+                                    "   X = MAP X (0-255)",
+                                    "   Y = MAP Y (0-255)",
+                                    "   D = DENSITY (0-255)",
+                                    "   S = STEP (0-31)",
+                                    "   RETURNS 1 IF TRIGGERED",
+                                    "GRIDS LEVEL OP - GR.L",
+                                    "GR.L I X Y S",
+                                    "   RETURNS LEVEL 0-255",
+                                    "GRIDS ACCENT OP - GR.A",
+                                    "GR.A I X Y D S",
+                                    "   RETURNS 1 IF ACCENT"
                                     };
 
 #define HELP5_LENGTH 130

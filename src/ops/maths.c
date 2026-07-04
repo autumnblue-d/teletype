@@ -5,6 +5,7 @@
 #include "chaos.h"
 #include "drum_helpers.h"
 #include "euclidean/euclidean.h"
+#include "grids_helpers.h"
 #include "helpers.h"
 #include "random.h"
 #include "table.h"
@@ -147,6 +148,12 @@ static void op_DR_P_get(const void *data, scene_state_t *ss, exec_state_t *es,
                         command_state_t *cs);
 static void op_DR_V_get(const void *data, scene_state_t *ss, exec_state_t *es,
                         command_state_t *cs);
+static void op_GR_P_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                        command_state_t *cs);
+static void op_GR_L_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                        command_state_t *cs);
+static void op_GR_A_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                        command_state_t *cs);
 static void op_BPM_get(const void *data, scene_state_t *ss, exec_state_t *es,
                        command_state_t *cs);
 static void op_BIT_OR_get(const void *data, scene_state_t *ss, exec_state_t *es,
@@ -252,6 +259,9 @@ const tele_op_t op_NR    = MAKE_GET_OP(NR      , op_NR_get      , 4, true);
 const tele_op_t op_DR_T  = MAKE_GET_OP(DR.T    , op_DR_T_get    , 5, true);
 const tele_op_t op_DR_P  = MAKE_GET_OP(DR.P    , op_DR_P_get    , 3, true);
 const tele_op_t op_DR_V  = MAKE_GET_OP(DR.V    , op_DR_V_get    , 2, true);
+const tele_op_t op_GR_P  = MAKE_GET_OP(GR.P    , op_GR_P_get    , 5, true);
+const tele_op_t op_GR_L  = MAKE_GET_OP(GR.L    , op_GR_L_get    , 4, true);
+const tele_op_t op_GR_A  = MAKE_GET_OP(GR.A    , op_GR_A_get    , 5, true);
 const tele_op_t op_BPM   = MAKE_GET_OP(BPM     , op_BPM_get     , 1, true);
 const tele_op_t op_BIT_OR  = MAKE_GET_OP(|, op_BIT_OR_get  , 2, true);
 const tele_op_t op_BIT_AND = MAKE_GET_OP(&, op_BIT_AND_get, 2, true);
@@ -1133,6 +1143,35 @@ static void op_DR_V_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
     int16_t pattern = cs_pop(cs);
     int16_t step = cs_pop(cs);
     cs_push(cs, velocity(pattern, step));
+}
+
+static void op_GR_P_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
+                        exec_state_t *NOTUSED(es), command_state_t *cs) {
+    int16_t instrument = cs_pop(cs);
+    int16_t x = cs_pop(cs);
+    int16_t y = cs_pop(cs);
+    int16_t density = cs_pop(cs);
+    int16_t step = cs_pop(cs);
+    cs_push(cs, grids_trigger(instrument, x, y, density, step));
+}
+
+static void op_GR_L_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
+                        exec_state_t *NOTUSED(es), command_state_t *cs) {
+    int16_t instrument = cs_pop(cs);
+    int16_t x = cs_pop(cs);
+    int16_t y = cs_pop(cs);
+    int16_t step = cs_pop(cs);
+    cs_push(cs, grids_level(instrument, x, y, step));
+}
+
+static void op_GR_A_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
+                        exec_state_t *NOTUSED(es), command_state_t *cs) {
+    int16_t instrument = cs_pop(cs);
+    int16_t x = cs_pop(cs);
+    int16_t y = cs_pop(cs);
+    int16_t density = cs_pop(cs);
+    int16_t step = cs_pop(cs);
+    cs_push(cs, grids_accent(instrument, x, y, density, step));
 }
 
 static void op_N_S_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),

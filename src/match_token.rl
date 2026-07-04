@@ -263,6 +263,9 @@
         "DR.T"        => { MATCH_OP(E_OP_DR_T); };
         "DR.P"        => { MATCH_OP(E_OP_DR_P); };
         "DR.V"        => { MATCH_OP(E_OP_DR_V); };
+        "GR.P"        => { MATCH_OP(E_OP_GR_P); };
+        "GR.L"        => { MATCH_OP(E_OP_GR_L); };
+        "GR.A"        => { MATCH_OP(E_OP_GR_A); };
         "BPM"         => { MATCH_OP(E_OP_BPM);; };
         "|"           => { MATCH_OP(E_OP_BIT_OR);; };
         "&"           => { MATCH_OP(E_OP_BIT_AND);; };

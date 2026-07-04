@@ -3,6 +3,7 @@
 #include "drum_helpers_tests.h"
 #include "es_tests.h"
 #include "greatest/greatest.h"
+#include "grids_helpers_tests.h"
 #include "kria_tests.h"
 #include "match_token_tests.h"
 #include "meadowphysics_tests.h"
@@ -124,6 +125,7 @@ int main(int argc, char** argv) {
     RUN_SUITE(process_suite);
     RUN_SUITE(turtle_suite);
     RUN_SUITE(drum_helpers_suite);
+    RUN_SUITE(grids_helpers_suite);
     RUN_SUITE(serialize_scene_suite);
     RUN_SUITE(meadowphysics_suite);
     RUN_SUITE(kria_suite);

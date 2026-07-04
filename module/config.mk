@@ -82,6 +82,8 @@ CSRCS = \
 	../src/every.c					\
 	../src/helpers.c					\
 	../src/drum_helpers.c					\
+	../src/grids_data.c					\
+	../src/grids_helpers.c					\
 	../src/match_token.c					\
 	../src/meadowphysics_engine.c				\
 	../src/meadowphysics_binding.c				\
