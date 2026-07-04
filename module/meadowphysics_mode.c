@@ -18,9 +18,9 @@
 
 // libavr32
 #include "events.h"
+#include "flash.h"  // scale-bank persistence + MP_SCALE_SLOTS
 #include "font.h"
 #include "monome.h"  // monomeLedBuffer, monome_is_vari
-#include "music.h"   // SCALE_INT (diatonic mode intervals)
 #include "region.h"
 #include "timers.h"
 #include "util.h"  // rnd, itoa
@@ -37,12 +37,15 @@
 // tempo nudge per key press (ms of edge interval)
 #define MP_TEMPO_STEP 4
 
-// scales: 7 diatonic modes (from libavr32 SCALE_INT) + chromatic
-#define MP_SCALE_COUNT 8
-static const char* const mp_scale_name[MP_SCALE_COUNT] = {
+// 16-slot editable scale bank (MP_SCALE_SLOTS, flash.h): slots 0-6 default to
+// the diatonic modes, 7-15 to chromatic; all persisted and editable (the grid
+// editor is Phase 2). Slots 0-7 have names; 8-15 show as USER.
+#define MP_SCALE_NAMED 8
+static const char* const mp_scale_name[MP_SCALE_NAMED] = {
     "IONIAN", "DORIAN",  "PHRYG",   "LYDIAN",
     "MIXOLY", "AEOLIAN", "LOCRIAN", "CHROMA"
 };
+static uint8_t mp_scale_bank[MP_SCALE_SLOTS][8];  // RAM mirror of f.scale_bank
 
 static mp_engine_t mp_eng;
 static mp_clock_t mp_clk;
@@ -78,18 +81,10 @@ static void run_clock(uint8_t phase) {
     dirty = true;
 }
 
-// Recompute the engine's pitch table from the selected scale. Rows map to
-// scale degrees over an octave; scale 0-6 are the diatonic modes (SCALE_INT),
-// 7 is chromatic. Called on mode enter and whenever the scale changes.
+// Recompute the engine's pitch table from the selected scale-bank slot (rows
+// map to scale degrees). Called on mode enter and whenever the scale changes.
 static void mp_apply_scale(void) {
-    uint8_t iv[8];
-    uint8_t s = mp_eng.cfg.scale;
-    iv[0] = 0;
-    if (s < 7)
-        for (uint8_t i = 0; i < 7; i++) iv[i + 1] = SCALE_INT[s][i];
-    else  // chromatic
-        for (uint8_t i = 1; i < 8; i++) iv[i] = 1;
-    mp_engine_calc_scale(&mp_eng, iv);
+    mp_engine_calc_scale(&mp_eng, mp_scale_bank[mp_eng.cfg.scale]);
 }
 
 // Load the current scene's MP config into the engine, sanitize it, arm the
@@ -100,7 +95,7 @@ static void mp_load_from_scene(void) {
     // index out of bounds; fall back to defaults if so.
     if (!mp_engine_config_valid(&mp_eng.cfg))
         mp_engine_set_defaults(&mp_eng.cfg);
-    if (mp_eng.cfg.scale >= MP_SCALE_COUNT) mp_eng.cfg.scale = 0;
+    if (mp_eng.cfg.scale >= MP_SCALE_SLOTS) mp_eng.cfg.scale = 0;
     mp_engine_reset(&mp_eng);
     mp_apply_scale();
 }
@@ -111,6 +106,7 @@ static void mp_init_once(void) {
     mp_engine_init(&mp_eng, mp_binding_output(), &mp_rnd, NULL);
     mp_clock_init(&mp_clk);
     mp_grid_state_init(&mp_grid);
+    flash_get_scale_bank(mp_scale_bank);  // load bank before apply_scale
     mp_load_from_scene();
     initialized = true;
 }
@@ -278,13 +274,13 @@ void process_meadowphysics_keys(uint8_t key, uint8_t mod_key,
     else if (match_no_mod(mod_key, key,
                           HID_OPEN_BRACKET)) {  // '[' : prev scale
         mp_eng.cfg.scale =
-            (mp_eng.cfg.scale + MP_SCALE_COUNT - 1) % MP_SCALE_COUNT;
+            (mp_eng.cfg.scale + MP_SCALE_SLOTS - 1) % MP_SCALE_SLOTS;
         mp_apply_scale();
         dirty = true;
     }
     else if (match_no_mod(mod_key, key,
                           HID_CLOSE_BRACKET)) {  // ']' : next scale
-        mp_eng.cfg.scale = (mp_eng.cfg.scale + 1) % MP_SCALE_COUNT;
+        mp_eng.cfg.scale = (mp_eng.cfg.scale + 1) % MP_SCALE_SLOTS;
         mp_apply_scale();
         dirty = true;
     }
@@ -367,11 +363,12 @@ uint8_t screen_refresh_meadowphysics(void) {
         font_string_region_clip(&line[5], mp_voice_name[mp_eng.cfg.voice_mode],
                                 48, 0, MP_S_VALUE, 0);
         font_string_region_clip(&line[6], "SCALE", 0, 0, MP_S_LABEL, 0);
-        font_string_region_clip(
-            &line[6],
-            mp_scale_name[mp_eng.cfg.scale < MP_SCALE_COUNT ? mp_eng.cfg.scale
-                                                            : 0],
-            48, 0, MP_S_VALUE, 0);
+        mp_num(6, 48, mp_eng.cfg.scale, MP_S_VALUE);  // slot number
+        font_string_region_clip(&line[6],
+                                mp_eng.cfg.scale < MP_SCALE_NAMED
+                                    ? mp_scale_name[mp_eng.cfg.scale]
+                                    : "USER",
+                                72, 0, MP_S_VALUE, 0);
         font_string_region_clip(&line[7], "V:VOICE [ ]:SCALE", 0, 0, MP_S_DIM,
                                 0);
     }

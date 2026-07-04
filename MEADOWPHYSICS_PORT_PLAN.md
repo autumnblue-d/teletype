@@ -405,3 +405,76 @@ resolved them. **All of A1–A6 are now locked** — no open decisions remain in
 - Arc explicitly out of scope.
 - Serialization version bump — already in risks.
 - CV resting state on exit — already flagged.
+
+---
+
+## Planned feature: grid scale editing (Ansible-style)
+
+Restore the per-note scale editing that A4 dropped. Today the scale is chosen
+with `[`/`]` from 7 fixed diatonic modes + chromatic (derived from `SCALE_INT`);
+you cannot edit the intervals. Ansible let you both **select** a scale (16 slots)
+and **draw its intervals** on the grid's config view. This plans that.
+
+### What Ansible did (reference)
+Config view (front-button): voice mode (top-left), **scale select** = 2 rows x 8
+= 16 slots (`m.scale = (y-6)*8 + x`), **per-degree interval editor** on the right
+half (`scale_data[m.scale][7-y] = x-8`), then `calc_scale`. Scales lived in a
+**global** `f.scale[16][8]` (shared across presets), 7 diatonic + 9 blank.
+
+### Decisions needed (recommendations first)
+
+- **D1 — Storage: global bank vs per-scene.** *Recommend a global editable bank*
+  `scale_bank[16][8]` in `nvram_data_t` (like `cal`/`device_config`), matching
+  Ansible. Cost: 128 B once (not x30 scenes) — trivial against the ~5.4 KB free
+  in the NVRAM region. `mp_config_t.scale` (per-scene) still selects the slot.
+  Alternative: one editable scale per scene in `mp_config_t` (+8 B/scene = 240 B)
+  if scales should be scene-specific — but you lose the shared library. **Global.**
+- **D2 — Bank size:** *16 x 8* (Ansible parity, fits a 2x8 select grid, 128 B) vs
+  8 x 8 (compact). **Recommend 16.**
+- **D3 — Grid surface trigger:** *tie it to the OLED Config view* (`3`): pressing
+  `3` switches the grid to the scale editor (voice/scale). Unifies the keyboard
+  view with the grid, avoids a 4th col-hold sub-mode. **Recommend view-driven.**
+- **D4 — Layout on 16x8:** scale-slot select (2 rows x 8 = 16), per-degree
+  interval editor (8 rows x interval columns 0-N). Exact cell map to design in
+  Phase 2; port Ansible's where it maps cleanly.
+- **D5 — `[`/`]` semantics:** repurpose to step the **bank slot** (0-15) instead
+  of the fixed modes; grid edits the selected slot's intervals. **Recommend.**
+- **D6 — 8T:** scale is irrelevant (gates); Config view hides the scale editor in
+  8T (as Ansible did). Keep.
+
+### Wiring
+- `mp_apply_scale()` reads the selected `scale_bank[cfg.scale]` intervals instead
+  of `SCALE_INT`/chromatic; call it on edit + slot change + mode enter.
+- Bank init (firstrun): rows 0-6 = the 7 diatonic modes (from `SCALE_INT`), row 7
+  = chromatic, 8-15 = a sensible default (chromatic or copies) — editable.
+
+### Footprint
+- **NVRAM:** +128 B in `nvram_data_t` (content 189,064 -> 189,192 of 190 KB;
+  ~5.4 KB slack remains). Changes `nvram_data_t` layout -> **`FIRSTRUN_KEY`
+  0x23 -> 0x24** (another flash reinit; existing scenes wiped — acceptable).
+- **Code:** grid editor + select logic ~1-2 KB `.text`. Only **~4 KB program-flash
+  headroom** remains — this is the binding constraint. If it doesn't fit, reclaim
+  via the `tele_data_t` 8->4 B change (frees ~10 KB) before landing this.
+
+### Phases
+1. **Storage + wiring — ✅ DONE (builds clean, exit 0).** `scale_bank[16][8]` added to
+   `nvram_data_t` (`flash.h`, `MP_SCALE_SLOTS 16`); `flash.c` inits it in firstrun (0-6 diatonic
+   via `SCALE_INT`, 7-15 chromatic) + `flash_get/update_scale_bank` accessors; `FIRSTRUN_KEY`
+   0x23→0x24. Mode keeps a RAM mirror loaded on init; `mp_apply_scale()` now reads the bank slot
+   (no more `SCALE_INT` derivation); `[`/`]` cycle all 16 slots; Config view shows slot # + name
+   (0-7) / "USER" (8-15). `.flash_nvram` 189,064 → **189,192 (+128 B, ~5.4 KB slack)**; `.text`
+   +124 B. No editor yet (Phase 2) — slots 8-15 are chromatic until edited.
+2. **Grid editor:** scale-select + per-degree interval editor in
+   `meadowphysics_grid.c`, shown when the OLED Config view is active; host-test
+   the edit logic (like the existing grid tests). Re-measure `.text` (Phase-0 gate).
+3. **Keyboard/OLED:** `[`/`]` -> bank slot; Config view shows slot + intervals.
+4. **Docs/help.**
+
+### Risks
+- **Program-flash budget (~4 KB)** is the real ceiling — the grid editor may not
+  fit without the `tele_data_t` reclaim. Measure early (Phase 1) and decide.
+- Another `FIRSTRUN_KEY` bump wipes user scenes on upgrade.
+- Grid layout/interaction complexity on 16x8; needs bench validation.
+- Making scales global changes the mental model (edits affect all scenes) — the
+  A4 intent was to *reuse* TT scales; confirm a private MP bank is wanted vs
+  hooking TT's own scale system.

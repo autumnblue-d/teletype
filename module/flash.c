@@ -6,15 +6,17 @@
 #include "flashc.h"
 #include "gpio.h"
 #include "init_teletype.h"
+#include "music.h"  // SCALE_INT (MP scale-bank defaults)
 #include "print_funcs.h"
 
 // this
 #include "teletype.h"
 
-// Bumped 0x22 -> 0x23 for the Meadowphysics port: SCENE_SLOTS 32->30 and the
-// added per-scene mp_config_t change the nvram layout, so existing flash must
-// be reinitialized on upgrade (there is no per-scene version/migration path).
-#define FIRSTRUN_KEY 0x23
+// Bumped 0x22 -> 0x23 for the Meadowphysics port (SCENE_SLOTS 32->30 +
+// per-scene mp_config_t), then -> 0x24 for the global MP scale bank in
+// nvram_data_t. Each layout change forces a flash reinit on upgrade (no
+// per-scene migration path).
+#define FIRSTRUN_KEY 0x24
 
 static grid_data_t grid_data;
 
@@ -73,6 +75,18 @@ void flash_prepare() {
         device_config_t device_config = { .flip = 0 };
         flashc_memcpy((void*)&f.device_config, &device_config,
                       sizeof(device_config), true);
+
+        // MP scale bank defaults: 0-6 = the 7 diatonic modes, 7-15 = chromatic
+        // (editable). step[0]=0 base; step[1..7]=semitone deltas.
+        uint8_t scale_bank[MP_SCALE_SLOTS][8];
+        for (uint8_t s = 0; s < MP_SCALE_SLOTS; s++) {
+            scale_bank[s][0] = 0;
+            for (uint8_t i = 0; i < 7; i++)
+                scale_bank[s][i + 1] = (s < 7) ? SCALE_INT[s][i] : 1;
+        }
+        flashc_memcpy((void*)&f.scale_bank, scale_bank, sizeof(scale_bank),
+                      true);
+
         flash_update_last_saved_scene(0);
         flash_update_last_mode(M_LIVE);
         flashc_memset8((void*)&f.fresh, FIRSTRUN_KEY, 1, true);
@@ -150,6 +164,14 @@ void flash_update_cal(cal_data_t* cal) {
 
 void flash_get_cal(cal_data_t* cal) {
     *cal = f.cal;
+}
+
+void flash_get_scale_bank(uint8_t (*bank)[8]) {
+    memcpy(bank, f.scale_bank, sizeof(f.scale_bank));
+}
+
+void flash_update_scale_bank(uint8_t (*bank)[8]) {
+    flashc_memcpy((void*)&f.scale_bank, bank, sizeof(f.scale_bank), true);
 }
 
 void flash_update_device_config(device_config_t* device_config) {
