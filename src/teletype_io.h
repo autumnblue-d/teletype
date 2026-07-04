@@ -91,6 +91,8 @@ extern int16_t kria_op_loop_len(int16_t track, int16_t param, int16_t set,
                                 int16_t val);
 extern int16_t kria_op_cv(int16_t track);
 extern int16_t kria_op_dur(int16_t track);
+// enable/disable an i2c follower (0-5: JF/TXo/ER301/Disting/WSYN/Crow)
+extern int16_t kria_op_ii(int16_t follower, int16_t set, int16_t val);
 
 // live screen / dashboard
 extern void set_live_submode(uint8_t submode);
