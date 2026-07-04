@@ -178,12 +178,16 @@ bool meadowphysics_suppresses_output(void) {
     return mp_running && !writing;
 }
 
-bool meadowphysics_active(void) {
-    return active;
+// MP drives the monome grid when it's the front view OR while it's playing --
+// so a running sequence keeps animating the grid as a visual aid even while
+// you're editing in another mode. (Grid input then edits MP; pause MP to hand
+// the grid back to the current mode.)
+bool meadowphysics_owns_grid(void) {
+    return active || mp_running;
 }
 
 void meadowphysics_grid_key(uint8_t x, uint8_t y, uint8_t z) {
-    if (!active) return;
+    if (!meadowphysics_owns_grid()) return;
     mp_grid_process_key(&mp_eng, &mp_grid, x, y, z);
     dirty = true;
 }

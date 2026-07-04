@@ -566,8 +566,9 @@ void handler_AppCustom(int32_t data) {
     // data selects the custom event source: 0 = metro, 1 = meadowphysics clock.
     if (data == 1) {
         meadowphysics_clock_tick();
-        // redraw the grid only while the MP view owns it
-        if (mode == M_MEADOWPHYSICS) scene_state.grid.grid_dirty = 1;
+        // keep the grid animating whenever MP drives it (its view, or while
+        // it's playing in the background)
+        if (meadowphysics_owns_grid()) scene_state.grid.grid_dirty = 1;
         return;
     }
     if (ss_get_script_len(&scene_state, METRO_SCRIPT)) {

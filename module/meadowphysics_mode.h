@@ -45,11 +45,12 @@ bool meadowphysics_external_clock(uint8_t level);
 // be suppressed -- MP mode is active and not currently in its own write.
 bool meadowphysics_suppresses_output(void);
 
-// True while MP mode is front-most. grid.c uses this to hand the whole monome
-// grid to MP (bypassing the scene-grid surface).
-bool meadowphysics_active(void);
+// True when MP should drive the monome grid: while its view is front-most, or
+// while it's playing (so a running sequence keeps animating the grid even from
+// another mode). grid.c routes grid key/refresh to MP when this is set.
+bool meadowphysics_owns_grid(void);
 
-// Grid surface (dispatched from grid.c when meadowphysics_active()).
+// Grid surface (dispatched from grid.c when meadowphysics_owns_grid()).
 void meadowphysics_grid_key(uint8_t x, uint8_t y, uint8_t z);
 void meadowphysics_grid_render(void);  // fills monomeLedBuffer
 

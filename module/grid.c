@@ -172,13 +172,13 @@ typedef struct {
     u8 key;
     u8 x;
     u8 y;
-    scene_state_t *ss;
+    scene_state_t* ss;
     softTimer_t timer;
 } hold_repeat_info;
 
 typedef struct {
     u8 on;
-    scene_state_t *ss;
+    scene_state_t* ss;
     softTimer_t timer;
 } script_trigger_info;
 
@@ -194,23 +194,23 @@ static hold_repeat_info held_keys[GRID_MAX_KEY_PRESSED];
 static u8 timers_uninitialized = 1;
 static script_trigger_info script_triggers[11];
 
-static void grid_control_refresh(scene_state_t *ss);
-static u8 grid_control_process_key(scene_state_t *ss, u8 x, u8 y, u8 z,
+static void grid_control_refresh(scene_state_t* ss);
+static u8 grid_control_process_key(scene_state_t* ss, u8 x, u8 y, u8 z,
                                    u8 from_held);
-static void hold_repeat_timer_callback(void *o);
-static void grid_process_key_hold_repeat(scene_state_t *ss, u8 x, u8 y);
-static void grid_screen_refresh_ctrl(scene_state_t *ss, u8 page, u8 x1, u8 y1,
+static void hold_repeat_timer_callback(void* o);
+static void grid_process_key_hold_repeat(scene_state_t* ss, u8 x, u8 y);
+static void grid_screen_refresh_ctrl(scene_state_t* ss, u8 page, u8 x1, u8 y1,
                                      u8 x2, u8 y2);
-static void grid_screen_refresh_led(scene_state_t *ss, u8 full_grid, u8 page,
+static void grid_screen_refresh_led(scene_state_t* ss, u8 full_grid, u8 page,
                                     u8 x1, u8 y1, u8 x2, u8 y2);
-static void grid_screen_refresh_info(scene_state_t *ss, u8 page, u8 x1, u8 y1,
+static void grid_screen_refresh_info(scene_state_t* ss, u8 page, u8 x1, u8 y1,
                                      u8 x2, u8 y2);
-static bool grid_within_area(u8 x, u8 y, grid_common_t *gc);
+static bool grid_within_area(u8 x, u8 y, grid_common_t* gc);
 static void grid_fill_area(s8 x, s8 y, s8 w, s8 h, s8 level);
 static void grid_fill_area_scr(s8 x, s8 y, s8 w, s8 h, s8 level, u8 page);
-static u16 calc_fader_level(scene_state_t *ss, u8 i, u8 vert);
+static u16 calc_fader_level(scene_state_t* ss, u8 i, u8 vert);
 
-void grid_set_control_mode(u8 control, u8 mode, scene_state_t *ss) {
+void grid_set_control_mode(u8 control, u8 mode, scene_state_t* ss) {
     if (mode == M_LIVE) {
         u8 sub_mode = get_live_sub_mode();
         if (sub_mode == SUB_MODE_GRID)
@@ -234,7 +234,7 @@ void grid_set_control_mode(u8 control, u8 mode, scene_state_t *ss) {
     ss->grid.grid_dirty = 1;
 }
 
-void grid_control_refresh(scene_state_t *ss) {
+void grid_control_refresh(scene_state_t* ss) {
     size_x = monome_size_x();
     size_y = monome_size_y();
 
@@ -456,7 +456,7 @@ void grid_control_refresh(scene_state_t *ss) {
 
     if (variable_edit) {
         u8 ve = variable_edit - 1;
-        int16_t *v = &(ss->variables.a);
+        int16_t* v = &(ss->variables.a);
         if (size_x == 8) {
             if (v[ve] < 0)
                 for (u16 i = 0; i < 8; i++)
@@ -485,24 +485,24 @@ void grid_control_refresh(scene_state_t *ss) {
     }
 }
 
-static void script_triggers_callback(void *o) {
-    script_trigger_info *st = o;
+static void script_triggers_callback(void* o) {
+    script_trigger_info* st = o;
     timer_remove(&st->timer);
     st->on = 0;
     st->ss->grid.grid_dirty = 1;
 }
 
-void grid_metro_triggered(scene_state_t *ss) {
+void grid_metro_triggered(scene_state_t* ss) {
     script_triggers[8].on = 1;
     script_triggers[8].ss = ss;
     timer_remove(&script_triggers[8].timer);
     timer_add(&script_triggers[8].timer,
               min(GRID_SCRIPT_TRIGGER, ss->variables.m >> 1),
-              &script_triggers_callback, (void *)&script_triggers[8]);
+              &script_triggers_callback, (void*)&script_triggers[8]);
     ss->grid.grid_dirty = 1;
 }
 
-static void restore_last_mode(scene_state_t *ss) {
+static void restore_last_mode(scene_state_t* ss) {
     tt_mode = tt_last_mode;
     if (tt_mode == G_EDIT) {
         set_edit_mode_script(tt_script);
@@ -533,7 +533,7 @@ static void restore_last_mode(scene_state_t *ss) {
     ss->grid.grid_dirty = 1;
 }
 
-static u8 grid_control_process_key(scene_state_t *ss, u8 x, u8 y, u8 z,
+static u8 grid_control_process_key(scene_state_t* ss, u8 x, u8 y, u8 z,
                                    u8 from_held) {
     if (size_y == 16) {
         if (y < 8) return 0;
@@ -543,7 +543,7 @@ static u8 grid_control_process_key(scene_state_t *ss, u8 x, u8 y, u8 z,
     if (variable_edit && y == 7) {
         if (!z || from_held) return 1;
 
-        int16_t *v = &(ss->variables.a);
+        int16_t* v = &(ss->variables.a);
         v[variable_edit - 1] = v[variable_edit - 1] == x + 1 ? 0 : x + 1;
         variable_changed = 1;
         set_vars_updated();
@@ -871,14 +871,14 @@ static u8 grid_control_process_key(scene_state_t *ss, u8 x, u8 y, u8 z,
         script_triggers[x].ss = ss;
         timer_remove(&script_triggers[x].timer);
         timer_add(&script_triggers[x].timer, GRID_SCRIPT_TRIGGER,
-                  &script_triggers_callback, (void *)&script_triggers[x]);
+                  &script_triggers_callback, (void*)&script_triggers[x]);
         ss->grid.grid_dirty = 1;
         run_script(ss, x);
         return 1;
     }
 
     if (variable_edit && y > 1 && y < 6) {
-        int16_t *v = &(ss->variables.a);
+        int16_t* v = &(ss->variables.a);
         u8 ve = variable_edit - 1;
 
         if (!z && x > 2 && x < 5 && variable_edit == x - 2 + ((y - 2) << 1)) {
@@ -938,7 +938,7 @@ static u8 grid_control_process_key(scene_state_t *ss, u8 x, u8 y, u8 z,
         script_triggers[10].ss = ss;
         timer_remove(&script_triggers[x].timer);
         timer_add(&script_triggers[10].timer, GRID_SCRIPT_TRIGGER,
-                  &script_triggers_callback, (void *)&script_triggers[10]);
+                  &script_triggers_callback, (void*)&script_triggers[10]);
         clear_delays_and_slews(ss);
         ss->grid.grid_dirty = 1;
         return 1;
@@ -950,7 +950,7 @@ static u8 grid_control_process_key(scene_state_t *ss, u8 x, u8 y, u8 z,
         script_triggers[8].ss = ss;
         timer_remove(&script_triggers[8].timer);
         timer_add(&script_triggers[8].timer, GRID_SCRIPT_TRIGGER,
-                  &script_triggers_callback, (void *)&script_triggers[8]);
+                  &script_triggers_callback, (void*)&script_triggers[8]);
         ss->grid.grid_dirty = 1;
         run_script(ss, METRO_SCRIPT);
         return 1;
@@ -962,7 +962,7 @@ static u8 grid_control_process_key(scene_state_t *ss, u8 x, u8 y, u8 z,
         script_triggers[9].ss = ss;
         timer_remove(&script_triggers[9].timer);
         timer_add(&script_triggers[9].timer, GRID_SCRIPT_TRIGGER,
-                  &script_triggers_callback, (void *)&script_triggers[9]);
+                  &script_triggers_callback, (void*)&script_triggers[9]);
         ss->grid.grid_dirty = 1;
         run_script(ss, INIT_SCRIPT);
         return 1;
@@ -1043,7 +1043,7 @@ static u8 grid_control_process_key(scene_state_t *ss, u8 x, u8 y, u8 z,
     return 1;
 }
 
-void grid_process_key(scene_state_t *ss, u8 _x, u8 _y, u8 z, u8 emulated) {
+void grid_process_key(scene_state_t* ss, u8 _x, u8 _y, u8 z, u8 emulated) {
     if (timers_uninitialized) {
         timers_uninitialized = 0;
         for (u8 i = 0; i < GRID_MAX_KEY_PRESSED; i++) held_keys[i].used = 0;
@@ -1055,7 +1055,7 @@ void grid_process_key(scene_state_t *ss, u8 _x, u8 _y, u8 z, u8 emulated) {
     u8 y = SG.rotate && !emulated ? size_y - _y - 1 : _y;
 
     // Meadowphysics owns the whole grid while active.
-    if (meadowphysics_active()) {
+    if (meadowphysics_owns_grid()) {
         meadowphysics_grid_key(x, y, z);
         ss->grid.grid_dirty = 1;
         return;
@@ -1078,7 +1078,7 @@ void grid_process_key(scene_state_t *ss, u8 _x, u8 _y, u8 z, u8 emulated) {
                     held_keys[i].ss = ss;
                     timer_add(&held_keys[i].timer, GRID_KEY_HOLD_DELAY,
                               &hold_repeat_timer_callback,
-                              (void *)&held_keys[i]);
+                              (void*)&held_keys[i]);
                     break;
                 }
         }
@@ -1287,7 +1287,7 @@ void grid_process_key(scene_state_t *ss, u8 _x, u8 _y, u8 z, u8 emulated) {
     if (refresh) SG.grid_dirty = SG.scr_dirty = 1;
 }
 
-void grid_process_key_hold_repeat(scene_state_t *ss, u8 x, u8 y) {
+void grid_process_key_hold_repeat(scene_state_t* ss, u8 x, u8 y) {
     if (control_mode_on)
         if (grid_control_process_key(ss, x, y, 1, 1)) return;
 
@@ -1338,8 +1338,8 @@ void grid_process_key_hold_repeat(scene_state_t *ss, u8 x, u8 y) {
     if (refresh) SG.grid_dirty = SG.scr_dirty = 1;
 }
 
-void hold_repeat_timer_callback(void *o) {
-    hold_repeat_info *hr = o;
+void hold_repeat_timer_callback(void* o) {
+    hold_repeat_info* hr = o;
     u8 is_hold = hr->used == 1;
     if (is_hold) {
         timer_reset_set(&hr->timer, control_mode_on && hr->x > 7
@@ -1350,7 +1350,7 @@ void hold_repeat_timer_callback(void *o) {
     grid_process_key_hold_repeat(hr->ss, hr->x, hr->y);
 }
 
-void grid_process_fader_slew(scene_state_t *ss) {
+void grid_process_fader_slew(scene_state_t* ss) {
     u8 refresh = 0;
     u8 scripts[EDITABLE_SCRIPT_COUNT];
     for (u8 i = 0; i < EDITABLE_SCRIPT_COUNT; i++) scripts[i] = 0;
@@ -1391,18 +1391,18 @@ void grid_clear_held_keys() {
     }
 }
 
-bool grid_within_area(u8 x, u8 y, grid_common_t *gc) {
+bool grid_within_area(u8 x, u8 y, grid_common_t* gc) {
     return x >= gc->x && x < (gc->x + gc->w) && y >= gc->y &&
            y < (gc->y + gc->h);
 }
 
-u16 calc_fader_level(scene_state_t *ss, u8 i, u8 vert) {
+u16 calc_fader_level(scene_state_t* ss, u8 i, u8 vert) {
     u32 fl = ((GF.value * ((vert ? GFC.h : GFC.w) - 2)) << 5) / GFC.level;
     fl = (fl >> 1) + (fl & 1);
     return fl;
 }
 
-void grid_refresh(scene_state_t *ss) {
+void grid_refresh(scene_state_t* ss) {
     size_x = monome_size_x();
     size_y = monome_size_y();
 
@@ -1410,7 +1410,7 @@ void grid_refresh(scene_state_t *ss) {
     if (size_y == 0) size_y = 8;
 
     // Meadowphysics owns the whole grid while active (renders its own buffer).
-    if (meadowphysics_active()) {
+    if (meadowphysics_owns_grid()) {
         meadowphysics_grid_render();
         ss->grid.grid_dirty = 0;
         return;
@@ -1629,7 +1629,7 @@ void grid_fill_area(s8 x, s8 y, s8 w, s8 h, s8 level) {
 
 ///////////////////////////////////////// screen functions
 
-void grid_screen_refresh(scene_state_t *ss, u8 is_full, u8 page, u8 ctrl, u8 x1,
+void grid_screen_refresh(scene_state_t* ss, u8 is_full, u8 page, u8 ctrl, u8 x1,
                          u8 y1, u8 x2, u8 y2) {
     if (is_full) { grid_screen_refresh_led(ss, 1, page, x1, y1, x2, y2); }
     else {
@@ -1640,7 +1640,7 @@ void grid_screen_refresh(scene_state_t *ss, u8 is_full, u8 page, u8 ctrl, u8 x1,
     SG.scr_dirty = 0;
 }
 
-void grid_screen_refresh_ctrl(scene_state_t *ss, u8 page, u8 x1, u8 y1, u8 x2,
+void grid_screen_refresh_ctrl(scene_state_t* ss, u8 page, u8 x1, u8 y1, u8 x2,
                               u8 y2) {
     grid_fill_area_scr(0, 0, GRID_MAX_DIMENSION, GRID_MAX_DIMENSION, 0, 0);
 
@@ -1719,7 +1719,7 @@ void grid_screen_refresh_ctrl(scene_state_t *ss, u8 page, u8 x1, u8 y1, u8 x2,
     return;
 }
 
-void grid_screen_refresh_led(scene_state_t *ss, u8 full_grid, u8 page, u8 x1,
+void grid_screen_refresh_led(scene_state_t* ss, u8 full_grid, u8 page, u8 x1,
                              u8 y1, u8 x2, u8 y2) {
     grid_fill_area_scr(0, 0, GRID_MAX_DIMENSION, GRID_MAX_DIMENSION, 0, 0);
 
@@ -1965,7 +1965,7 @@ void grid_screen_refresh_led(scene_state_t *ss, u8 full_grid, u8 page, u8 x1,
         }
 }
 
-static void grid_screen_refresh_info(scene_state_t *ss, u8 page, u8 x1, u8 y1,
+static void grid_screen_refresh_info(scene_state_t* ss, u8 page, u8 x1, u8 y1,
                                      u8 x2, u8 y2) {
     char s[32];
     u8 area_x, area_y, area_w, area_h;
