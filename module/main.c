@@ -36,6 +36,7 @@
 // this
 #include "chaos.h"
 #include "conf_board.h"
+#include "earthsea_mode.h"
 #include "edit_mode.h"
 #include "flash.h"
 #include "globals.h"
@@ -510,6 +511,12 @@ void handler_Trigger(int32_t data) {
     if (input == KR_EXT_CLOCK_INPUT &&
         kria_external_clock(gpio_get_pin_value(A00 + data)))
         return;
+    if (input == ES_EXT_CLOCK_INPUT &&
+        es_external_clock(gpio_get_pin_value(A00 + data)))
+        return;
+    if (input == ES_PLAY_INPUT &&
+        es_play_trigger(gpio_get_pin_value(A00 + data)))
+        return;
     if (!ss_get_mute(&scene_state, input)) {
         bool tr_state = gpio_get_pin_value(A00 + data);
         if (tr_state) {
@@ -542,6 +549,7 @@ void handler_ScreenRefresh(int32_t data) {
             screen_dirty = screen_refresh_meadowphysics();
             break;
         case M_KRIA: screen_dirty = screen_refresh_kria(); break;
+        case M_EARTHSEA: screen_dirty = screen_refresh_earthsea(); break;
     }
 
     u8 grid = 0;
@@ -592,6 +600,17 @@ void handler_AppCustom(int32_t data) {
     }
     if (data >= 20 && data < 24) {
         kria_service_repeat((uint8_t)(data - 20));
+        return;
+    }
+    // Earthsea: 3 = play-timer tick, 30-33 = fixed-edge note-off (see
+    // earthsea_mode.h).
+    if (data == 3) {
+        es_service_play();
+        if (es_owns_grid()) scene_state.grid.grid_dirty = 1;
+        return;
+    }
+    if (data >= 30 && data < 34) {
+        es_service_note_off((uint8_t)(data - 30));
         return;
     }
     if (ss_get_script_len(&scene_state, METRO_SCRIPT)) {
@@ -821,6 +840,9 @@ void set_mode(tele_mode_t m) {
     // leaving Kria: persist edits, relinquish keyboard/grid (engine keeps
     // running in the background if it was playing)
     if (mode == M_KRIA && m != M_KRIA) kria_mode_exit();
+    // leaving Earthsea: persist edits, silence live notes (playback keeps
+    // going in the background if a pattern is playing)
+    if (mode == M_EARTHSEA && m != M_EARTHSEA) earthsea_mode_exit();
     last_mode = mode;
     switch (m) {
         case M_LIVE:
@@ -842,6 +864,10 @@ void set_mode(tele_mode_t m) {
         case M_KRIA:
             set_kria_mode();
             mode = M_KRIA;
+            break;
+        case M_EARTHSEA:
+            set_earthsea_mode();
+            mode = M_EARTHSEA;
             break;
         case M_PRESET_W:
             set_preset_w_mode();
@@ -908,6 +934,9 @@ void process_keypress(uint8_t key, uint8_t mod_key, bool is_held_key,
             process_meadowphysics_keys(key, mod_key, is_held_key);
             break;
         case M_KRIA: process_kria_keys(key, mod_key, is_held_key); break;
+        case M_EARTHSEA:
+            process_earthsea_keys(key, mod_key, is_held_key);
+            break;
         case M_PRESET_W:
             process_preset_w_keys(key, mod_key, is_held_key);
             break;
@@ -975,6 +1004,14 @@ bool process_global_keys(uint8_t k, uint8_t m, bool is_held_key) {
             set_last_mode();
         else
             set_mode(M_KRIA);
+        return true;
+    }
+    // <alt>-E: toggle earthsea mode
+    else if (match_alt(m, k, HID_E)) {
+        if (mode == M_EARTHSEA)
+            set_last_mode();
+        else
+            set_mode(M_EARTHSEA);
         return true;
     }
     // <F1> through <F8>: run corresponding script
@@ -1130,6 +1167,7 @@ void tele_metro_reset() {
 void tele_tr(uint8_t i, int16_t v) {
     if (meadowphysics_suppresses_output(i)) return;
     if (kria_suppresses_output(i)) return;
+    if (es_suppresses_output(i)) return;
     uint32_t pin = B08 + (device_config.flip ? 3 - i : i);
 
     if (v)
@@ -1169,6 +1207,7 @@ void trPulseTimer_callback(void* obj) {
 void tele_cv(uint8_t i, int16_t v, uint8_t s) {
     if (meadowphysics_suppresses_output(i)) return;
     if (kria_suppresses_output(i)) return;
+    if (es_suppresses_output(i)) return;
     int16_t t = v + aout[i].off;
     if (t < 0)
         t = 0;

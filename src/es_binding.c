@@ -1,0 +1,44 @@
+// Earthsea output binding -- see es_binding.h.
+
+#include "es_binding.h"
+
+#include <stddef.h>  // NULL
+
+#include "kria_binding.h"  // kria_note_to_cv (shared ET semitone mapping)
+#include "kria_i2c.h"      // shared i2c follower fan-out
+#include "teletype_io.h"   // tele_tr, tele_cv
+
+void es_binding_note_on(uint8_t voice, int16_t semitones, uint16_t duration) {
+    if (voice >= ES_NUM_VOICES) return;
+    int16_t cv = kria_note_to_cv(semitones);
+    kria_i2c_set_voice(voice, semitones, duration);
+    kria_i2c_cv(voice, cv);
+    tele_cv(voice, cv, 0);
+    tele_tr(voice, 1);
+    kria_i2c_tr(voice, 1);
+}
+
+void es_binding_note_off(uint8_t voice) {
+    if (voice >= ES_NUM_VOICES) return;
+    tele_tr(voice, 0);
+    kria_i2c_tr(voice, 0);
+}
+
+static void bind_note_on(void* ctx, uint8_t voice, int16_t semitones,
+                         uint16_t duration) {
+    (void)ctx;
+    es_binding_note_on(voice, semitones, duration);
+}
+
+static void bind_note_off(void* ctx, uint8_t voice) {
+    (void)ctx;
+    es_binding_note_off(voice);
+}
+
+static const es_output_t OUTPUT = { .note_on = bind_note_on,
+                                    .note_off = bind_note_off,
+                                    .ctx = NULL };
+
+const es_output_t* es_binding_output(void) {
+    return &OUTPUT;
+}

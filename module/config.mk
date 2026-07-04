@@ -72,6 +72,7 @@ CSRCS = \
 	../module/meadowphysics_mode.c   			\
 	../module/kria_mode.c   				\
 	../module/kria_i2c_oled.c   				\
+	../module/earthsea_mode.c				\
 	../module/pattern_mode.c   				\
 	../module/preset_r_mode.c   				\
 	../module/preset_w_mode.c   				\
@@ -90,6 +91,9 @@ CSRCS = \
 	../src/kria_clock.c					\
 	../src/kria_grid.c					\
 	../src/kria_i2c.c					\
+	../src/es_engine.c					\
+	../src/es_binding.c					\
+	../src/es_grid.c					\
 	../src/scanner.c					\
 	../src/scale.c						\
 	../src/scene_serialization.c				\

@@ -102,14 +102,26 @@ void meadowphysics_op_stop(int16_t channel) {}
 void meadowphysics_op_run(int16_t on) {}
 void kria_op_run(int16_t on) {}
 void kria_op_reset(void) {}
-int16_t kria_op_pattern(int16_t set, int16_t val) { return 0; }
-int16_t kria_op_scale(int16_t set, int16_t val) { return 0; }
-int16_t kria_op_period(int16_t set, int16_t val) { return 0; }
-int16_t kria_op_mute(int16_t track, int16_t set, int16_t val) { return 0; }
+int16_t kria_op_pattern(int16_t set, int16_t val) {
+    return 0;
+}
+int16_t kria_op_scale(int16_t set, int16_t val) {
+    return 0;
+}
+int16_t kria_op_period(int16_t set, int16_t val) {
+    return 0;
+}
+int16_t kria_op_mute(int16_t track, int16_t set, int16_t val) {
+    return 0;
+}
 void kria_op_tmute(int16_t track) {}
 void kria_op_clock(int16_t track) {}
-int16_t kria_op_dir(int16_t track, int16_t set, int16_t val) { return 0; }
-int16_t kria_op_cue(int16_t set, int16_t val) { return 0; }
+int16_t kria_op_dir(int16_t track, int16_t set, int16_t val) {
+    return 0;
+}
+int16_t kria_op_cue(int16_t set, int16_t val) {
+    return 0;
+}
 int16_t kria_op_pos(int16_t track, int16_t param, int16_t set, int16_t val) {
     return 0;
 }
@@ -121,9 +133,26 @@ int16_t kria_op_loop_len(int16_t track, int16_t param, int16_t set,
                          int16_t val) {
     return 0;
 }
-int16_t kria_op_cv(int16_t track) { return 0; }
-int16_t kria_op_dur(int16_t track) { return 0; }
-int16_t kria_op_ii(int16_t follower, int16_t set, int16_t val) { return 0; }
+int16_t kria_op_cv(int16_t track) {
+    return 0;
+}
+int16_t kria_op_dur(int16_t track) {
+    return 0;
+}
+int16_t kria_op_ii(int16_t follower, int16_t set, int16_t val) {
+    return 0;
+}
+void es_op_run(int16_t on) {}
+void es_op_pattern(int16_t p) {}
+void es_op_clock(int16_t d) {}
+void es_op_reset(int16_t pos) {}
+void es_op_stop(void) {}
+void es_op_trans(int16_t d) {}
+void es_op_magic(int16_t d) {}
+void es_op_mode(int16_t d) {}
+int16_t es_op_cv(int16_t voice) {
+    return 0;
+}
 
 void set_live_submode(uint8_t submode) {
     printf("SET_LIVE_SUBMODE submode:%" PRIu8, submode);

@@ -1,5 +1,6 @@
 #include "grid.h"
 
+#include "earthsea_mode.h"
 #include "edit_mode.h"
 #include "flash.h"
 #include "font.h"
@@ -31,7 +32,8 @@ typedef enum {
     G_TRACKER,
     G_PRESET,
     G_MEADOWPHYSICS,
-    G_KRIA
+    G_KRIA,
+    G_EARTHSEA
 } grid_control_mode_t;
 
 // clang-format off
@@ -231,6 +233,7 @@ void grid_set_control_mode(u8 control, u8 mode, scene_state_t* ss) {
     else if (mode == M_PATTERN) { tt_mode = G_TRACKER; }
     else if (mode == M_MEADOWPHYSICS) { tt_mode = G_MEADOWPHYSICS; }
     else if (mode == M_KRIA) { tt_mode = G_KRIA; }
+    else if (mode == M_EARTHSEA) { tt_mode = G_EARTHSEA; }
     else if (mode == M_PRESET_W || mode == M_PRESET_R) { tt_mode = G_PRESET; }
     control_mode_on = control;
     grid_clear_held_keys();
@@ -1069,6 +1072,12 @@ void grid_process_key(scene_state_t* ss, u8 _x, u8 _y, u8 z, u8 emulated) {
         ss->grid.grid_dirty = 1;
         return;
     }
+    // Earthsea owns the whole grid while active.
+    if (es_owns_grid()) {
+        es_grid_key(x, y, z);
+        ss->grid.grid_dirty = 1;
+        return;
+    }
 
     if (SG.clear_held) {
         grid_clear_held_keys();
@@ -1427,6 +1436,12 @@ void grid_refresh(scene_state_t* ss) {
     // Kria owns the whole grid while active (renders its own buffer).
     if (kria_owns_grid()) {
         kria_grid_render();
+        ss->grid.grid_dirty = 0;
+        return;
+    }
+    // Earthsea owns the whole grid while active (renders its own buffer).
+    if (es_owns_grid()) {
+        es_grid_render();
         ss->grid.grid_dirty = 0;
         return;
     }

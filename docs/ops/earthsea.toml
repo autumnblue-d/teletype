@@ -1,67 +1,87 @@
 ["ES.PRESET"]
 prototype = "ES.PRESET x"
-short = "Recall preset `x` (0-7)"
+short = "i2c only: recall preset `x` (0-7) on an external Ansible"
 description = """
-Recall the preset in location `x`. This will stop the currently playing pattern.
+Recall the preset in location `x` on an external Ansible running Earthsea.
+Unlike the other `ES.*` ops this is NOT retargeted at the native Earthsea
+mode (the native port has a single global bank instead of presets).
 """
 
 ["ES.MODE"]
 prototype = "ES.MODE x"
-short = "Set pattern clock mode. (0=normal, 1=II clock)"
+short = "Set edge mode (<0 pattern, 0 drone, 1-15 fixed)"
 description = """
-Sets the pattern clock mode. Setting `x` to 0 sets Earthsea to use it's internal clock. Setting `x` to 1 clocks Earthsea via the `ES.CLOCK` command.
+Sets the current pattern's edge (gate) mode. `x` < 0 or > 15: pattern mode
+(gates exactly as recorded). `x` = 0: drone mode (presses toggle notes).
+`x` = 1-15: fixed mode with gate length (`x`+1)*16 ms.
 """
 
 ["ES.CLOCK"]
 prototype = "ES.CLOCK x"
-short = "If II clocked, next pattern event"
+short = "Advance to the next pattern event group"
 description = """
-If Earthsea is II clocked (see `ES.MODE`), and `x` is non-zero, advance to the next pattern event.
+Advance playback by one chord group (all events recorded closer together
+than the chord threshold play at once). Use with external-clock mode for
+stepped playback. `x` is ignored (kept for compatibility).
 """
 
 ["ES.RESET"]
 prototype = "ES.RESET x"
-short = "Reset pattern to start (and start playing)"
+short = "(Re)start playback at position `x`/16 (0-15)"
 description = """
-If `x` is non-zero, reset the position in the current pattern to the start and start playing.
+Start (or restart) playback of the current pattern at scrub position `x`/16
+of its total length; 0 starts from the beginning.
 """
 
 ["ES.PATTERN"]
 prototype = "ES.PATTERN x"
-short = "Select playing pattern (0-15)"
+short = "Select pattern (0-15)"
 description = """
-Select pattern (0-15) from the current preset.
+Select pattern (0-15). Does not start playback (use `ES.RESET` / `ES.RUN`).
 """
 
 ["ES.TRANS"]
 prototype = "ES.TRANS x"
-short = "Transpose the current pattern"
+short = "Transpose the current pattern and restart playback"
 description = """
-Apply a transposition relative to the current 'root' position. Integer divisions of `x` shift the root note up or down a row, `x` modulo 5 will shift the position
-left or right up to 4 notes.
+Walk the pattern root `x` steps along the fourths keyboard layout (positive =
+up in pitch), then restart playback. Integer divisions of `x` shift the root
+note up or down a row, `x` modulo 5 shifts left or right up to 4 notes.
 """
 
 ["ES.STOP"]
 prototype = "ES.STOP x"
-short = "Stop pattern playback."
+short = "Stop pattern playback"
 description = """
-If `x` is non-zero, stop pattern playback, or stop record if currently recording.
+Stop pattern playback. `x` is ignored (kept for compatibility).
 """
 
 ["ES.TRIPLE"]
 prototype = "ES.TRIPLE x"
-short = "Recall triple shape (1-4)"
+short = "i2c only: recall triple shape (1-4) on an original Earthsea"
 description = """
-Recall triple shape (1-4).
+Recall triple shape (1-4). Targets the original Earthsea module over i2c;
+not retargeted at the native mode (Ansible ignores it too).
 """
 
 ["ES.MAGIC"]
 prototype = "ES.MAGIC x"
-short = "Magic shape (1= halfspeed, 2=doublespeed, 3=linearize)"
+short = "Magic: 1 half, 2 double, 3/4 linearize on/off, 5/6 fwd/rev"
 description = """
-Apply one of the magic shapes, (1= halfspeed, 2=doublespeed, 3=linearize). Other shapes are not currently available via II ops.
+Apply a magic transform to the current pattern: 1 = half speed, 2 = double
+speed, 3 = linearize on, 4 = linearize off, 5 = play forward, 6 = play
+reversed.
 """
 
 ["ES.CV"]
-prototype = "ES.CV x "
-short = "get the current CV value for channel `x`"
+prototype = "ES.CV x"
+short = "Get the current CV (pitch) value for voice `x` (1-4)"
+
+["ES.RUN"]
+prototype = "ES.RUN x"
+short = "Play (`x` != 0) or stop + silence (`x` = 0) the current pattern"
+description = """
+`x` non-zero starts playback of the current pattern from the beginning (it
+keeps playing in the background across mode changes). `x` = 0 stops playback
+and silences all Earthsea voices, releasing the CV/TR jacks back to scripts.
+"""

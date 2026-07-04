@@ -396,6 +396,7 @@
         "ES.TRIPLE"   => { MATCH_OP(E_OP_ES_TRIPLE); };
         "ES.MAGIC"    => { MATCH_OP(E_OP_ES_MAGIC); };
         "ES.CV"       => { MATCH_OP(E_OP_ES_CV); };
+        "ES.RUN"      => { MATCH_OP(E_OP_ES_RUN); };
 
         # orca
         "OR.TRK"      => { MATCH_OP(E_OP_OR_TRK); };

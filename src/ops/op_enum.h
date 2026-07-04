@@ -355,6 +355,7 @@ typedef enum {
     E_OP_ES_TRIPLE,
     E_OP_ES_MAGIC,
     E_OP_ES_CV,
+    E_OP_ES_RUN,
     E_OP_OR_TRK,
     E_OP_OR_CLK,
     E_OP_OR_DIV,

@@ -10,6 +10,7 @@
 #include "print_funcs.h"
 
 // this
+#include "es_engine.h"  // es_engine_set_defaults (first-run ES bank)
 #include "teletype.h"
 
 // Bumped 0x22 -> 0x23 for the Meadowphysics port (SCENE_SLOTS 32->30 +
@@ -19,7 +20,8 @@
 // 0x24 -> 0x25: Kria (SCENE_SLOTS 30->20 + global kria_config_t bank);
 // -> 0x26/0x27 for the i2c follower bits; -> 0x28 for the global i2c bank.
 // -> 0x29: I2M + MO MIDI followers (6->8 followers + MIDI fields in fstate).
-#define FIRSTRUN_KEY 0x29
+// -> 0x2A: Earthsea (SCENE_SLOTS 20->18 + global es_config_t bank).
+#define FIRSTRUN_KEY 0x2A
 
 static grid_data_t grid_data;
 
@@ -88,6 +90,13 @@ void flash_prepare() {
                 scale_bank[s][i + 1] = (s < 7) ? SCALE_INT[s][i] : 1;
         }
         flashc_memcpy((void*)&f.scale_bank, scale_bank, sizeof(scale_bank),
+                      true);
+
+        // Earthsea bank defaults (single global instance). Staged in RAM;
+        // ~8.6 KB, static to keep it off the stack.
+        static es_config_t es_defaults;
+        es_engine_set_defaults(&es_defaults);
+        flashc_memcpy((void*)&f.earthsea, &es_defaults, sizeof(es_defaults),
                       true);
 
         flash_update_last_saved_scene(0);
@@ -191,6 +200,14 @@ void flash_get_kria_i2c(kria_i2c_fstate_t* dst) {
 
 void flash_update_kria_i2c(const kria_i2c_fstate_t* src) {
     flashc_memcpy((void*)&f.kria_i2c, src, sizeof(f.kria_i2c), true);
+}
+
+void flash_get_es(es_config_t* dst) {
+    memcpy(dst, &f.earthsea, sizeof(f.earthsea));
+}
+
+void flash_update_es(const es_config_t* src) {
+    flashc_memcpy((void*)&f.earthsea, src, sizeof(f.earthsea), true);
 }
 
 void flash_update_device_config(device_config_t* device_config) {

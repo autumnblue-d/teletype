@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 
+#include "es_engine.h"
 #include "globals.h"
 #include "kria_engine.h"
 #include "line_editor.h"
@@ -15,7 +16,9 @@
 // Kria (Scenario B): reduced 30 -> 20. Dropping 10 scenes (~63 KB) funds the
 // 16-pattern global Kria bank (~18.5 KB) and leaves ~49 KB of program flash for
 // Kria code. See KRIA_PORT_PLAN.md §0.
-#define SCENE_SLOTS 20
+// Earthsea (Scenario A): reduced 20 -> 18. Dropping 2 scenes (~12.7 KB) funds
+// the 16-pattern global Earthsea bank (~8.6 KB). See EARTHSEA_PORT_PLAN.md §0.
+#define SCENE_SLOTS 18
 #define BUTTON_STATE_SIZE (GRID_BUTTON_COUNT >> 3)
 
 typedef struct {
@@ -44,6 +47,7 @@ typedef struct {
     uint8_t scale_bank[MP_SCALE_SLOTS][8];
     kria_config_t kria;  // Kria global preset bank (single song), not per-scene
     kria_i2c_fstate_t kria_i2c[KRIA_I2C_FOLLOWERS];  // global i2c follower bank
+    es_config_t earthsea;  // Earthsea global bank (single instance)
 } nvram_data_t;
 
 u8 is_flash_fresh(void);
@@ -75,5 +79,9 @@ void flash_update_kria(const kria_config_t* src);
 // Global i2c follower bank (shared by Kria + MP).
 void flash_get_kria_i2c(kria_i2c_fstate_t* dst);
 void flash_update_kria_i2c(const kria_i2c_fstate_t* src);
+
+// Global Earthsea bank (single instance in nvram_data_t; not per-scene).
+void flash_get_es(es_config_t* dst);
+void flash_update_es(const es_config_t* src);
 
 #endif

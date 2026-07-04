@@ -1,6 +1,7 @@
 #include <stdint.h>
 
 #include "drum_helpers_tests.h"
+#include "es_tests.h"
 #include "greatest/greatest.h"
 #include "kria_tests.h"
 #include "match_token_tests.h"
@@ -52,7 +53,7 @@ int16_t get_dashboard_value(uint8_t index) {
     return 0;
 }
 void reset_midi_counter() {}
-void tele_midi_out(uint8_t port, uint8_t *pack, uint8_t len) {}
+void tele_midi_out(uint8_t port, uint8_t* pack, uint8_t len) {}
 void tele_save_calibration() {}
 void grid_key_press(uint8_t x, uint8_t y, uint8_t z) {}
 void meadowphysics_op_reset(int16_t channel) {}
@@ -100,6 +101,17 @@ int16_t kria_op_dur(int16_t track) {
 int16_t kria_op_ii(int16_t follower, int16_t set, int16_t val) {
     return 0;
 }
+void es_op_run(int16_t on) {}
+void es_op_pattern(int16_t p) {}
+void es_op_clock(int16_t d) {}
+void es_op_reset(int16_t pos) {}
+void es_op_stop(void) {}
+void es_op_trans(int16_t d) {}
+void es_op_magic(int16_t d) {}
+void es_op_mode(int16_t d) {}
+int16_t es_op_cv(int16_t voice) {
+    return 0;
+}
 
 GREATEST_MAIN_DEFS();
 
@@ -115,6 +127,7 @@ int main(int argc, char** argv) {
     RUN_SUITE(serialize_scene_suite);
     RUN_SUITE(meadowphysics_suite);
     RUN_SUITE(kria_suite);
+    RUN_SUITE(es_suite);
 
     GREATEST_MAIN_END();
 }

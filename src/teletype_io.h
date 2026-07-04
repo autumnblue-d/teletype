@@ -99,6 +99,18 @@ extern int16_t kria_op_dur(int16_t track);
 // enable/disable an i2c follower (0-5: JF/TXo/ER301/Disting/WSYN/Crow)
 extern int16_t kria_op_ii(int16_t follower, int16_t set, int16_t val);
 
+// earthsea ops (native engine). Semantics mirror Ansible's ii_es handlers;
+// see EARTHSEA_PORT_PLAN.md §8. voice is 0-indexed.
+extern void es_op_run(int16_t on);     // 1 = play pattern, 0 = stop + silence
+extern void es_op_pattern(int16_t p);  // select pattern 0-15
+extern void es_op_clock(int16_t d);    // step next chord group (d unused)
+extern void es_op_reset(int16_t pos);  // (re)start playback at pos/16 (0-15)
+extern void es_op_stop(void);
+extern void es_op_trans(int16_t d);      // walk root +/-d, restart playback
+extern void es_op_magic(int16_t d);      // 1 half 2 dbl 3/4 linearize 5/6 dir
+extern void es_op_mode(int16_t d);       // edge: <0/>15 patt, 0 drone, 1-15 fix
+extern int16_t es_op_cv(int16_t voice);  // voice pitch as raw CV (ET)
+
 // live screen / dashboard
 extern void set_live_submode(uint8_t submode);
 extern void select_dash_screen(uint8_t screen);

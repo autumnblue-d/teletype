@@ -43,7 +43,7 @@
 
 // If you edit this array, you need to run 'utils/op_enums.py' to update the
 // values in 'op_enum.h' so that the order matches.
-const tele_op_t *tele_ops[E_OP__LENGTH] = {
+const tele_op_t* tele_ops[E_OP__LENGTH] = {
     // variables
     &op_A, &op_B, &op_C, &op_D, &op_DRUNK, &op_DRUNK_MAX, &op_DRUNK_MIN,
     &op_DRUNK_WRAP, &op_FLIP, &op_I, &op_O, &op_O_INC, &op_O_MAX, &op_O_MIN,
@@ -141,6 +141,7 @@ const tele_op_t *tele_ops[E_OP__LENGTH] = {
     // earthsea
     &op_ES_PRESET, &op_ES_MODE, &op_ES_CLOCK, &op_ES_RESET, &op_ES_PATTERN,
     &op_ES_TRANS, &op_ES_STOP, &op_ES_TRIPLE, &op_ES_MAGIC, &op_ES_CV,
+    &op_ES_RUN,
 
     // orca
     &op_OR_TRK, &op_OR_CLK, &op_OR_DIV, &op_OR_PHASE, &op_OR_RST, &op_OR_WGT,
@@ -152,13 +153,12 @@ const tele_op_t *tele_ops[E_OP__LENGTH] = {
     &op_ANS_APP, &op_KR_PRE, &op_KR_PAT, &op_KR_SCALE, &op_KR_PERIOD,
     &op_KR_POS, &op_KR_L_ST, &op_KR_L_LEN, &op_KR_RES, &op_KR_CV, &op_KR_MUTE,
     &op_KR_TMUTE, &op_KR_CLK, &op_KR_PG, &op_KR_CUE, &op_KR_DIR, &op_KR_DUR,
-    &op_KR_RUN, &op_KR_II,
-    &op_ME_PRE, &op_ME_RES, &op_ME_STOP, &op_ME_SCALE, &op_ME_PERIOD, &op_ME_CV,
-    &op_LV_PRE, &op_LV_RES, &op_LV_POS, &op_LV_L_ST, &op_LV_L_LEN, &op_LV_L_DIR,
-    &op_LV_CV, &op_CY_PRE, &op_CY_RES, &op_CY_POS, &op_CY_REV, &op_CY_CV,
-    &op_MID_SHIFT, &op_MID_SLEW, &op_ARP_STY, &op_ARP_HLD, &op_ARP_RPT,
-    &op_ARP_GT, &op_ARP_DIV, &op_ARP_RES, &op_ARP_SHIFT, &op_ARP_SLEW,
-    &op_ARP_FIL, &op_ARP_ROT, &op_ARP_ER,
+    &op_KR_RUN, &op_KR_II, &op_ME_PRE, &op_ME_RES, &op_ME_STOP, &op_ME_SCALE,
+    &op_ME_PERIOD, &op_ME_CV, &op_LV_PRE, &op_LV_RES, &op_LV_POS, &op_LV_L_ST,
+    &op_LV_L_LEN, &op_LV_L_DIR, &op_LV_CV, &op_CY_PRE, &op_CY_RES, &op_CY_POS,
+    &op_CY_REV, &op_CY_CV, &op_MID_SHIFT, &op_MID_SLEW, &op_ARP_STY,
+    &op_ARP_HLD, &op_ARP_RPT, &op_ARP_GT, &op_ARP_DIV, &op_ARP_RES,
+    &op_ARP_SHIFT, &op_ARP_SLEW, &op_ARP_FIL, &op_ARP_ROT, &op_ARP_ER,
 
     // justfriends
     &op_JF_TR, &op_JF_RMODE, &op_JF_RUN, &op_JF_SHIFT, &op_JF_VTR, &op_JF_MODE,
