@@ -20,7 +20,7 @@
 // kria_config_t bank). The bump forces a clean re-init on upgrade even without
 // a chip erase. The Kria bank itself isn't seeded here (an erased/invalid bank
 // fails kria_engine_config_valid and the mode falls back to defaults on load).
-#define FIRSTRUN_KEY 0x26
+#define FIRSTRUN_KEY 0x27
 
 static grid_data_t grid_data;
 

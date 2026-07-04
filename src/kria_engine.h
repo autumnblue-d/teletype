@@ -53,16 +53,24 @@
 #define KR_SYNC_NONE 0x00
 #define KR_SYNC_TIMEDIV 0x01
 
-// i2c follower bits for kria_config_t.i2c_enable / i2c_route (see kria_i2c.h).
-// Only TXo + JF are wired for output today; the rest are reserved so the i2c
-// view can match Ansible's follower layout (grid_KR_ii).
-#define KR_I2C_TXO 0x01
-#define KR_I2C_JF 0x02
-#define KR_I2C_ER301 0x04    // reserved (not yet emitting)
-#define KR_I2C_DISTING 0x08  // reserved
-#define KR_I2C_WSYN 0x10     // reserved
-#define KR_I2C_CROW 0x20     // reserved
-#define KR_I2C_ALL 0x03      // default routing = the implemented followers
+// i2c followers (index into kria_config_t.i2c[] and kria_i2c.c's table). Order
+// matches Ansible's grid_KR_ii layout: col 5 = JF/TXo/ER301/Disting (rows 2-5),
+// col 6 = WSYN/Crow (rows 2-3).
+#define KRIA_I2C_FOLLOWERS 6
+#define KR_F_JF 0
+#define KR_F_TXO 1
+#define KR_F_ER301 2
+#define KR_F_DISTING 3
+#define KR_F_WSYN 4
+#define KR_F_CROW 5
+
+// Persisted per-follower state (mirrors Ansible i2c_follower_t's mutable bits).
+typedef struct {
+    uint8_t active;    // follower enabled
+    uint8_t track_en;  // 4-bit mask: which tracks drive this follower
+    int8_t oct;        // octave offset
+    uint8_t mode;      // active operating mode (follower-specific)
+} kria_i2c_fstate_t;
 
 typedef struct {
     uint8_t tr[16];
@@ -119,8 +127,7 @@ typedef struct {
     uint16_t clock_period;   // internal tempo (ms); used by the clock layer
 
     // i2c follower output (additive to the CV/TR jacks). See kria_i2c.h.
-    uint8_t i2c_enable;                   // KR_I2C_* bitmask of enabled followers
-    uint8_t i2c_route[KRIA_NUM_TRACKS];   // per-track follower bitmask
+    kria_i2c_fstate_t i2c[KRIA_I2C_FOLLOWERS];
 } kria_config_t;
 
 // Ephemeral runtime state -- never serialized.
