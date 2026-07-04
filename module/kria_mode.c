@@ -15,6 +15,7 @@
 #include "kria_clock.h"
 #include "kria_engine.h"
 #include "kria_grid.h"
+#include "kria_i2c.h"  // follower output
 
 // libavr32
 #include "events.h"
@@ -58,6 +59,7 @@ static bool cfg_dirty = false;  // song edited, not yet flushed to flash
 
 static uint64_t last_tick_time = 0;
 static uint32_t clock_delta = KR_CLOCK_PERIOD_DEFAULT;
+static int16_t last_pitch[KRIA_NUM_TRACKS];  // latest semitone per track (for i2c)
 
 // Grid views (Ansible Key 1 / Key 2 equivalents), switched from the keyboard
 // (1 = sequencer, 2 = time, 3 = config). Only active while the Kria view is
@@ -65,6 +67,7 @@ static uint32_t clock_delta = KR_CLOCK_PERIOD_DEFAULT;
 #define KM_VIEW_SEQ 0
 #define KM_VIEW_TIME 1
 #define KM_VIEW_CONFIG 2
+#define KM_VIEW_I2C 3
 #define KM_ROUGH_STEP 64  // ms per rough tempo step
 #define KM_FINE_STEP 4    // ms per fine tempo step
 static uint8_t km_view = KM_VIEW_SEQ;
@@ -86,13 +89,23 @@ static uint32_t km_rnd(void* ctx) {
 
 static void km_schedule_gate(uint8_t ch);
 
+// Route a track's gate (and, on gate-high, its stashed pitch) to any enabled
+// i2c followers assigned to it. Additive to the jacks.
+static void km_i2c_send(uint8_t ch, uint8_t on) {
+    if (ch >= KRIA_NUM_TRACKS) return;
+    uint8_t f = eng.cfg.i2c_enable & eng.cfg.i2c_route[ch];
+    if (f) kria_i2c_note(f, ch, last_pitch[ch], on);
+}
+
 static void km_tr(void* c, uint8_t ch, uint8_t on) {
     (void)c;
     tele_tr(ch, on);
+    km_i2c_send(ch, on);
     if (on) km_schedule_gate(ch);
 }
 static void km_cv(void* c, uint8_t ch, int16_t sem) {
     (void)c;
+    if (ch < KRIA_NUM_TRACKS) last_pitch[ch] = sem;
     tele_cv(ch, kria_note_to_cv(sem), 0);
 }
 static void km_slew(void* c, uint8_t ch, uint16_t s) {
@@ -388,12 +401,44 @@ static void km_config_key(uint8_t x, uint8_t y, uint8_t z) {
         kgrid.note_div_sync = !kgrid.note_div_sync;
 }
 
+// i2c view (Ansible's follower routing): row 0 = follower enable (TXo at col 0,
+// JF at col 2); rows 2/3 = per-track routing for TXo / JF (cols 0-3 = tracks).
+static void km_i2c_render(void) {
+    uint8_t* led = monomeLedBuffer;
+    uint8_t t;
+    memset(led, 0, 128);
+    led[0] = (eng.cfg.i2c_enable & KR_I2C_TXO) ? KM_LB : KM_LD;   // (0,0) TXo on
+    led[2] = (eng.cfg.i2c_enable & KR_I2C_JF) ? KM_LB : KM_LD;    // (2,0) JF on
+    for (t = 0; t < KRIA_NUM_TRACKS; t++) {
+        led[32 + t] = (eng.cfg.i2c_route[t] & KR_I2C_TXO) ? KM_LB : KM_LD;  // row2
+        led[48 + t] = (eng.cfg.i2c_route[t] & KR_I2C_JF) ? KM_LB : KM_LD;   // row3
+    }
+    km_view_finalize(led);
+}
+
+static void km_i2c_key(uint8_t x, uint8_t y, uint8_t z) {
+    if (!z) return;
+    if (y == 0 && x == 0)
+        eng.cfg.i2c_enable ^= KR_I2C_TXO;
+    else if (y == 0 && x == 2)
+        eng.cfg.i2c_enable ^= KR_I2C_JF;
+    else if (y == 2 && x < KRIA_NUM_TRACKS)
+        eng.cfg.i2c_route[x] ^= KR_I2C_TXO;
+    else if (y == 3 && x < KRIA_NUM_TRACKS)
+        eng.cfg.i2c_route[x] ^= KR_I2C_JF;
+    else
+        return;
+    cfg_dirty = true;
+}
+
 void kria_grid_key(uint8_t x, uint8_t y, uint8_t z) {
     if (!kria_owns_grid()) return;
     if (active && km_view == KM_VIEW_TIME)
         km_time_key(x, y, z);
     else if (active && km_view == KM_VIEW_CONFIG)
         km_config_key(x, y, z);
+    else if (active && km_view == KM_VIEW_I2C)
+        km_i2c_key(x, y, z);
     else {
         kria_grid_process_key(&eng, &kgrid, x, y, z);
         if (z) cfg_dirty = true;
@@ -406,6 +451,8 @@ void kria_grid_render(void) {
         km_time_render();
     else if (active && km_view == KM_VIEW_CONFIG)
         km_config_render();
+    else if (active && km_view == KM_VIEW_I2C)
+        km_i2c_render();
     else
         kria_grid_refresh(&eng, &kgrid, monomeLedBuffer, monome_is_vari());
 }
@@ -461,6 +508,11 @@ void process_kria_keys(uint8_t key, uint8_t mod_key, bool is_held_key) {
         scene_state.grid.grid_dirty = 1;
         dirty = true;
     }
+    else if (match_no_mod(mod_key, key, HID_4)) {  // i2c follower routing view
+        km_view = KM_VIEW_I2C;
+        scene_state.grid.grid_dirty = 1;
+        dirty = true;
+    }
 }
 
 // ---- OLED ----
@@ -472,7 +524,7 @@ void process_kria_keys(uint8_t key, uint8_t mod_key, bool is_held_key) {
 static const char* const km_page_name[9] = { "TRIG", "NOTE", "OCT",
                                              "DUR",  "RPT",  "ALT",
                                              "GLIDE", "SCALE", "PATT" };
-static const char* const km_view_name[3] = { "SEQ", "TIME", "CONFIG" };
+static const char* const km_view_name[4] = { "SEQ", "TIME", "CONFIG", "I2C" };
 
 static void km_num(uint8_t ln, uint8_t x, int val, uint8_t fg) {
     char s[8];
@@ -670,8 +722,8 @@ uint8_t screen_refresh_kria(void) {
                             kgrid.mode < 9 ? km_page_name[kgrid.mode] : "?", 102,
                             0, KM_S_VALUE, 0);
 
-    font_string_region_clip(&line[7], "1SEQ 2TIME 3CFG  SPACE:RUN S:SAVE", 0, 0,
-                            3, 0);
+    font_string_region_clip(&line[7], "1SEQ 2TIME 3CFG 4I2C  SPACE:RUN S:SAVE",
+                            0, 0, 3, 0);
 
     return 0b11111111;
 }

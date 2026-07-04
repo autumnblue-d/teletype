@@ -88,6 +88,7 @@ CSRCS = \
 	../src/kria_binding.c					\
 	../src/kria_clock.c					\
 	../src/kria_grid.c					\
+	../src/kria_i2c.c					\
 	../src/scanner.c					\
 	../src/scale.c						\
 	../src/scene_serialization.c				\

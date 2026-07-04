@@ -53,6 +53,11 @@
 #define KR_SYNC_NONE 0x00
 #define KR_SYNC_TIMEDIV 0x01
 
+// i2c follower bits for kria_config_t.i2c_enable / i2c_route (see kria_i2c.h).
+#define KR_I2C_TXO 0x01
+#define KR_I2C_JF 0x02
+#define KR_I2C_ALL 0x03
+
 typedef struct {
     uint8_t tr[16];
     int8_t oct[16];
@@ -106,6 +111,10 @@ typedef struct {
     uint8_t meta_reset_all;  // reset input also resets the meta pointer
     uint8_t dur_tie_mode;    // hold gate on max-duration steps (legato/tie)
     uint16_t clock_period;   // internal tempo (ms); used by the clock layer
+
+    // i2c follower output (additive to the CV/TR jacks). See kria_i2c.h.
+    uint8_t i2c_enable;                   // KR_I2C_* bitmask of enabled followers
+    uint8_t i2c_route[KRIA_NUM_TRACKS];   // per-track follower bitmask
 } kria_config_t;
 
 // Ephemeral runtime state -- never serialized.

@@ -413,6 +413,9 @@ void kria_engine_set_defaults(kria_config_t* cfg) {
     cfg->meta_reset_all = 0;
     cfg->dur_tie_mode = 0;
     cfg->clock_period = 60;
+
+    cfg->i2c_enable = 0;  // off by default (pure CV/TR jacks)
+    for (uint8_t i = 0; i < KRIA_NUM_TRACKS; i++) cfg->i2c_route[i] = KR_I2C_ALL;
 }
 
 bool kria_engine_config_valid(const kria_config_t* cfg) {
