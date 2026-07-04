@@ -33,9 +33,7 @@ static bool kria_next_step(kria_engine_t* e, uint8_t t, uint8_t p) {
     e->rt.pos_mul[t][p]++;
 
     bool latch_input = false;
-    if (e->cfg.sync_mode == KR_SYNC_NONE) {
-        latch_input = true;
-    }
+    if (e->cfg.sync_mode == KR_SYNC_NONE) { latch_input = true; }
     else {
         switch (track->direction) {
             case KR_DIR_FORWARD:
@@ -56,9 +54,7 @@ static bool kria_next_step(kria_engine_t* e, uint8_t t, uint8_t p) {
     if (e->cfg.sync_mode & KR_SYNC_TIMEDIV) {
         if (latch_input) e->rt.tmul_live[t][p] = track->tmul[p];
     }
-    else {
-        e->rt.tmul_live[t][p] = track->tmul[p];
-    }
+    else { e->rt.tmul_live[t][p] = track->tmul[p]; }
 
     if (e->rt.pos_mul[t][p] >= e->rt.tmul_live[t][p]) {
         e->rt.pos_mul[t][p] = 0;
@@ -131,12 +127,13 @@ static void clock_kria_note(kria_engine_t* e, uint8_t t) {
     if (kria_next_step(e, t, KR_P_DUR)) {
         // Nominal (unscaled) gate length; the shell scales by measured clock
         // deltas to real ticks: (dur[step]+1) * (dur_mul<<2).
-        e->rt.dur_unscaled[t] = (uint16_t)((track->dur[e->rt.pos[t][KR_P_DUR]] + 1) *
-                                           (track->dur_mul << 2));
+        e->rt.dur_unscaled[t] =
+            (uint16_t)((track->dur[e->rt.pos[t][KR_P_DUR]] + 1) *
+                       (track->dur_mul << 2));
     }
     if (kria_next_step(e, t, KR_P_OCT)) {
-        e->rt.oct[t] =
-            (uint8_t)sum_clip(track->octshift, track->oct[e->rt.pos[t][KR_P_OCT]], 5);
+        e->rt.oct[t] = (uint8_t)sum_clip(track->octshift,
+                                         track->oct[e->rt.pos[t][KR_P_OCT]], 5);
     }
     if (kria_next_step(e, t, KR_P_NOTE)) {
         e->rt.note[t] = track->note[e->rt.pos[t][KR_P_NOTE]];
@@ -310,7 +307,8 @@ void kria_engine_clock(kria_engine_t* e, uint8_t phase) {
                         e->rt.meta_pos = e->cfg.meta_start;
                     else
                         e->rt.meta_pos++;
-                    kria_engine_change_pattern(e, e->cfg.meta_pat[e->rt.meta_pos]);
+                    kria_engine_change_pattern(e,
+                                               e->cfg.meta_pat[e->rt.meta_pos]);
                     e->rt.meta_next = 0;
                     e->rt.meta_count = 0;
                 }
@@ -413,7 +411,6 @@ void kria_engine_set_defaults(kria_config_t* cfg) {
     cfg->meta_reset_all = 0;
     cfg->dur_tie_mode = 0;
     cfg->clock_period = 60;
-
 }
 
 bool kria_engine_config_valid(const kria_config_t* cfg) {
@@ -431,7 +428,8 @@ bool kria_engine_config_valid(const kria_config_t* cfg) {
                 if (t->tmul[i] == 0) return false;  // divider must be >= 1
             }
             for (uint8_t s = 0; s < 16; s++)
-                if (t->rpt[s] == 0) return false;  // downstream dur/rpt div guard
+                if (t->rpt[s] == 0)
+                    return false;  // downstream dur/rpt div guard
         }
     }
 

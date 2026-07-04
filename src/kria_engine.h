@@ -11,8 +11,8 @@
 //
 // This engine is hardware-abstract and self-contained (no globals, no libavr32
 // dependencies): all persistent data lives in kria_config_t, all ephemeral
-// state in kria_runtime_t, all output goes through the kria_output_t vtable, and
-// randomness is injected. That makes the stepping/loop/meta/scale logic
+// state in kria_runtime_t, all output goes through the kria_output_t vtable,
+// and randomness is injected. That makes the stepping/loop/meta/scale logic
 // host-unit-testable (see tests/kria_tests.c).
 //
 // Deliberate split vs Ansible: Ansible drives gate length and repeat spacing
@@ -80,8 +80,10 @@ typedef struct {
     uint8_t mode;      // active operating mode (follower-specific)
     uint8_t chan;      // MIDI: base channel (0-based)
     uint8_t port;      // MIDI (MO): USB cable, 0=A 1=B
-    uint8_t notes[KRIA_I2C_TRACKS];  // MIDI 8T: fixed note per gate (GM defaults)
-    uint8_t chans[KRIA_I2C_TRACKS];  // MIDI 8T.CHANS: channel per gate (0-based)
+    uint8_t
+        notes[KRIA_I2C_TRACKS];  // MIDI 8T: fixed note per gate (GM defaults)
+    uint8_t
+        chans[KRIA_I2C_TRACKS];  // MIDI 8T.CHANS: channel per gate (0-based)
 } kria_i2c_fstate_t;
 
 typedef struct {
@@ -98,7 +100,8 @@ typedef struct {
 
     uint8_t dur_mul;
     uint8_t direction;  // KR_DIR_*, stored as u8 to pin the size to 1 byte
-    uint8_t advancing[KRIA_NUM_PARAMS];  // triangle-mode direction latch (mutated)
+    uint8_t
+        advancing[KRIA_NUM_PARAMS];  // triangle-mode direction latch (mutated)
     uint8_t octshift;
 
     uint8_t lstart[KRIA_NUM_PARAMS];
@@ -107,7 +110,7 @@ typedef struct {
     uint8_t lswap[KRIA_NUM_PARAMS];  // engine-unused (UI/loop-edit only)
     uint8_t tmul[KRIA_NUM_PARAMS];   // per-param clock divider (>=1)
 
-    uint8_t tt_clocked;       // advanced by TT/i2c KR.CLK instead of internal clock
+    uint8_t tt_clocked;  // advanced by TT/i2c KR.CLK instead of internal clock
     uint8_t trigger_clocked;  // value params advance only when a trigger fires
 } kria_track_t;
 
@@ -144,8 +147,8 @@ typedef struct {
 
 // Ephemeral runtime state -- never serialized.
 typedef struct {
-    uint8_t pos[KRIA_NUM_TRACKS][KRIA_NUM_PARAMS];      // current step per param
-    uint8_t pos_mul[KRIA_NUM_TRACKS][KRIA_NUM_PARAMS];  // divider sub-counter
+    uint8_t pos[KRIA_NUM_TRACKS][KRIA_NUM_PARAMS];  // current step per param
+    uint8_t pos_mul[KRIA_NUM_TRACKS][KRIA_NUM_PARAMS];    // divider sub-counter
     uint8_t tmul_live[KRIA_NUM_TRACKS][KRIA_NUM_PARAMS];  // live divider target
 
     // latched per-step values (updated when their param advances)
@@ -174,16 +177,16 @@ typedef struct {
     uint8_t cue_sub_count;
     uint8_t meta_pos;
     uint16_t meta_count;
-    uint8_t meta_next;      // queued meta jump (1-based; 0 = none)
-    uint8_t cue_pat_next;   // queued pattern change (1-based; 0 = none)
-    bool pos_reset;         // re-arm all positions on next clock
-    bool meta_reset;        // reset meta pointer on next clock
+    uint8_t meta_next;     // queued meta jump (1-based; 0 = none)
+    uint8_t cue_pat_next;  // queued pattern change (1-based; 0 = none)
+    bool pos_reset;        // re-arm all positions on next clock
+    bool meta_reset;       // reset meta pointer on next clock
 } kria_runtime_t;
 
 // Thin output interface. The engine never touches hardware directly.
 //   tr(ctx, ch, on)        -- gate output ch high/low
-//   cv(ctx, ch, semitones) -- pitch CV as a 0..120 semitone index (binding -> ET)
-//   cv_slew(ctx, ch, slew) -- portamento/slew amount for ch (glide)
+//   cv(ctx, ch, semitones) -- pitch CV as a 0..120 semitone index (binding ->
+//   ET) cv_slew(ctx, ch, slew) -- portamento/slew amount for ch (glide)
 typedef struct {
     void (*tr)(void* ctx, uint8_t ch, uint8_t on);
     void (*cv)(void* ctx, uint8_t ch, int16_t semitones);
@@ -239,7 +242,8 @@ void kria_engine_clock_track(kria_engine_t* e, uint8_t track);
 void kria_engine_note_off(kria_engine_t* e, uint8_t track);
 void kria_engine_repeat(kria_engine_t* e, uint8_t track);
 
-// Switch the active pattern (forces a position reset + scale recompute request).
+// Switch the active pattern (forces a position reset + scale recompute
+// request).
 void kria_engine_change_pattern(kria_engine_t* e, uint8_t pattern);
 
 // Mute/unmute a track (muted tracks advance but emit no gate/CV).

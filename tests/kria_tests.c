@@ -240,7 +240,7 @@ TEST note_maps_through_scale_and_octave(void) {
     kria_engine_reset(&E);
     kria_engine_calc_scale(&E, MAJOR);  // cur_scale[2] == 4
     ev_reset();
-    kria_engine_clock(&E, 1);           // advances all params to step 0, fires
+    kria_engine_clock(&E, 1);  // advances all params to step 0, fires
     // semitones = cur_scale[2] + (oct 1)*12 = 4 + 12 = 16
     ASSERT_EQ(1, ev_count(EV_CV, 0, 16));
     PASS();
@@ -435,8 +435,8 @@ TEST grid_render_smoke(void) {
     kria_grid_state_init(&G);  // mTr page
 
     kria_grid_refresh(&E, &G, led, 1);
-    ASSERT(led[0 * 16 + 3] > 0);      // the trigger cell is lit
-    ASSERT(led[112 + 0] > 0);         // bottom-row track 0 select
+    ASSERT(led[0 * 16 + 3] > 0);  // the trigger cell is lit
+    ASSERT(led[112 + 0] > 0);     // bottom-row track 0 select
     // every cell within range
     for (int i = 0; i < 128; i++) ASSERT(led[i] <= 15);
 

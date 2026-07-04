@@ -222,14 +222,14 @@ static void ii_octave_txo(i2c_follower_t* f, uint8_t track, int8_t octave) {
 static void ii_tr_txo(i2c_follower_t* f, uint8_t track, uint8_t state) {
     uint8_t d[4] = { 0 };
     switch (f->active_mode) {
-        case 0:  // enveloped oscillator
+        case 0:           // enveloped oscillator
             d[0] = 0x6D;  // TO_ENV
             d[1] = track;
             d[2] = 0;
             d[3] = state;
             tele_ii_tx(f->addr, d, 4);
             break;
-        case 1:  // gate/cv
+        case 1:           // gate/cv
             d[0] = 0x00;  // TO_TR
             d[1] = track;
             d[2] = 0;
@@ -257,7 +257,7 @@ static void ii_cv_txo(i2c_follower_t* f, uint8_t track, uint16_t dac_value) {
             d[3] = dac_value & 0xff;
             tele_ii_tx(f->addr, d, 4);
             break;
-        case 1:  // gate/cv
+        case 1:           // gate/cv
             d[0] = 0x10;  // TO_CV
             d[1] = track;
             d[2] = dac_value >> 8;
@@ -302,7 +302,10 @@ static void ii_tr_disting_ex(i2c_follower_t* f, uint8_t track, uint8_t state) {
     int note = kri2c_sem[track] + 12 * (4 + f->oct);
     switch (f->active_mode) {
         case 0:  // SD Multisample / triggers, allocated voices
-            if (note < 0) note = 0; else if (note > 127) note = 127;
+            if (note < 0)
+                note = 0;
+            else if (note > 127)
+                note = 127;
             if (state) {
                 d[0] = 0x56;
                 d[1] = note;
@@ -369,7 +372,10 @@ static void ii_cv_disting_ex(i2c_follower_t* f, uint8_t track,
     d[2] = pitch >> 8;
     d[3] = pitch;
     if (f->active_mode == 0) {
-        if (note < 0) note = 0; else if (note > 127) note = 127;
+        if (note < 0)
+            note = 0;
+        else if (note > 127)
+            note = 127;
         d[0] = 0x54;
         d[1] = note;
         tele_ii_tx(f->addr, d, 4);
@@ -485,14 +491,16 @@ static void ii_u16_nop(i2c_follower_t* f, uint8_t track, uint16_t v) {
 
 // ---- MIDI followers: I2M (i2c2midi over i2c) + MO (native USB MIDI) ----
 
-#define I2C2MIDI 0x3F      // i2c2midi module address (see src/ops/i2c2midi.c)
-#define KR_MIDI_VEL 100    // fixed note velocity (velocity-from-duration = TODO)
+#define I2C2MIDI 0x3F    // i2c2midi module address (see src/ops/i2c2midi.c)
+#define KR_MIDI_VEL 100  // fixed note velocity (velocity-from-duration = TODO)
 
 // General MIDI drum map for the 8T fixed-note defaults (kick/snare/hats/...).
-static const uint8_t GM_DRUM[KRIA_I2C_TRACKS] = { 36, 38, 42, 46, 39, 45, 49, 51 };
+static const uint8_t GM_DRUM[KRIA_I2C_TRACKS] = {
+    36, 38, 42, 46, 39, 45, 49, 51
+};
 
-// pitched note for a track (modes 0/1): Kria semitone + base 4 octaves + offset,
-// matching the Disting-EX MIDI modes.
+// pitched note for a track (modes 0/1): Kria semitone + base 4 octaves +
+// offset, matching the Disting-EX MIDI modes.
 static int midi_pitched_note(i2c_follower_t* f, uint8_t track) {
     uint8_t t = track < KRIA_NUM_TRACKS ? track : KRIA_NUM_TRACKS - 1;
     return kri2c_sem[t] + 12 * (4 + f->oct);
@@ -538,11 +546,16 @@ static void ii_tr_i2m(i2c_follower_t* f, uint8_t track, uint8_t state) {
     if (!midi_resolve(f, track, &ch, &note)) return;
     uint8_t d[4];
     if (state) {  // i2c2midi note-on = cmd 20 (ch, note, vel)
-        d[0] = 20; d[1] = ch; d[2] = note; d[3] = KR_MIDI_VEL;
+        d[0] = 20;
+        d[1] = ch;
+        d[2] = note;
+        d[3] = KR_MIDI_VEL;
         tele_ii_tx(f->addr, d, 4);
     }
     else {  // note-off = cmd 21 (ch, note)
-        d[0] = 21; d[1] = ch; d[2] = note;
+        d[0] = 21;
+        d[1] = ch;
+        d[2] = note;
         tele_ii_tx(f->addr, d, 3);
     }
 }
@@ -577,33 +590,38 @@ static void ii_init_midi(i2c_follower_t* f, uint8_t track, uint8_t state) {
 
 // ---- follower table (order = KR_F_*) ----
 
-static const i2c_ops_t jf_ops = { ii_init_jf, ii_mode_jf,   ii_tr_jf,
-                                  ii_mute_jf, ii_u16_nop,   ii_octave_jf,
+static const i2c_ops_t jf_ops = { ii_init_jf, ii_mode_jf, ii_tr_jf,
+                                  ii_mute_jf, ii_u16_nop, ii_octave_jf,
                                   ii_u16_nop, 3 };
-static const i2c_ops_t txo_ops = { ii_init_txo, ii_mode_txo,   ii_tr_txo,
-                                   ii_mute_txo, ii_cv_txo,     ii_octave_txo,
+static const i2c_ops_t txo_ops = { ii_init_txo, ii_mode_txo,
+                                   ii_tr_txo,   ii_mute_txo,
+                                   ii_cv_txo,   ii_octave_txo,
                                    ii_slew_txo, 2 };
-static const i2c_ops_t er301_ops = { ii_u8_nop,   ii_u8_nop,   ii_tr_txo,
-                                     ii_mute_txo, ii_cv_txo,   ii_octave_txo,
+static const i2c_ops_t er301_ops = { ii_u8_nop,   ii_u8_nop, ii_tr_txo,
+                                     ii_mute_txo, ii_cv_txo, ii_octave_txo,
                                      ii_slew_txo, 1 };
-static const i2c_ops_t disting_ops = { ii_u8_nop,           ii_mode_disting_ex,
-                                       ii_tr_disting_ex,    ii_mute_disting_ex,
-                                       ii_cv_disting_ex,    ii_s8_nop,
-                                       ii_u16_nop,          4 };
-static const i2c_ops_t wsyn_ops = { ii_init_wsyn, ii_mode_wsyn, ii_tr_wsyn,
-                                    ii_mute_wsyn, ii_cv_wsyn,   ii_s8_nop,
+static const i2c_ops_t disting_ops = { ii_u8_nop,        ii_mode_disting_ex,
+                                       ii_tr_disting_ex, ii_mute_disting_ex,
+                                       ii_cv_disting_ex, ii_s8_nop,
+                                       ii_u16_nop,       4 };
+static const i2c_ops_t wsyn_ops = { ii_init_wsyn, ii_mode_wsyn,
+                                    ii_tr_wsyn,   ii_mute_wsyn,
+                                    ii_cv_wsyn,   ii_s8_nop,
                                     ii_u16_nop,   2 };
-static const i2c_ops_t crow_ops = { ii_u8_nop,  ii_mode_crow, ii_tr_crow,
-                                    ii_u8_nop,  ii_u16_nop,   ii_s8_nop,
+static const i2c_ops_t crow_ops = { ii_u8_nop,  ii_mode_crow,
+                                    ii_tr_crow, ii_u8_nop,
+                                    ii_u16_nop, ii_s8_nop,
                                     ii_u16_nop, 1 };
-// MIDI followers: mode handled specially in kria_i2c_set_mode; cv/slew/octave are
-// no-ops (pitch rides in the note-on, octave read live in midi_resolve).
-static const i2c_ops_t i2m_ops = { ii_init_midi, ii_u8_nop,  ii_tr_i2m,
-                                   ii_mute_i2m,  ii_u16_nop, ii_s8_nop,
-                                   ii_u16_nop,   KR_MIDI_MODE_CT, 1, 32 };
-static const i2c_ops_t mo_ops = { ii_init_midi, ii_u8_nop,  ii_tr_mo,
-                                  ii_mute_mo,   ii_u16_nop, ii_s8_nop,
-                                  ii_u16_nop,   KR_MIDI_MODE_CT, 1, 16 };
+// MIDI followers: mode handled specially in kria_i2c_set_mode; cv/slew/octave
+// are no-ops (pitch rides in the note-on, octave read live in midi_resolve).
+static const i2c_ops_t i2m_ops = {
+    ii_init_midi, ii_u8_nop,  ii_tr_i2m,       ii_mute_i2m, ii_u16_nop,
+    ii_s8_nop,    ii_u16_nop, KR_MIDI_MODE_CT, 1,           32
+};
+static const i2c_ops_t mo_ops = {
+    ii_init_midi, ii_u8_nop,  ii_tr_mo,        ii_mute_mo, ii_u16_nop,
+    ii_s8_nop,    ii_u16_nop, KR_MIDI_MODE_CT, 1,          16
+};
 
 static i2c_follower_t followers[KRIA_I2C_FOLLOWERS] = {
     { JF_ADDR, 0, 0x0f, 0, 0, &jf_ops },
@@ -732,7 +750,8 @@ void kria_i2c_set_chan_slot(uint8_t index, uint8_t slot, uint8_t chan) {
 
 void kria_i2c_set_active(uint8_t index, uint8_t on) {
     if (index >= KRIA_I2C_FOLLOWERS) return;
-    if ((followers[index].active != 0) != (on != 0)) kria_i2c_toggle_active(index);
+    if ((followers[index].active != 0) != (on != 0))
+        kria_i2c_toggle_active(index);
 }
 
 // ---- persistence (global blob) ----
@@ -797,7 +816,8 @@ void kria_i2c_save(kria_i2c_fstate_t* st) {
 
 static int8_t view_sel = -1;  // follower being configured (-1 = toggle page)
 static uint8_t view_mod = 0;  // (5,7) modifier held (enter config on tap)
-static int8_t oled_req = -1;  // MIDI follower to open in the OLED editor (-1 none)
+static int8_t oled_req =
+    -1;  // MIDI follower to open in the OLED editor (-1 none)
 
 void kria_i2c_view_enter(void) {
     view_sel = -1;

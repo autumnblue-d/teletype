@@ -1,10 +1,10 @@
 #ifndef _KRIA_I2C_H_
 #define _KRIA_I2C_H_
 
-// i2c follower output for native Kria: routes each track's pitch/gate to enabled
-// follower modules (Ansible's i2c-leader feature). Additive to the CV/TR jacks.
-// Faithful port of Ansible's src/ansible_ii_leader.c (per-follower ops vtable),
-// driving Teletype's i2c bus via tele_ii_tx. See KRIA_I2C_PLAN.md.
+// i2c follower output for native Kria: routes each track's pitch/gate to
+// enabled follower modules (Ansible's i2c-leader feature). Additive to the
+// CV/TR jacks. Faithful port of Ansible's src/ansible_ii_leader.c (per-follower
+// ops vtable), driving Teletype's i2c bus via tele_ii_tx. See KRIA_I2C_PLAN.md.
 //
 // Followers (index order = KR_F_*): Just Friends, TELEXo, ER-301, Disting EX,
 // W/syn, Crow. track n -> follower voice/output n+1 (per follower).
@@ -30,15 +30,15 @@ typedef struct {
 
 // MIDI follower operating modes (active_mode when ops->midi).
 #define KR_MIDI_PITCH_SINGLE 0  // all routed tracks -> base chan, pitched
-#define KR_MIDI_PITCH_MULTI  1  // track n -> chan+n, pitched
-#define KR_MIDI_8T_NOTES     2  // 8 fixed notes[] on base chan (MP 8T)
-#define KR_MIDI_8T_CHANS     3  // 1 fixed note (notes[0]) on chans[] (MP 8T)
-#define KR_MIDI_MODE_CT      4
+#define KR_MIDI_PITCH_MULTI 1   // track n -> chan+n, pitched
+#define KR_MIDI_8T_NOTES 2      // 8 fixed notes[] on base chan (MP 8T)
+#define KR_MIDI_8T_CHANS 3      // 1 fixed note (notes[0]) on chans[] (MP 8T)
+#define KR_MIDI_MODE_CT 4
 
 struct i2c_follower {
     uint8_t addr;
     uint8_t active;
-    uint8_t track_en;    // 8-bit mask of driven tracks/gates
+    uint8_t track_en;  // 8-bit mask of driven tracks/gates
     int8_t oct;
     uint8_t active_mode;
     const i2c_ops_t* ops;
@@ -74,9 +74,9 @@ void kria_i2c_set_mode(uint8_t index, uint8_t mode);
 
 // MIDI follower (I2M/MO) config accessors, used by the OLED editor. Setters
 // clamp and mark the bank dirty; index must be a MIDI follower.
-void kria_i2c_set_channel(uint8_t index, uint8_t chan);        // base, 0-based
-void kria_i2c_set_port(uint8_t index, uint8_t port);           // MO cable 0/1
-void kria_i2c_set_note(uint8_t index, uint8_t slot, uint8_t note);   // 8T notes
+void kria_i2c_set_channel(uint8_t index, uint8_t chan);  // base, 0-based
+void kria_i2c_set_port(uint8_t index, uint8_t port);     // MO cable 0/1
+void kria_i2c_set_note(uint8_t index, uint8_t slot, uint8_t note);  // 8T notes
 void kria_i2c_set_chan_slot(uint8_t index, uint8_t slot, uint8_t chan);
 uint8_t kria_i2c_is_midi(uint8_t index);   // 1 if follower is I2M/MO
 uint8_t kria_i2c_chan_max(uint8_t index);  // MIDI channel count (16/32)

@@ -1,6 +1,6 @@
 // Kria grid surface -- see kria_grid.h. Ported from refresh_kria_view +
-// handler_KriaGridKey (ansible/src/ansible_grid.c). Globals -> engine (cfg/rt) +
-// grid-state fields; monomeLedBuffer -> the passed-in `led`.
+// handler_KriaGridKey (ansible/src/ansible_grid.c). Globals -> engine (cfg/rt)
+// + grid-state fields; monomeLedBuffer -> the passed-in `led`.
 //
 // Deviations (no hardware to tune against; all documented):
 //  - primary 16x8 view only (no 256 second view).
@@ -53,12 +53,8 @@ static int step_in_loop(const kria_track_t* t, uint8_t p, uint8_t step) {
 // Apply the loop shade Ansible adds to a lit body cell: -2 outside the loop,
 // +1 inside when in modLoop (0 inside otherwise). Underflow-safe.
 static void loop_shade(uint8_t* led, uint8_t idx, int in, int modloop) {
-    if (!in) {
-        led[idx] = (led[idx] >= 2) ? led[idx] - 2 : 0;
-    }
-    else if (modloop) {
-        led[idx] += 1;
-    }
+    if (!in) { led[idx] = (led[idx] >= 2) ? led[idx] - 2 : 0; }
+    else if (modloop) { led[idx] += 1; }
 }
 
 void kria_grid_state_init(kria_grid_state_t* g) {
@@ -84,8 +80,10 @@ static void adj_loop_start(kria_engine_t* e, kria_grid_state_t* g, uint8_t t,
     if (playhead_ok(e, g)) {
         int temp = (int)e->rt.pos[t][m] -
                    (int)e->cfg.p[e->cfg.pattern].t[t].lstart[m] + (int)x;
-        if (temp < 0) temp += 16;
-        else if (temp > 15) temp -= 16;
+        if (temp < 0)
+            temp += 16;
+        else if (temp > 15)
+            temp -= 16;
         e->rt.pos[t][m] = (uint8_t)temp;
     }
     kria_track_t* tk = &e->cfg.p[ep].t[t];
@@ -119,10 +117,12 @@ static void adj_loop_end(kria_engine_t* e, kria_grid_state_t* g, uint8_t t,
         kria_track_t* pk = &e->cfg.p[e->cfg.pattern].t[t];
         int p = e->rt.pos[t][m];
         if (pk->lswap[m]) {
-            if (p < pk->lstart[m] && p > pk->lend[m]) e->rt.pos[t][m] = pk->lstart[m];
+            if (p < pk->lstart[m] && p > pk->lend[m])
+                e->rt.pos[t][m] = pk->lstart[m];
         }
         else {
-            if (p < pk->lstart[m] || p > pk->lend[m]) e->rt.pos[t][m] = pk->lstart[m];
+            if (p < pk->lstart[m] || p > pk->lend[m])
+                e->rt.pos[t][m] = pk->lstart[m];
         }
     }
 }
@@ -136,7 +136,8 @@ static void upd_loop_start(kria_engine_t* e, kria_grid_state_t* g, uint8_t t,
             break;
         case 2:
             for (j = 0; j < KRIA_NUM_TRACKS; j++)
-                for (i = 0; i < KRIA_NUM_PARAMS; i++) adj_loop_start(e, g, j, x, i);
+                for (i = 0; i < KRIA_NUM_PARAMS; i++)
+                    adj_loop_start(e, g, j, x, i);
             break;
         default: adj_loop_start(e, g, t, x, m); break;
     }
@@ -151,7 +152,8 @@ static void upd_loop_end(kria_engine_t* e, kria_grid_state_t* g, uint8_t t,
             break;
         case 2:
             for (j = 0; j < KRIA_NUM_TRACKS; j++)
-                for (i = 0; i < KRIA_NUM_PARAMS; i++) adj_loop_end(e, g, j, x, i);
+                for (i = 0; i < KRIA_NUM_PARAMS; i++)
+                    adj_loop_end(e, g, j, x, i);
             break;
         default: adj_loop_end(e, g, t, x, m); break;
     }
@@ -191,7 +193,8 @@ static void do_loop(kria_engine_t* e, kria_grid_state_t* g, uint8_t trk,
             }
             else {
                 upd_loop_start(e, g, trk, g->loop_first, param);
-                if (couple >= 0) upd_loop_start(e, g, trk, g->loop_first, (uint8_t)couple);
+                if (couple >= 0)
+                    upd_loop_start(e, g, trk, g->loop_first, (uint8_t)couple);
             }
         }
     }
@@ -357,7 +360,8 @@ static void draw_rpt(kria_engine_t* e, kria_grid_state_t* g, uint8_t* led) {
             loop_shade(led, idx, in, modloop);
         }
         if (playhead_ok(e, g) && i == e->rt.pos[track][KR_P_RPT]) {
-            int y = imax(1, (int)e->rt.activeRpt[track] - (int)e->rt.repeats[track]);
+            int y = imax(
+                1, (int)e->rt.activeRpt[track] - (int)e->rt.repeats[track]);
             if (y <= 5)
                 led[(uint8_t)(R6 - 16 * y + i)] += (rb & (1 << y)) ? 4 : 2;
         }
@@ -409,7 +413,8 @@ static void draw_scale(kria_engine_t* e, kria_grid_state_t* g, uint8_t* led) {
         led[R5 + (scale >> 3) * 16 + (scale & 0x7)] = L1;
         if (g->scale_bank) {
             for (i = 0; i < 7; i++) {
-                uint8_t sp = (uint8_t)(g->scale_bank[scale][i] + 8 + (6 - i) * 16);
+                uint8_t sp =
+                    (uint8_t)(g->scale_bank[scale][i] + 8 + (6 - i) * 16);
                 led[(uint8_t)(sp + e->rt.scale_adj[i])] = L0;
                 led[sp] = L1;
             }
@@ -476,9 +481,7 @@ static int draw_mod_overlay(kria_engine_t* e, kria_grid_state_t* g,
     uint8_t ep = edit_pat(e, g);
     uint8_t mode = g->mode, track = g->track, i;
     switch (g->mod_mode) {
-        case KR_MOD_LOOP:
-            led[R7 + 10] = L1;
-            return 0;
+        case KR_MOD_LOOP: led[R7 + 10] = L1; return 0;
         case KR_MOD_TIME:
             led[R7 + 11] = L1;
             memset(led + R1, 3, 16);
@@ -541,9 +544,11 @@ static void draw_bottom_row(kria_engine_t* e, kria_grid_state_t* g,
         default: idx = R7 + 0; break;
     }
     if (mode == KR_MODE_PATTERN)
-        led[idx] = (e->cfg.meta && g->meta_lock && g->meta_lock_blink) ? L1 : L2;
+        led[idx] =
+            (e->cfg.meta && g->meta_lock && g->meta_lock_blink) ? L1 : L2;
     else {
-        int is_alt = (mode == KR_P_RPT || mode == KR_P_ALTNOTE || mode == KR_P_GLIDE);
+        int is_alt =
+            (mode == KR_P_RPT || mode == KR_P_ALTNOTE || mode == KR_P_GLIDE);
         led[idx] = (is_alt && g->alt_blink) ? L1 : L2;
     }
 }
@@ -648,11 +653,15 @@ void kria_grid_process_key(kria_engine_t* e, kria_grid_state_t* g, uint8_t x,
                         }
                         else {
                             g->loop_last = x;
-                            upd_loop_start(e, g, g->loop_edit, g->loop_first, KR_P_TR);
-                            upd_loop_end(e, g, g->loop_edit, g->loop_last, KR_P_TR);
+                            upd_loop_start(e, g, g->loop_edit, g->loop_first,
+                                           KR_P_TR);
+                            upd_loop_end(e, g, g->loop_edit, g->loop_last,
+                                         KR_P_TR);
                             if (g->note_sync) {
-                                upd_loop_start(e, g, g->loop_edit, g->loop_first, KR_P_NOTE);
-                                upd_loop_end(e, g, g->loop_edit, g->loop_last, KR_P_NOTE);
+                                upd_loop_start(e, g, g->loop_edit,
+                                               g->loop_first, KR_P_NOTE);
+                                upd_loop_end(e, g, g->loop_edit, g->loop_last,
+                                             KR_P_NOTE);
                             }
                         }
                         g->loop_count++;
@@ -709,7 +718,8 @@ void kria_grid_process_key(kria_engine_t* e, kria_grid_state_t* g, uint8_t x,
                     break;
                 case KR_MOD_LOOP:
                     do_loop(e, g, track, mode,
-                            (mode == KR_P_NOTE && g->note_sync) ? KR_P_TR : -1, x, z);
+                            (mode == KR_P_NOTE && g->note_sync) ? KR_P_TR : -1,
+                            x, z);
                     break;
                 case KR_MOD_TIME:
                     if (z) set_tmul(e, g, track, mode, x + 1);
@@ -732,7 +742,9 @@ void kria_grid_process_key(kria_engine_t* e, kria_grid_state_t* g, uint8_t x,
                             t->oct[x] = (int8_t)((6 - y) - t->octshift);
                     }
                     break;
-                case KR_MOD_LOOP: do_loop(e, g, track, KR_P_OCT, -1, x, z); break;
+                case KR_MOD_LOOP:
+                    do_loop(e, g, track, KR_P_OCT, -1, x, z);
+                    break;
                 case KR_MOD_TIME:
                     if (z) set_tmul(e, g, track, KR_P_OCT, x + 1);
                     break;
@@ -781,7 +793,8 @@ void kria_grid_process_key(kria_engine_t* e, kria_grid_state_t* g, uint8_t x,
                     }
                     break;
                 case KR_MOD_LOOP:
-                    do_loop(e, g, track, KR_P_RPT, -1, x, z);  // TODO vrange gesture
+                    do_loop(e, g, track, KR_P_RPT, -1, x,
+                            z);  // TODO vrange gesture
                     break;
                 case KR_MOD_TIME:
                     if (z) set_tmul(e, g, track, KR_P_RPT, x + 1);
@@ -798,7 +811,9 @@ void kria_grid_process_key(kria_engine_t* e, kria_grid_state_t* g, uint8_t x,
                 case KR_MOD_NONE:
                     if (z && y <= 6) t->glide[x] = 6 - y;
                     break;
-                case KR_MOD_LOOP: do_loop(e, g, track, KR_P_GLIDE, -1, x, z); break;
+                case KR_MOD_LOOP:
+                    do_loop(e, g, track, KR_P_GLIDE, -1, x, z);
+                    break;
                 case KR_MOD_TIME:
                     if (z) set_tmul(e, g, track, KR_P_GLIDE, x + 1);
                     break;
@@ -835,7 +850,8 @@ void kria_grid_process_key(kria_engine_t* e, kria_grid_state_t* g, uint8_t x,
                         uint8_t v = x - 8;
                         if (v > 7) v = 7;
                         g->scale_bank[e->cfg.p[ep].scale][deg] = v;
-                        kria_engine_calc_scale(e, g->scale_bank[e->cfg.p[ep].scale]);
+                        kria_engine_calc_scale(
+                            e, g->scale_bank[e->cfg.p[ep].scale]);
                     }
                 }
             }

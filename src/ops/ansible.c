@@ -76,12 +76,12 @@ static void op_KR_DIR_set(const void *data, scene_state_t *ss, exec_state_t *es,
                           command_state_t *cs);
 static void op_KR_DUR_get(const void *data, scene_state_t *ss, exec_state_t *es,
                           command_state_t *cs);
-static void op_KR_RUN_get(const void *data, scene_state_t *ss, exec_state_t *es,
-                          command_state_t *cs);
-static void op_KR_II_get(const void *data, scene_state_t *ss, exec_state_t *es,
-                         command_state_t *cs);
-static void op_KR_II_set(const void *data, scene_state_t *ss, exec_state_t *es,
-                         command_state_t *cs);
+static void op_KR_RUN_get(const void* data, scene_state_t* ss, exec_state_t* es,
+                          command_state_t* cs);
+static void op_KR_II_get(const void* data, scene_state_t* ss, exec_state_t* es,
+                         command_state_t* cs);
+static void op_KR_II_set(const void* data, scene_state_t* ss, exec_state_t* es,
+                         command_state_t* cs);
 static void op_ME_PRE_get(const void *data, scene_state_t *ss, exec_state_t *es,
                           command_state_t *cs);
 static void op_ME_PRE_set(const void *data, scene_state_t *ss, exec_state_t *es,
@@ -427,16 +427,18 @@ static void op_KR_POS_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
     cs_push(cs, kria_op_pos(track, param, 0, 0));
 }
 
-static void op_KR_L_ST_set(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
-                           exec_state_t *NOTUSED(es), command_state_t *cs) {
+static void op_KR_L_ST_set(const void* NOTUSED(data),
+                           scene_state_t* NOTUSED(ss),
+                           exec_state_t* NOTUSED(es), command_state_t* cs) {
     int16_t val = cs_pop(cs);
     int16_t param = cs_pop(cs);
     int16_t track = cs_pop(cs);
     kria_op_loop_start(track, param, 1, val);
 }
 
-static void op_KR_L_ST_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
-                           exec_state_t *NOTUSED(es), command_state_t *cs) {
+static void op_KR_L_ST_get(const void* NOTUSED(data),
+                           scene_state_t* NOTUSED(ss),
+                           exec_state_t* NOTUSED(es), command_state_t* cs) {
     int16_t param = cs_pop(cs);
     int16_t track = cs_pop(cs);
     cs_push(cs, kria_op_loop_start(track, param, 0, 0));
@@ -471,15 +473,17 @@ static void op_KR_CV_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
     cs_push(cs, kria_op_cv(cs_pop(cs) - 1));  // track is 1-indexed
 }
 
-static void op_KR_MUTE_set(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
-                           exec_state_t *NOTUSED(es), command_state_t *cs) {
+static void op_KR_MUTE_set(const void* NOTUSED(data),
+                           scene_state_t* NOTUSED(ss),
+                           exec_state_t* NOTUSED(es), command_state_t* cs) {
     int16_t val = cs_pop(cs);
     int16_t track = cs_pop(cs);
     kria_op_mute(track, 1, val);
 }
 
-static void op_KR_MUTE_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
-                           exec_state_t *NOTUSED(es), command_state_t *cs) {
+static void op_KR_MUTE_get(const void* NOTUSED(data),
+                           scene_state_t* NOTUSED(ss),
+                           exec_state_t* NOTUSED(es), command_state_t* cs) {
     cs_push(cs, kria_op_mute(cs_pop(cs), 0, 0));
 }
 
@@ -531,18 +535,18 @@ static void op_KR_DUR_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
     cs_push(cs, kria_op_dur(cs_pop(cs) - 1));  // track is 1-indexed
 }
 
-static void op_KR_RUN_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
-                          exec_state_t *NOTUSED(es), command_state_t *cs) {
+static void op_KR_RUN_get(const void* NOTUSED(data), scene_state_t* NOTUSED(ss),
+                          exec_state_t* NOTUSED(es), command_state_t* cs) {
     kria_op_run(cs_pop(cs));
 }
 
-static void op_KR_II_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
-                         exec_state_t *NOTUSED(es), command_state_t *cs) {
+static void op_KR_II_get(const void* NOTUSED(data), scene_state_t* NOTUSED(ss),
+                         exec_state_t* NOTUSED(es), command_state_t* cs) {
     cs_push(cs, kria_op_ii(cs_pop(cs), 0, 0));
 }
 
-static void op_KR_II_set(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
-                         exec_state_t *NOTUSED(es), command_state_t *cs) {
+static void op_KR_II_set(const void* NOTUSED(data), scene_state_t* NOTUSED(ss),
+                         exec_state_t* NOTUSED(es), command_state_t* cs) {
     int16_t val = cs_pop(cs);
     int16_t f = cs_pop(cs);
     kria_op_ii(f, 1, val);

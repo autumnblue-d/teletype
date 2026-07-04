@@ -4,15 +4,15 @@
 // Kria grid surface: key handling + LED rendering, ported from Ansible's
 // refresh_kria_view + handler_KriaGridKey (ansible_grid.c). Hardware-abstract
 // and testable: operates on the engine (kria_engine_t) plus a small grid
-// interaction state, writing into a raw 16x8 LED buffer (index y*16+x). The mode
-// shell (Phase 4) routes the monome grid here when Kria owns it and blits into
-// monomeLedBuffer.
+// interaction state, writing into a raw 16x8 LED buffer (index y*16+x). The
+// mode shell (Phase 4) routes the monome grid here when Kria owns it and blits
+// into monomeLedBuffer.
 //
 // Scope vs Ansible: this renders/edits the primary 16x8 view. The 256-grid
 // second view (rows 8-15) and the OLED preset/clock/config/tuning screens are
-// out of scope here (shell/keyboard concern). Long-press gestures (pattern copy,
-// rpt reset) are exposed via kria_grid_key_hold() for the shell's key timer to
-// drive. Persisted edit-behavior flags (note_sync/loop_sync/div_sync/
+// out of scope here (shell/keyboard concern). Long-press gestures (pattern
+// copy, rpt reset) are exposed via kria_grid_key_hold() for the shell's key
+// timer to drive. Persisted edit-behavior flags (note_sync/loop_sync/div_sync/
 // note_div_sync) live in the grid state with Ansible defaults for now.
 
 #include <stdint.h>
@@ -31,9 +31,9 @@
 #define KR_MOD_PROB 3
 
 typedef struct {
-    uint8_t mode;      // KR_P_* (0..6) or KR_MODE_SCALE/PATTERN
-    uint8_t mod_mode;  // KR_MOD_*
-    uint8_t track;     // edit track 0..3
+    uint8_t mode;          // KR_P_* (0..6) or KR_MODE_SCALE/PATTERN
+    uint8_t mod_mode;      // KR_MOD_*
+    uint8_t track;         // edit track 0..3
     uint8_t edit_pattern;  // pattern edited when meta_lock; else follows play
 
     // meta editing

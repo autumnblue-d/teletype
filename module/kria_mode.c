@@ -47,13 +47,14 @@ static softTimer_t blinkTimer[KRIA_NUM_TRACKS];   // grid trigger blink
 static softTimer_t kriaBlinkTimer = { .next = NULL, .prev = NULL };  // alt/meta
 static uint8_t km_idx[KRIA_NUM_TRACKS] = { 0, 1, 2, 3 };
 
-static uint8_t kria_scale_bank[MP_SCALE_SLOTS][8];  // shared w/ MP (f.scale_bank)
+static uint8_t kria_scale_bank[MP_SCALE_SLOTS]
+                              [8];  // shared w/ MP (f.scale_bank)
 
 static bool initialized = false;
 static bool active = false;        // Kria view front-most
 static bool kria_running = false;  // engine playing (timer on, owns outputs)
 static bool writing = false;       // inside our own output write
-static bool in_repeat = false;     // inside a repeat retrigger (gate scheduling)
+static bool in_repeat = false;  // inside a repeat retrigger (gate scheduling)
 static bool timer_enabled = false;
 static bool dirty = true;
 static bool cfg_dirty = false;  // song edited, not yet flushed to flash
@@ -152,8 +153,8 @@ static void km_altblink_cb(void* o) {
     if ((active || kria_running)) scene_state.grid.grid_dirty = 1;
 }
 
-// Schedule the note-off (and, on the initial clock fire, the first repeat) for a
-// track whose gate just went high. Real-tick scaling from the measured clock
+// Schedule the note-off (and, on the initial clock fire, the first repeat) for
+// a track whose gate just went high. Real-tick scaling from the measured clock
 // length (Ansible's dur/rpt + rptTicks). Runs in the event loop (not ISR).
 static void km_schedule_gate(uint8_t ch) {
     kria_track_t* t = &eng.cfg.p[eng.cfg.pattern].t[ch];
@@ -173,7 +174,8 @@ static void km_schedule_gate(uint8_t ch) {
               &km_idx[ch]);
 
     if (!in_repeat && eng.rt.repeats[ch] > 0) {
-        uint32_t rt = kria_clock_repeat_ticks(clock_delta, t->tmul[KR_P_TR], rpt);
+        uint32_t rt =
+            kria_clock_repeat_ticks(clock_delta, t->tmul[KR_P_TR], rpt);
         if (rt < 1) rt = 1;
         timer_remove(&repeatTimer[ch]);
         timer_add(&repeatTimer[ch], rt, &km_rpt_cb, &km_idx[ch]);
@@ -215,8 +217,8 @@ static void km_init_once(void) {
     kgrid.scale_bank = kria_scale_bank;
     km_load_flash();
     // (i2c follower bank is global and loaded at boot in main.c)
-    kria_clock_set_period(
-        &clk, eng.cfg.clock_period ? eng.cfg.clock_period : KR_CLOCK_PERIOD_DEFAULT);
+    kria_clock_set_period(&clk, eng.cfg.clock_period ? eng.cfg.clock_period
+                                                     : KR_CLOCK_PERIOD_DEFAULT);
     timer_add(&kriaBlinkTimer, 100, &km_altblink_cb, NULL);
     initialized = true;
 }
@@ -235,7 +237,7 @@ void kria_mode_exit(void) {
         flash_update_scale_bank(kria_scale_bank);  // shared bank, small
         cfg_dirty = false;
     }
-    km_flush_i2c();  // persist follower-bank edits
+    km_flush_i2c();         // persist follower-bank edits
     kria_i2c_oled_exit();   // don't leave the MIDI editor open across mode exit
     km_view = KM_VIEW_SEQ;  // next entry starts on the sequencer
     active = false;
@@ -293,7 +295,8 @@ void kria_service_repeat(uint8_t track) {
         kria_track_t* t = &eng.cfg.p[eng.cfg.pattern].t[track];
         uint8_t rpt = eng.rt.rpt[track];
         if (!rpt) rpt = 1;
-        uint32_t rt = kria_clock_repeat_ticks(clock_delta, t->tmul[KR_P_TR], rpt);
+        uint32_t rt =
+            kria_clock_repeat_ticks(clock_delta, t->tmul[KR_P_TR], rpt);
         if (rt < 1) rt = 1;
         timer_remove(&repeatTimer[track]);
         timer_add(&repeatTimer[track], rt, &km_rpt_cb, &km_idx[track]);
@@ -311,7 +314,8 @@ bool kria_external_clock(uint8_t level) {
 // ---- ownership ----
 
 bool kria_suppresses_output(uint8_t ch) {
-    return kria_running && !writing && ch < KRIA_NUM_TRACKS && !eng.rt.mutes[ch];
+    return kria_running && !writing && ch < KRIA_NUM_TRACKS &&
+           !eng.rt.mutes[ch];
 }
 
 bool kria_owns_grid(void) {
@@ -364,15 +368,31 @@ static void km_time_render(void) {
         led[64 + 9] = 7;
     }
     i = kgrid.note_div_sync ? 7 : 3;  // note-division-sync box (cols 0-3, r4-7)
-    led[64 + 0] = i; led[80 + 0] = i; led[96 + 0] = i; led[112 + 0] = i;
-    led[64 + 1] = i; led[64 + 2] = i; led[64 + 3] = i;
-    led[80 + 3] = i; led[96 + 3] = i; led[112 + 3] = i;
-    led[112 + 2] = i; led[112 + 1] = i;
-    i = (eng.cfg.sync_mode & KR_SYNC_TIMEDIV) ? 7 : 3;  // sync-mode (x7-8, r6-7)
-    led[96 + 7] = i; led[96 + 8] = i; led[112 + 7] = i; led[112 + 8] = i;
-    led[80 + 12] = (kgrid.div_sync == 1) ? 7 : 3;  // division-sync: track (x12 r5)
-    i = (kgrid.div_sync == 2) ? 7 : 3;             // all (x12-15 r7)
-    led[112 + 12] = i; led[112 + 13] = i; led[112 + 14] = i; led[112 + 15] = i;
+    led[64 + 0] = i;
+    led[80 + 0] = i;
+    led[96 + 0] = i;
+    led[112 + 0] = i;
+    led[64 + 1] = i;
+    led[64 + 2] = i;
+    led[64 + 3] = i;
+    led[80 + 3] = i;
+    led[96 + 3] = i;
+    led[112 + 3] = i;
+    led[112 + 2] = i;
+    led[112 + 1] = i;
+    i = (eng.cfg.sync_mode & KR_SYNC_TIMEDIV) ? 7
+                                              : 3;  // sync-mode (x7-8, r6-7)
+    led[96 + 7] = i;
+    led[96 + 8] = i;
+    led[112 + 7] = i;
+    led[112 + 8] = i;
+    led[80 + 12] =
+        (kgrid.div_sync == 1) ? 7 : 3;  // division-sync: track (x12 r5)
+    i = (kgrid.div_sync == 2) ? 7 : 3;  // all (x12-15 r7)
+    led[112 + 12] = i;
+    led[112 + 13] = i;
+    led[112 + 14] = i;
+    led[112 + 15] = i;
     km_view_finalize(led);
 }
 
@@ -412,18 +432,29 @@ static void km_config_render(void) {
     uint8_t* led = monomeLedBuffer;
     uint8_t i;
     memset(led, 0, 128);
-    memset(led, 4, 3);                        // brightness options (row 0 x0-2)
-    led[monome_is_vari() ? 2 : 0] = 12;       // current grid type (auto)
-    i = kgrid.note_sync ? 7 : 3;              // note-sync box (cols 2-5, r2-5)
-    led[32 + 2] = i; led[32 + 3] = i; led[32 + 4] = i; led[32 + 5] = i;
-    led[48 + 2] = i; led[48 + 5] = i;
-    led[64 + 2] = i; led[64 + 5] = i;
-    led[80 + 2] = i; led[80 + 3] = i; led[80 + 4] = i; led[80 + 5] = i;
+    memset(led, 4, 3);                   // brightness options (row 0 x0-2)
+    led[monome_is_vari() ? 2 : 0] = 12;  // current grid type (auto)
+    i = kgrid.note_sync ? 7 : 3;         // note-sync box (cols 2-5, r2-5)
+    led[32 + 2] = i;
+    led[32 + 3] = i;
+    led[32 + 4] = i;
+    led[32 + 5] = i;
+    led[48 + 2] = i;
+    led[48 + 5] = i;
+    led[64 + 2] = i;
+    led[64 + 5] = i;
+    led[80 + 2] = i;
+    led[80 + 3] = i;
+    led[80 + 4] = i;
+    led[80 + 5] = i;
     led[48 + 10] = (kgrid.loop_sync == 1) ? 7 : 3;  // loop-sync: track (x10 r3)
     i = (kgrid.loop_sync == 2) ? 7 : 3;             // all (x10-13 r5)
-    led[80 + 10] = i; led[80 + 11] = i; led[80 + 12] = i; led[80 + 13] = i;
-    led[112 + 8] = eng.cfg.dur_tie_mode ? 8 : 4;    // note-tie (x8 r7)
-    led[112 + 14] = 4;                              // tuning button (x14 r7)
+    led[80 + 10] = i;
+    led[80 + 11] = i;
+    led[80 + 12] = i;
+    led[80 + 13] = i;
+    led[112 + 8] = eng.cfg.dur_tie_mode ? 8 : 4;     // note-tie (x8 r7)
+    led[112 + 14] = 4;                               // tuning button (x14 r7)
     led[112 + 15] = eng.cfg.meta_reset_all ? 8 : 4;  // meta-reset (x15 r7)
     km_view_finalize(led);
 }
@@ -544,7 +575,8 @@ void process_kria_keys(uint8_t key, uint8_t mod_key, bool is_held_key) {
         scene_state.grid.grid_dirty = 1;
         dirty = true;
     }
-    else if (match_no_mod(mod_key, key, HID_3)) {  // config view (Ansible Key 2)
+    else if (match_no_mod(mod_key, key,
+                          HID_3)) {  // config view (Ansible Key 2)
         km_view = KM_VIEW_CONFIG;
         scene_state.grid.grid_dirty = 1;
         dirty = true;
@@ -563,8 +595,8 @@ void process_kria_keys(uint8_t key, uint8_t mod_key, bool is_held_key) {
 #define KM_S_VALUE 12
 #define KM_S_TITLE 15
 
-static const char* const km_page_name[9] = { "TRIG", "NOTE", "OCT",
-                                             "DUR",  "RPT",  "ALT",
+static const char* const km_page_name[9] = { "TRIG",  "NOTE",  "OCT",
+                                             "DUR",   "RPT",   "ALT",
                                              "GLIDE", "SCALE", "PATT" };
 static const char* const km_view_name[4] = { "SEQ", "TIME", "CONFIG", "I2C" };
 
@@ -574,9 +606,10 @@ static void km_num(uint8_t ln, uint8_t x, int val, uint8_t fg) {
     font_string_region_clip(&line[ln], s, x, 0, fg, 0);
 }
 
-// ---- native ops (KR.* retargeted from external-Ansible i2c to the engine) ----
-// All ensure the engine is constructed so ops work even before entering the
-// mode. get/set pairs: set != 0 writes val; every op returns the current value.
+// ---- native ops (KR.* retargeted from external-Ansible i2c to the engine)
+// ---- All ensure the engine is constructed so ops work even before entering
+// the mode. get/set pairs: set != 0 writes val; every op returns the current
+// value.
 
 void kria_op_run(int16_t on) {
     km_init_once();
@@ -777,8 +810,8 @@ uint8_t screen_refresh_kria(void) {
     km_num(3, 42, kgrid.track, KM_S_VALUE);
     font_string_region_clip(&line[3], "PAGE", 66, 0, KM_S_LABEL, 0);
     font_string_region_clip(&line[3],
-                            kgrid.mode < 9 ? km_page_name[kgrid.mode] : "?", 102,
-                            0, KM_S_VALUE, 0);
+                            kgrid.mode < 9 ? km_page_name[kgrid.mode] : "?",
+                            102, 0, KM_S_VALUE, 0);
 
     font_string_region_clip(&line[7], "1SEQ 2TIME 3CFG 4I2C  SPACE:RUN S:SAVE",
                             0, 0, 3, 0);

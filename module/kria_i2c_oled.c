@@ -9,7 +9,8 @@
 #include "kria_i2c.h"
 #include "region.h"
 #include "util.h"  // itoa
-// HID_UP/DOWN/LEFT/RIGHT, HID_ESCAPE, HID_TAB + match_* come via keyboard_helper.h
+// HID_UP/DOWN/LEFT/RIGHT, HID_ESCAPE, HID_TAB + match_* come via
+// keyboard_helper.h
 
 #define OL_LABEL 5
 #define OL_VALUE 12
@@ -61,7 +62,8 @@ static void build_fields(void) {
         fields[field_ct++] = (ol_field_t){ F_CHAN, 0 };  // base channel
     if (ed_index == KR_F_MO) fields[field_ct++] = (ol_field_t){ F_PORT, 0 };
 
-    uint8_t ntr = (mode >= KR_MIDI_8T_NOTES) ? KRIA_I2C_TRACKS : KRIA_NUM_TRACKS;
+    uint8_t ntr =
+        (mode >= KR_MIDI_8T_NOTES) ? KRIA_I2C_TRACKS : KRIA_NUM_TRACKS;
     for (uint8_t t = 0; t < ntr; t++)
         fields[field_ct++] = (ol_field_t){ F_TRACK, t };
 
@@ -154,9 +156,7 @@ static void edit_field(int delta) {
     uint8_t chmax = kria_i2c_chan_max((uint8_t)ed_index);
     int v;
     switch (fld.kind) {
-        case F_ACTIVE:
-            kria_i2c_toggle_active((uint8_t)ed_index);
-            break;
+        case F_ACTIVE: kria_i2c_toggle_active((uint8_t)ed_index); break;
         case F_MODE:
             v = f->active_mode + delta;
             if (v < 0) v = 0;
@@ -183,12 +183,8 @@ static void edit_field(int delta) {
             if (v > 127) v = 127;
             kria_i2c_set_note((uint8_t)ed_index, 0, (uint8_t)v);
             break;
-        case F_PORT:
-            kria_i2c_set_port((uint8_t)ed_index, !f->port);
-            break;
-        case F_TRACK:
-            kria_i2c_toggle_track((uint8_t)ed_index, fld.arg);
-            break;
+        case F_PORT: kria_i2c_set_port((uint8_t)ed_index, !f->port); break;
+        case F_TRACK: kria_i2c_toggle_track((uint8_t)ed_index, fld.arg); break;
         case F_NOTE:
             v = (int)f->notes[fld.arg] + delta;
             if (v < 0) v = 0;
@@ -210,13 +206,16 @@ void kria_i2c_oled_render(void) {
     if (ed_index < 0) return;
     i2c_follower_t* f = kria_i2c_follower((uint8_t)ed_index);
 
-    font_string_region_clip(&line[0], ed_index == KR_F_MO ? "MO EDIT" : "I2M EDIT",
-                            0, 0, OL_CURSOR, 0);
-    font_string_region_clip(&line[0], f->active ? "ON" : "OFF", 104, 0, OL_VALUE, 0);
+    font_string_region_clip(&line[0],
+                            ed_index == KR_F_MO ? "MO EDIT" : "I2M EDIT", 0, 0,
+                            OL_CURSOR, 0);
+    font_string_region_clip(&line[0], f->active ? "ON" : "OFF", 104, 0,
+                            OL_VALUE, 0);
 
     // keep the cursor within the visible window
     if (ed_cursor < ed_scroll) ed_scroll = ed_cursor;
-    if (ed_cursor >= ed_scroll + OL_VISIBLE) ed_scroll = ed_cursor - OL_VISIBLE + 1;
+    if (ed_cursor >= ed_scroll + OL_VISIBLE)
+        ed_scroll = ed_cursor - OL_VISIBLE + 1;
 
     for (uint8_t r = 0; r < OL_VISIBLE; r++) {
         uint8_t fi = ed_scroll + r;
@@ -226,10 +225,10 @@ void kria_i2c_oled_render(void) {
         uint8_t ln = r + 1;
         uint8_t sel = (fi == ed_cursor);
         if (sel) font_string_region_clip(&line[ln], ">", 0, 0, OL_CURSOR, 0);
-        font_string_region_clip(&line[ln], label, 8, 0, sel ? OL_CURSOR : OL_LABEL,
-                                0);
-        font_string_region_clip(&line[ln], val, 78, 0, sel ? OL_CURSOR : OL_VALUE,
-                                0);
+        font_string_region_clip(&line[ln], label, 8, 0,
+                                sel ? OL_CURSOR : OL_LABEL, 0);
+        font_string_region_clip(&line[ln], val, 78, 0,
+                                sel ? OL_CURSOR : OL_VALUE, 0);
     }
 
     font_string_region_clip(&line[7], "UP/DN LT/RT EDIT  ENTER/1-4 EXIT", 0, 0,
@@ -256,12 +255,8 @@ uint8_t kria_i2c_oled_key(uint8_t key, uint8_t mod, uint8_t is_held_key) {
     else if (match_no_mod(mod, key, HID_DOWN)) {
         if (ed_cursor + 1 < field_ct) ed_cursor++;
     }
-    else if (match_no_mod(mod, key, HID_LEFT)) {
-        edit_field(-1);
-    }
-    else if (match_no_mod(mod, key, HID_RIGHT)) {
-        edit_field(+1);
-    }
+    else if (match_no_mod(mod, key, HID_LEFT)) { edit_field(-1); }
+    else if (match_no_mod(mod, key, HID_RIGHT)) { edit_field(+1); }
     else {
         return 0;  // not ours -> let the shell exit the editor + handle it
     }

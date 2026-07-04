@@ -16,8 +16,8 @@
 void set_kria_mode(void);
 void kria_mode_exit(void);
 
-// Play/pause the engine (Space in-mode, or alt-K enters the mode). While running
-// Kria owns the CV/TR of its un-muted tracks; stopping releases them.
+// Play/pause the engine (Space in-mode, or alt-K enters the mode). While
+// running Kria owns the CV/TR of its un-muted tracks; stopping releases them.
 void kria_toggle_run(void);
 
 // Keyboard handler (from process_keypress).
@@ -38,8 +38,8 @@ void kria_service_repeat(uint8_t track);
 // the pin state. Returns true if Kria consumed the edge.
 bool kria_external_clock(uint8_t level);
 
-// Output ownership: true when a script write to CV/TR channel `ch` (0-3) must be
-// suppressed (Kria playing, ch is an un-muted track, not our own write).
+// Output ownership: true when a script write to CV/TR channel `ch` (0-3) must
+// be suppressed (Kria playing, ch is an un-muted track, not our own write).
 bool kria_suppresses_output(uint8_t ch);
 
 // Grid ownership + surface (from grid.c).

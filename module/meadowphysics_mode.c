@@ -141,8 +141,9 @@ static void mp_out_cv(void* c, uint8_t ch, int16_t note) {
 static void mp_out_cv_gate(void* c, uint8_t ch, uint8_t on) {
     (void)c;
     tele_cv(ch, on ? MP_CV_FULL : 0, 0);
-    // 8T CV-as-gate: physical CV jack stays 0-3, but drive follower gates 4-7 so
-    // all 8 of 8T's gates are distinct at MIDI followers (cv_gate is 8T-only).
+    // 8T CV-as-gate: physical CV jack stays 0-3, but drive follower gates 4-7
+    // so all 8 of 8T's gates are distinct at MIDI followers (cv_gate is
+    // 8T-only).
     kria_i2c_tr(ch + 4, on);
 }
 static const mp_output_t MP_OUT = {
@@ -178,8 +179,8 @@ void meadowphysics_mode_exit(void) {
     // Persist the working config back to the scene so a later scene save
     // captures it.
     scene_state.mp = mp_eng.cfg;
-    mp_flush_bank();  // save any scale edits
-    mp_flush_i2c();   // persist follower-bank edits
+    mp_flush_bank();       // save any scale edits
+    mp_flush_i2c();        // persist follower-bank edits
     kria_i2c_oled_exit();  // don't leave the MIDI editor open across mode exit
     mp_i2c_view = false;
     active = false;
