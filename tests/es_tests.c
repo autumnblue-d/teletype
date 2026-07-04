@@ -94,6 +94,28 @@ TEST defaults_are_valid(void) {
     PASS();
 }
 
+TEST piecewise_defaults_match(void) {
+    // module/flash.c first-runs the ES bank with piecewise writes instead of
+    // an 8.6 KB staging buffer (RAM is too tight for one). Lock the two
+    // recipes together: zeros + voices/scale + a per-pattern template must
+    // reproduce es_engine_set_defaults() exactly.
+    es_config_t piecewise;
+    memset(&piecewise, 0, sizeof(piecewise));
+    piecewise.voices = 0xF;
+    piecewise.scale = 16;
+    es_pattern_t tmpl;
+    memset(&tmpl, 0, sizeof(tmpl));
+    tmpl.edge_time = 16;
+    tmpl.voices = 0xF;
+    tmpl.end = 15;
+    for (uint8_t p = 0; p < ES_NUM_PATTERNS; p++) piecewise.p[p] = tmpl;
+
+    es_config_t reference;
+    es_engine_set_defaults(&reference);
+    ASSERT_EQ(0, memcmp(&piecewise, &reference, sizeof(reference)));
+    PASS();
+}
+
 TEST validation_rejects_stale_flash(void) {
     setup();
     E.cfg.p_select = ES_NUM_PATTERNS;
@@ -679,6 +701,7 @@ TEST empty_pattern_wont_play(void) {
 
 SUITE(es_suite) {
     RUN_TEST(defaults_are_valid);
+    RUN_TEST(piecewise_defaults_match);
     RUN_TEST(validation_rejects_stale_flash);
     RUN_TEST(note_index_fourths_layout);
     RUN_TEST(live_note_on_off);

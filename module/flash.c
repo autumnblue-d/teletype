@@ -10,7 +10,6 @@
 #include "print_funcs.h"
 
 // this
-#include "es_engine.h"  // es_engine_set_defaults (first-run ES bank)
 #include "teletype.h"
 
 // Bumped 0x22 -> 0x23 for the Meadowphysics port (SCENE_SLOTS 32->30 +
@@ -92,12 +91,23 @@ void flash_prepare() {
         flashc_memcpy((void*)&f.scale_bank, scale_bank, sizeof(scale_bank),
                       true);
 
-        // Earthsea bank defaults (single global instance). Staged in RAM;
-        // ~8.6 KB, static to keep it off the stack.
-        static es_config_t es_defaults;
-        es_engine_set_defaults(&es_defaults);
-        flashc_memcpy((void*)&f.earthsea, &es_defaults, sizeof(es_defaults),
-                      true);
+        // Earthsea bank defaults (single global instance), written piecewise:
+        // a full es_config_t staging buffer would cost 8.6 KB of RAM, and the
+        // heap barely fits the OLED line regions as it is (blank-screen bug).
+        // Must stay equivalent to es_engine_set_defaults(): zeros everywhere
+        // except voices=0xF, scale=16 (off) and per-pattern edge_time=16,
+        // voices=0xF, end=15.
+        flashc_memset8((void*)&f.earthsea, 0, sizeof(es_config_t), true);
+        flashc_memset8((void*)&f.earthsea.voices, 0xF, 1, true);
+        flashc_memset8((void*)&f.earthsea.scale, 16, 1, true);
+        es_pattern_t es_pattern_default;
+        memset(&es_pattern_default, 0, sizeof(es_pattern_default));
+        es_pattern_default.edge_time = 16;
+        es_pattern_default.voices = 0xF;
+        es_pattern_default.end = 15;
+        for (uint8_t p = 0; p < ES_NUM_PATTERNS; p++)
+            flashc_memcpy((void*)&f.earthsea.p[p], &es_pattern_default,
+                          sizeof(es_pattern_default), true);
 
         flash_update_last_saved_scene(0);
         flash_update_last_mode(M_LIVE);
