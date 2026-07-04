@@ -56,6 +56,12 @@ def _convert_struct_name_to_op_name(name):
         "SYM_PERCENTAGE":         "%",
         "SYM_DOLLAR":             "$",
         "SYM_DOLLAR_POL":         "$.POL",
+        # "_POUND" normally renders as "#" attached to the preceding segment
+        # (e.g. MO_CC_POUND -> MO.CC#), handled below. These roots instead take
+        # the "all channels" hash as its own ".#" segment.
+        "EX_POUND":               "EX.#",
+        "I2M_POUND":              "I2M.#",
+        "I2M_Q_POUND":            "I2M.Q.#",
         "SYM_EQUAL_x2":           "==",
         "SYM_EXCLAMATION_EQUAL":  "!=",
         "SYM_LEFT_ANGLED":        "<",
@@ -163,6 +169,10 @@ def _convert_struct_name_to_op_name(name):
 
     if stripped in MAPPINGS:
         return MAPPINGS[stripped]
+    elif stripped.endswith("_POUND"):
+        # MIDI "all channels" hash, e.g. MO_CC_POUND -> MO.CC#. Roots that
+        # render as ".#" (EX, I2M, I2M.Q) are special-cased in MAPPINGS above.
+        return stripped[: -len("_POUND")].replace("_", ".") + "#"
     else:
         return stripped.replace("_", ".")
 
