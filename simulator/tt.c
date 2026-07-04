@@ -122,7 +122,7 @@ int16_t get_dashboard_value(uint8_t index) {
 
 void reset_midi_counter() {}
 
-void tele_midi_out(uint8_t *pack, uint8_t len) {}
+void tele_midi_out(uint8_t port, uint8_t *pack, uint8_t len) {}
 
 void tele_ii_rx(uint8_t addr, uint8_t *data, uint8_t l) {
     printf("II_rx  addr:%" PRIu8 " l:%" PRIu8, addr, l);

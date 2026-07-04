@@ -63,11 +63,25 @@ static void op_MI_CLKD_set(const void *data, scene_state_t *ss,
 static void op_MI_CLKR_get(const void *data, scene_state_t *ss,
                            exec_state_t *es, command_state_t *cs);
 
-// MIDI Out (MO.*) — send to a connected USB MIDI device. Default channel is a
-// module-level static (0-based), mirroring EX.M.CH.
+// MIDI Out (MO.*) — send to a connected USB MIDI device. Default channel and
+// output port (USB virtual cable: 0=A, 1=B) are module-level statics, mirroring
+// EX.M.CH.
 static u8 midi_out_channel = 0;
+static u8 midi_out_port = 0;
 
 static void op_MO_CH_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                         command_state_t *cs);
+static void op_MO_PORT_get(const void *data, scene_state_t *ss,
+                           exec_state_t *es, command_state_t *cs);
+static void op_MO_PORT_set(const void *data, scene_state_t *ss,
+                           exec_state_t *es, command_state_t *cs);
+static void op_MI_LP_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                         command_state_t *cs);
+static void op_MI_NP_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                         command_state_t *cs);
+static void op_MI_OP_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                         command_state_t *cs);
+static void op_MI_CP_get(const void *data, scene_state_t *ss, exec_state_t *es,
                          command_state_t *cs);
 static void op_MO_CH_set(const void *data, scene_state_t *ss, exec_state_t *es,
                          command_state_t *cs);
@@ -123,10 +137,15 @@ const tele_op_t op_MI_LCH  = MAKE_GET_OP(MI.LCH,  op_MI_LCH_get,  0, true);
 const tele_op_t op_MI_NCH  = MAKE_GET_OP(MI.NCH,  op_MI_NCH_get,  0, true);
 const tele_op_t op_MI_OCH  = MAKE_GET_OP(MI.OCH,  op_MI_OCH_get,  0, true);
 const tele_op_t op_MI_CCH  = MAKE_GET_OP(MI.CCH,  op_MI_CCH_get,  0, true);
+const tele_op_t op_MI_LP   = MAKE_GET_OP(MI.LP,   op_MI_LP_get,   0, true);
+const tele_op_t op_MI_NP   = MAKE_GET_OP(MI.NP,   op_MI_NP_get,   0, true);
+const tele_op_t op_MI_OP   = MAKE_GET_OP(MI.OP,   op_MI_OP_get,   0, true);
+const tele_op_t op_MI_CP   = MAKE_GET_OP(MI.CP,   op_MI_CP_get,   0, true);
 const tele_op_t op_MI_CLKR = MAKE_GET_OP(MI.CLKR, op_MI_CLKR_get, 0, false);
 const tele_op_t op_MI_CLKD = MAKE_GET_SET_OP(MI.CLKD, op_MI_CLKD_get, op_MI_CLKD_set, 0, true);
 
 const tele_op_t op_MO_CH       = MAKE_GET_SET_OP(MO.CH, op_MO_CH_get, op_MO_CH_set, 0, true);
+const tele_op_t op_MO_PORT     = MAKE_GET_SET_OP(MO.PORT, op_MO_PORT_get, op_MO_PORT_set, 0, true);
 const tele_op_t op_MO_N        = MAKE_GET_OP(MO.N,      op_MO_N_get,        2, false);
 const tele_op_t op_MO_N_POUND  = MAKE_GET_OP(MO.N#,     op_MO_N_POUND_get,  3, false);
 const tele_op_t op_MO_NO       = MAKE_GET_OP(MO.NO,     op_MO_NO_get,       1, false);
@@ -352,6 +371,30 @@ static void op_MI_CCH_get(const void *NOTUSED(data), scene_state_t *ss,
                     : ss->midi.cc_channel[i - 1] + 1);
 }
 
+// Port (USB virtual cable, 0-based: 0=A, 1=B) the event arrived on.
+static void op_MI_LP_get(const void *NOTUSED(data), scene_state_t *ss,
+                         exec_state_t *NOTUSED(es), command_state_t *cs) {
+    cs_push(cs, ss->midi.last_port);
+}
+
+static void op_MI_NP_get(const void *NOTUSED(data), scene_state_t *ss,
+                         exec_state_t *es, command_state_t *cs) {
+    s16 i = es_variables(es)->i;
+    cs_push(cs, i < 1 || i > ss->midi.on_count ? 0 : ss->midi.on_port[i - 1]);
+}
+
+static void op_MI_OP_get(const void *NOTUSED(data), scene_state_t *ss,
+                         exec_state_t *es, command_state_t *cs) {
+    s16 i = es_variables(es)->i;
+    cs_push(cs, i < 1 || i > ss->midi.off_count ? 0 : ss->midi.off_port[i - 1]);
+}
+
+static void op_MI_CP_get(const void *NOTUSED(data), scene_state_t *ss,
+                         exec_state_t *es, command_state_t *cs) {
+    s16 i = es_variables(es)->i;
+    cs_push(cs, i < 1 || i > ss->midi.cc_count ? 0 : ss->midi.cc_port[i - 1]);
+}
+
 static void op_MI_CLKD_get(const void *NOTUSED(data), scene_state_t *ss,
                            exec_state_t *NOTUSED(es), command_state_t *cs) {
     cs_push(cs, ss->midi.clock_div);
@@ -375,7 +418,7 @@ static void op_MI_CLKR_get(const void *NOTUSED(data), scene_state_t *ss,
 // bytes (0) are correct for 2-byte (PRG) and 1-byte (realtime) messages.
 static void mo_send(u8 status, u8 d1, u8 d2) {
     u8 pack[3] = { status, d1, d2 };
-    tele_midi_out(pack, 3);
+    tele_midi_out(midi_out_port, pack, 3);
 }
 
 static void op_MO_CH_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
@@ -388,6 +431,20 @@ static void op_MO_CH_set(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
     s16 ch = cs_pop(cs) - 1;
     if (ch < 0 || ch > 15) return;
     midi_out_channel = ch;
+}
+
+static void op_MO_PORT_get(const void *NOTUSED(data),
+                           scene_state_t *NOTUSED(ss),
+                           exec_state_t *NOTUSED(es), command_state_t *cs) {
+    cs_push(cs, midi_out_port);
+}
+
+static void op_MO_PORT_set(const void *NOTUSED(data),
+                           scene_state_t *NOTUSED(ss),
+                           exec_state_t *NOTUSED(es), command_state_t *cs) {
+    s16 port = cs_pop(cs);
+    if (port < 0 || port > 15) return;
+    midi_out_port = port;
 }
 
 static void op_MO_N_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),

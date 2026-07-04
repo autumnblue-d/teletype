@@ -1042,7 +1042,12 @@
         "MI.CCH"      => { MATCH_OP(E_OP_MI_CCH); };
         "MI.CLKD"     => { MATCH_OP(E_OP_MI_CLKD); };
         "MI.CLKR"     => { MATCH_OP(E_OP_MI_CLKR); };
+        "MI.LP"       => { MATCH_OP(E_OP_MI_LP); };
+        "MI.NP"       => { MATCH_OP(E_OP_MI_NP); };
+        "MI.OP"       => { MATCH_OP(E_OP_MI_OP); };
+        "MI.CP"       => { MATCH_OP(E_OP_MI_CP); };
         "MO.CH"       => { MATCH_OP(E_OP_MO_CH); };
+        "MO.PORT"     => { MATCH_OP(E_OP_MO_PORT); };
         "MO.N"        => { MATCH_OP(E_OP_MO_N); };
         "MO.N#"       => { MATCH_OP(E_OP_MO_N_POUND); };
         "MO.NO"       => { MATCH_OP(E_OP_MO_NO); };

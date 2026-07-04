@@ -410,6 +410,25 @@ TEST test_MO() {
     CHECK_CALL(mo_run_ok(&ss, "MO.STOP"));
     CHECK_CALL(mo_run_ok(&ss, "MO.CONT"));
 
+    // MO.PORT round-trips the output port (0-based; 0=A, 1=B)
+    char* port1[2] = { "MO.PORT 1", "MO.PORT" };
+    CHECK_CALL(process_helper_state(&ss, 2, port1, 1));
+    char* port0[2] = { "MO.PORT 0", "MO.PORT" };
+    CHECK_CALL(process_helper_state(&ss, 2, port0, 0));
+    // out-of-range port is rejected, leaving the default unchanged
+    char* portrej[3] = { "MO.PORT 1", "MO.PORT 20", "MO.PORT" };
+    CHECK_CALL(process_helper_state(&ss, 3, portrej, 1));
+
+    // input port accessors parse and run; with no events they read 0
+    char* lp[1] = { "MI.LP" };
+    CHECK_CALL(process_helper_state(&ss, 1, lp, 0));
+    char* np[1] = { "MI.NP" };
+    CHECK_CALL(process_helper_state(&ss, 1, np, 0));
+    char* op[1] = { "MI.OP" };
+    CHECK_CALL(process_helper_state(&ss, 1, op, 0));
+    char* cp[1] = { "MI.CP" };
+    CHECK_CALL(process_helper_state(&ss, 1, cp, 0));
+
     PASS();
 }
 

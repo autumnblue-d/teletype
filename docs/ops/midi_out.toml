@@ -7,6 +7,15 @@ All MIDI out ops use the default channel except the `#` ops, which take an expli
 The default channel is a module-level setting and is not saved per scene.
 """
 
+["MO.PORT"]
+prototype = "MO.PORT"
+prototype_set = "MO.PORT x"
+short = "get or set the default output port / USB virtual cable (0=A, 1=B on a multi-port interface)"
+description = """
+All MIDI out ops send on the selected port. The default port is a module-level setting and is not saved per scene.
+On the M-Audio MIDISPORT 2x2, port 0 is DIN out A and port 1 is DIN out B.
+"""
+
 ["MO.N"]
 prototype = "MO.N x y"
 short = "send MIDI Note On message for note `x` (0..127) and velocity `y` (0..127)"
