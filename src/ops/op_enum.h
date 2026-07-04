@@ -394,6 +394,7 @@ typedef enum {
     E_OP_KR_DIR,
     E_OP_KR_DUR,
     E_OP_KR_RUN,
+    E_OP_KR_II,
     E_OP_ME_PRE,
     E_OP_ME_RES,
     E_OP_ME_STOP,

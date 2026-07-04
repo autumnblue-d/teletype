@@ -20,7 +20,7 @@
 // kria_config_t bank). The bump forces a clean re-init on upgrade even without
 // a chip erase. The Kria bank itself isn't seeded here (an erased/invalid bank
 // fails kria_engine_config_valid and the mode falls back to defaults on load).
-#define FIRSTRUN_KEY 0x27
+#define FIRSTRUN_KEY 0x28
 
 static grid_data_t grid_data;
 
@@ -184,6 +184,14 @@ void flash_get_kria(kria_config_t* dst) {
 
 void flash_update_kria(const kria_config_t* src) {
     flashc_memcpy((void*)&f.kria, src, sizeof(f.kria), true);
+}
+
+void flash_get_kria_i2c(kria_i2c_fstate_t* dst) {
+    memcpy(dst, f.kria_i2c, sizeof(f.kria_i2c));
+}
+
+void flash_update_kria_i2c(const kria_i2c_fstate_t* src) {
+    flashc_memcpy((void*)&f.kria_i2c, src, sizeof(f.kria_i2c), true);
 }
 
 void flash_update_device_config(device_config_t* device_config) {

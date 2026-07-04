@@ -44,15 +44,28 @@ void kria_i2c_cv(uint8_t track, uint16_t dac_value);
 void kria_i2c_tr(uint8_t track, uint8_t on);
 void kria_i2c_slew(uint8_t track, uint16_t slew);
 
-// Persistence: sync the follower table with the saved per-follower state.
-void kria_i2c_load(const kria_config_t* cfg);
-void kria_i2c_save(kria_config_t* cfg);
+// Persistence: sync the runtime follower table with the global saved blob.
+// load() sanitizes an erased/invalid blob to defaults.
+void kria_i2c_load(const kria_i2c_fstate_t* st);
+void kria_i2c_save(kria_i2c_fstate_t* st);
+void kria_i2c_defaults(kria_i2c_fstate_t* st);
 
-// Config accessors for the i2c view.
+// Config accessors.
 i2c_follower_t* kria_i2c_follower(uint8_t index);  // 0..KRIA_I2C_FOLLOWERS-1
 void kria_i2c_toggle_active(uint8_t index);
+void kria_i2c_set_active(uint8_t index, uint8_t on);  // for KR.II
 void kria_i2c_toggle_track(uint8_t index, uint8_t track);
 void kria_i2c_set_octave(uint8_t index, int8_t oct);
 void kria_i2c_set_mode(uint8_t index, uint8_t mode);
+
+// Shared i2c view (Ansible ii pages), used by both the Kria and MP shells.
+// enter() resets the view; render() fills a 16x8 led buffer; key() handles a
+// press and returns true if a follower setting changed (caller should mark the
+// bank dirty). take_dirty() returns+clears the accumulated edit flag (call at
+// view-leave / mode-exit to decide whether to flash).
+void kria_i2c_view_enter(void);
+void kria_i2c_view_render(uint8_t* led, uint8_t vari);
+void kria_i2c_view_key(uint8_t x, uint8_t y, uint8_t z);
+uint8_t kria_i2c_take_dirty(void);
 
 #endif

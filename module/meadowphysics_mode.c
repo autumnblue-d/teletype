@@ -64,6 +64,16 @@ static bool dirty = true;  // screen needs redraw
 static bool mp_bank_dirty =
     false;  // scale bank edited, not yet flushed to flash
 static uint8_t view = MP_VIEW_POSITIONS;
+static bool mp_i2c_view = false;  // grid shows the shared i2c view (keyboard 4)
+
+// Flush the shared i2c follower bank to flash if it was edited.
+static void mp_flush_i2c(void) {
+    if (kria_i2c_take_dirty()) {
+        kria_i2c_fstate_t t[KRIA_I2C_FOLLOWERS];
+        kria_i2c_save(t);
+        flash_update_kria_i2c(t);
+    }
+}
 
 // RNG adapter for the MP_RULE_RND rule (engine takes an injected source).
 static uint32_t mp_rnd(void* ctx) {
@@ -166,6 +176,8 @@ void meadowphysics_mode_exit(void) {
     // captures it.
     scene_state.mp = mp_eng.cfg;
     mp_flush_bank();  // save any scale edits
+    mp_flush_i2c();   // persist follower-bank edits
+    mp_i2c_view = false;
     active = false;
 }
 
@@ -240,6 +252,11 @@ static bool mp_scale_editor_active(void) {
 
 void meadowphysics_grid_key(uint8_t x, uint8_t y, uint8_t z) {
     if (!meadowphysics_owns_grid()) return;
+    if (active && mp_i2c_view) {
+        kria_i2c_view_key(x, y, z);  // shared i2c follower view
+        dirty = true;
+        return;
+    }
     if (mp_scale_editor_active()) {
         if (mp_grid_scale_key(&mp_eng, mp_scale_bank, x, y, z))
             mp_bank_dirty = true;  // flushed on leaving the Config view / mode
@@ -250,6 +267,10 @@ void meadowphysics_grid_key(uint8_t x, uint8_t y, uint8_t z) {
 }
 
 void meadowphysics_grid_render(void) {
+    if (active && mp_i2c_view) {
+        kria_i2c_view_render(monomeLedBuffer, monome_is_vari());
+        return;
+    }
     if (mp_scale_editor_active())
         mp_grid_scale_refresh(&mp_eng, mp_scale_bank, monomeLedBuffer,
                               monome_is_vari());
@@ -296,15 +317,26 @@ void process_meadowphysics_keys(uint8_t key, uint8_t mod_key,
     if (match_no_mod(mod_key, key, HID_1)) {
         view = MP_VIEW_POSITIONS;
         mp_flush_bank();  // leaving the Config view: save scale edits
+        if (mp_i2c_view) mp_flush_i2c();
+        mp_i2c_view = false;
         dirty = true;
     }
     else if (match_no_mod(mod_key, key, HID_2)) {
         view = MP_VIEW_CLOCK;
         mp_flush_bank();
+        if (mp_i2c_view) mp_flush_i2c();
+        mp_i2c_view = false;
         dirty = true;
     }
     else if (match_no_mod(mod_key, key, HID_3)) {
         view = MP_VIEW_CONFIG;
+        if (mp_i2c_view) mp_flush_i2c();
+        mp_i2c_view = false;
+        dirty = true;
+    }
+    else if (match_no_mod(mod_key, key, HID_4)) {  // shared i2c follower view
+        mp_i2c_view = true;
+        kria_i2c_view_enter();
         dirty = true;
     }
     else if (match_no_mod(mod_key, key, HID_SPACEBAR)) {

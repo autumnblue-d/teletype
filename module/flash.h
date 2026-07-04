@@ -43,6 +43,7 @@ typedef struct {
     device_config_t device_config;
     uint8_t scale_bank[MP_SCALE_SLOTS][8];
     kria_config_t kria;  // Kria global preset bank (single song), not per-scene
+    kria_i2c_fstate_t kria_i2c[KRIA_I2C_FOLLOWERS];  // global i2c follower bank
 } nvram_data_t;
 
 u8 is_flash_fresh(void);
@@ -70,5 +71,9 @@ void flash_update_scale_bank(uint8_t (*bank)[8]);
 // Global Kria song bank (single instance in nvram_data_t; not per-scene).
 void flash_get_kria(kria_config_t* dst);
 void flash_update_kria(const kria_config_t* src);
+
+// Global i2c follower bank (shared by Kria + MP).
+void flash_get_kria_i2c(kria_i2c_fstate_t* dst);
+void flash_update_kria_i2c(const kria_i2c_fstate_t* src);
 
 #endif

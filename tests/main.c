@@ -96,6 +96,9 @@ int16_t kria_op_cv(int16_t track) {
 int16_t kria_op_dur(int16_t track) {
     return 0;
 }
+int16_t kria_op_ii(int16_t follower, int16_t set, int16_t val) {
+    return 0;
+}
 
 GREATEST_MAIN_DEFS();
 

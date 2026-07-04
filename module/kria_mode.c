@@ -72,8 +72,15 @@ static uint32_t clock_delta = KR_CLOCK_PERIOD_DEFAULT;
 static uint8_t km_view = KM_VIEW_SEQ;
 static uint8_t km_rough = 0;
 static uint8_t km_fine = 0;
-static int8_t km_i2c_sel = -1;   // follower being configured (-1 = toggle view)
-static uint8_t km_i2c_mod = 0;   // (5,7) modifier held (enter config on tap)
+
+// Flush the shared i2c follower bank to flash if it was edited.
+static void km_flush_i2c(void) {
+    if (kria_i2c_take_dirty()) {
+        kria_i2c_fstate_t t[KRIA_I2C_FOLLOWERS];
+        kria_i2c_save(t);
+        flash_update_kria_i2c(t);
+    }
+}
 
 static void km_set_period(uint16_t p);  // defined in the keyboard section
 
@@ -208,7 +215,7 @@ static void km_init_once(void) {
     kria_grid_state_init(&kgrid);
     kgrid.scale_bank = kria_scale_bank;
     km_load_flash();
-    kria_i2c_load(&eng.cfg);  // sync follower table from the saved song
+    // (i2c follower bank is global and loaded at boot in main.c)
     kria_clock_set_period(
         &clk, eng.cfg.clock_period ? eng.cfg.clock_period : KR_CLOCK_PERIOD_DEFAULT);
     timer_add(&kriaBlinkTimer, 100, &km_altblink_cb, NULL);
@@ -225,14 +232,12 @@ void kria_mode_exit(void) {
     // Persist edits (song is a global bank, not per-scene). ~18 KB flash write
     // only when something changed; may briefly stall -- prefer saving stopped.
     if (cfg_dirty) {
-        kria_i2c_save(&eng.cfg);  // capture follower routing into the song
         flash_update_kria(&eng.cfg);
         flash_update_scale_bank(kria_scale_bank);  // shared bank, small
         cfg_dirty = false;
     }
+    km_flush_i2c();  // persist follower-bank edits
     km_view = KM_VIEW_SEQ;  // next entry starts on the sequencer
-    km_i2c_sel = -1;
-    km_i2c_mod = 0;
     active = false;
 }
 
@@ -403,95 +408,8 @@ static void km_config_key(uint8_t x, uint8_t y, uint8_t z) {
         kgrid.note_div_sync = !kgrid.note_div_sync;
 }
 
-// i2c view -- ports Ansible's Kria ii pages (grid_KR_ii / grid_KR_ii_config).
-// Follower toggles in a vertical block cols 5-6: col5 = JF(y2)/TXo(y3)/ER301(y4)/
-// Disting(y5), col6 = WSYN(y2)/Crow(y3). Bright = active. Hold (5,7) + tap a
-// follower to enter its config page (octave row0 cols0-6, mode row0 cols12+,
-// per-track row7 cols0-3); press (5,7) again to exit.
-
-// Follower index at grid cell (x,y), or -1.
-static int8_t km_i2c_at(uint8_t x, uint8_t y) {
-    if (y < 2 || y > 5) return -1;
-    int8_t f = (x == 5) ? (y - 2) : (x == 6) ? (y - 2 + 4) : -1;
-    return (f >= 0 && f < KRIA_I2C_FOLLOWERS) ? f : -1;
-}
-
-static void km_i2c_render(void) {
-    uint8_t* led = monomeLedBuffer;
-    uint8_t i;
-    memset(led, 0, 128);
-
-    // follower toggles (config view highlights the selected one)
-    for (i = 0; i < KRIA_I2C_FOLLOWERS; i++) {
-        uint8_t cell = 5 + (i / 4) + (2 + i % 4) * 16;
-        if (km_i2c_sel >= 0)
-            led[cell] = (i == km_i2c_sel) ? KM_LB : KM_LD;
-        else
-            led[cell] = kria_i2c_follower(i)->active ? KM_LB : KM_LD;
-    }
-    led[112 + 5] = km_i2c_mod ? KM_LB : KM_LD;  // (5,7) config modifier
-
-    if (km_i2c_sel >= 0) {
-        i2c_follower_t* f = kria_i2c_follower(km_i2c_sel);
-        // per-track routing on row 7
-        for (i = 0; i < KRIA_NUM_TRACKS; i++)
-            led[112 + i] = (f->track_en & (1 << i)) ? KM_LB : KM_LD;
-        // octave selector row 0 cols 0-6 (center = 0)
-        memset(led, KM_LD, 7);
-        led[f->oct + 3] = KM_LB;
-        // operating mode row 0 cols 12+ (only if the follower has modes)
-        if (f->ops->mode_ct > 1) {
-            memset(led + 12, KM_LD, f->ops->mode_ct);
-            led[12 + f->active_mode] = KM_LB;
-        }
-    }
-    km_view_finalize(led);
-}
-
-static void km_i2c_key(uint8_t x, uint8_t y, uint8_t z) {
-    if (!z) {
-        if (x == 5 && y == 7) km_i2c_mod = 0;
-        return;
-    }
-    if (x == 5 && y == 7) {
-        if (km_i2c_sel >= 0)
-            km_i2c_sel = -1;  // exit config
-        else
-            km_i2c_mod = 1;  // arm the config modifier
-        return;
-    }
-    if (km_i2c_sel >= 0) {  // config page for the selected follower
-        i2c_follower_t* f = kria_i2c_follower(km_i2c_sel);
-        int8_t sw = km_i2c_at(x, y);
-        if (sw >= 0) {
-            km_i2c_sel = sw;  // switch which follower is configured
-        }
-        else if (y == 0 && x <= 6) {
-            kria_i2c_set_octave(km_i2c_sel, (int8_t)(x - 3));
-            cfg_dirty = true;
-        }
-        else if (y == 0 && f->ops->mode_ct > 1 && x >= 12 &&
-                 x < 12 + f->ops->mode_ct) {
-            kria_i2c_set_mode(km_i2c_sel, x - 12);
-            cfg_dirty = true;
-        }
-        else if (y == 7 && x < KRIA_NUM_TRACKS) {
-            kria_i2c_toggle_track(km_i2c_sel, x);
-            cfg_dirty = true;
-        }
-    }
-    else {  // toggle page
-        int8_t f = km_i2c_at(x, y);
-        if (f >= 0) {
-            if (km_i2c_mod)
-                km_i2c_sel = f;  // enter config
-            else {
-                kria_i2c_toggle_active(f);
-                cfg_dirty = true;
-            }
-        }
-    }
-}
+// The i2c view (Ansible ii toggle + per-follower config pages) is shared with
+// the MP shell; it lives in src/kria_i2c.c (kria_i2c_view_*).
 
 void kria_grid_key(uint8_t x, uint8_t y, uint8_t z) {
     if (!kria_owns_grid()) return;
@@ -500,7 +418,7 @@ void kria_grid_key(uint8_t x, uint8_t y, uint8_t z) {
     else if (active && km_view == KM_VIEW_CONFIG)
         km_config_key(x, y, z);
     else if (active && km_view == KM_VIEW_I2C)
-        km_i2c_key(x, y, z);
+        kria_i2c_view_key(x, y, z);
     else {
         kria_grid_process_key(&eng, &kgrid, x, y, z);
         if (z) cfg_dirty = true;
@@ -514,7 +432,7 @@ void kria_grid_render(void) {
     else if (active && km_view == KM_VIEW_CONFIG)
         km_config_render();
     else if (active && km_view == KM_VIEW_I2C)
-        km_i2c_render();
+        kria_i2c_view_render(monomeLedBuffer, monome_is_vari());
     else
         kria_grid_refresh(&eng, &kgrid, monomeLedBuffer, monome_is_vari());
 }
@@ -549,9 +467,9 @@ void process_kria_keys(uint8_t key, uint8_t mod_key, bool is_held_key) {
                                                  : KR_CLOCK_PERIOD_MIN);
     }
     else if (match_no_mod(mod_key, key, HID_S)) {  // explicit save
-        kria_i2c_save(&eng.cfg);
         flash_update_kria(&eng.cfg);
         flash_update_scale_bank(kria_scale_bank);
+        km_flush_i2c();
         cfg_dirty = false;
         dirty = true;
     }
@@ -573,8 +491,7 @@ void process_kria_keys(uint8_t key, uint8_t mod_key, bool is_held_key) {
     }
     else if (match_no_mod(mod_key, key, HID_4)) {  // i2c follower routing view
         km_view = KM_VIEW_I2C;
-        km_i2c_sel = -1;
-        km_i2c_mod = 0;
+        kria_i2c_view_enter();
         scene_state.grid.grid_dirty = 1;
         dirty = true;
     }
@@ -755,6 +672,17 @@ int16_t kria_op_dur(int16_t track) {
     if (track < 0 || track >= KRIA_NUM_TRACKS) return 0;
     kria_track_t* t = &eng.cfg.p[eng.cfg.pattern].t[track];
     return t->dur[eng.rt.pos[track][KR_P_DUR]];
+}
+
+int16_t kria_op_ii(int16_t follower, int16_t set, int16_t val) {
+    km_init_once();
+    if (follower < 0 || follower >= KRIA_I2C_FOLLOWERS) return 0;
+    if (set) {
+        kria_i2c_set_active((uint8_t)follower, val ? 1 : 0);
+        km_flush_i2c();  // persist immediately (global follower bank)
+        dirty = true;
+    }
+    return kria_i2c_follower((uint8_t)follower)->active;
 }
 
 uint8_t screen_refresh_kria(void) {

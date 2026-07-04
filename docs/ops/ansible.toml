@@ -137,6 +137,24 @@ Get or set the play direction for track `x` (0-3):
 prototype = "KR.DUR x"
 short = "get the current duration value for track `x` (1-indexed)"
 
+["KR.II"]
+prototype = "KR.II f"
+prototype_set = "KR.II f x"
+short = "enable/disable i2c follower `f` for Kria/MP output"
+description = """
+Get or set the active state of i2c follower `f`, so scripts can route the
+on-board Kria (and Meadowphysics) output to external i2c modules. `x` = 1
+enables, 0 disables. The follower bank is global (shared by Kria and MP) and
+persisted. Followers:
+
+ - `0` = Just Friends
+ - `1` = TELEXo
+ - `2` = ER-301
+ - `3` = Disting EX
+ - `4` = W/syn
+ - `5` = Crow
+"""
+
 ["ME.PRE"]
 prototype = "ME.PRE"
 prototype_set = "ME.PRE x"

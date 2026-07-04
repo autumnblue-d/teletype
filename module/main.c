@@ -42,6 +42,7 @@
 #include "grid.h"
 #include "help_mode.h"
 #include "keyboard_helper.h"
+#include "kria_i2c.h"
 #include "kria_mode.h"
 #include "live_mode.h"
 #include "meadowphysics_mode.h"
@@ -1332,6 +1333,13 @@ void initialize_module(void) {
     ss_update_param_scale(&scene_state);
     ss_update_in_scale(&scene_state);
     ss_update_fader_scale_all(&scene_state);
+
+    // load the global i2c follower bank (shared by Kria + MP)
+    {
+        kria_i2c_fstate_t km_i2c_state[KRIA_I2C_FOLLOWERS];
+        flash_get_kria_i2c(km_i2c_state);
+        kria_i2c_load(km_i2c_state);
+    }
 
     // load preset from flash
     preset_select = flash_last_saved_scene();

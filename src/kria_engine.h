@@ -125,10 +125,10 @@ typedef struct {
     uint8_t meta_reset_all;  // reset input also resets the meta pointer
     uint8_t dur_tie_mode;    // hold gate on max-duration steps (legato/tie)
     uint16_t clock_period;   // internal tempo (ms); used by the clock layer
-
-    // i2c follower output (additive to the CV/TR jacks). See kria_i2c.h.
-    kria_i2c_fstate_t i2c[KRIA_I2C_FOLLOWERS];
 } kria_config_t;
+
+// i2c follower state (kria_i2c_fstate_t) is a GLOBAL bank shared by Kria + MP,
+// persisted at the nvram top level (flash.h), not per-song.
 
 // Ephemeral runtime state -- never serialized.
 typedef struct {

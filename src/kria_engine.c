@@ -414,16 +414,6 @@ void kria_engine_set_defaults(kria_config_t* cfg) {
     cfg->dur_tie_mode = 0;
     cfg->clock_period = 60;
 
-    // i2c followers off by default; all tracks routed. Ansible per-follower
-    // defaults: ER-301 (index 2) runs in gate/cv mode, W/syn (index 4) at oct -2.
-    for (uint8_t i = 0; i < KRIA_I2C_FOLLOWERS; i++) {
-        cfg->i2c[i].active = 0;
-        cfg->i2c[i].track_en = 0x0f;
-        cfg->i2c[i].oct = 0;
-        cfg->i2c[i].mode = 0;
-    }
-    cfg->i2c[KR_F_ER301].mode = 1;
-    cfg->i2c[KR_F_WSYN].oct = -2;
 }
 
 bool kria_engine_config_valid(const kria_config_t* cfg) {

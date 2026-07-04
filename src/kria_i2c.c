@@ -4,6 +4,8 @@
 
 #include "kria_i2c.h"
 
+#include <string.h>
+
 #include "ii.h"
 #include "music.h"        // ET
 #include "teletype_io.h"  // tele_ii_tx
@@ -11,6 +13,7 @@
 // current pitch (semitone index) + aux (duration) per track, set by the shell
 static int16_t kri2c_sem[KRIA_NUM_TRACKS];
 static uint16_t kri2c_aux[KRIA_NUM_TRACKS];
+static uint8_t view_dirty = 0;  // a follower setting changed since last flush
 
 static uint16_t et(int idx) {
     if (idx < 0) idx = 0;
@@ -561,6 +564,7 @@ void kria_i2c_toggle_active(uint8_t index) {
         follower_change_mode(f, f->active_mode);
         follower_change_octave(f, f->oct);
     }
+    view_dirty = 1;
 }
 
 void kria_i2c_toggle_track(uint8_t index, uint8_t track) {
@@ -579,22 +583,149 @@ void kria_i2c_set_mode(uint8_t index, uint8_t mode) {
     follower_change_mode(&followers[index], mode);
 }
 
-// ---- persistence ----
+void kria_i2c_set_active(uint8_t index, uint8_t on) {
+    if (index >= KRIA_I2C_FOLLOWERS) return;
+    if ((followers[index].active != 0) != (on != 0)) kria_i2c_toggle_active(index);
+}
 
-void kria_i2c_load(const kria_config_t* cfg) {
+// ---- persistence (global blob) ----
+
+void kria_i2c_defaults(kria_i2c_fstate_t* st) {
     for (uint8_t i = 0; i < KRIA_I2C_FOLLOWERS; i++) {
-        followers[i].active = cfg->i2c[i].active;
-        followers[i].track_en = cfg->i2c[i].track_en;
-        followers[i].oct = cfg->i2c[i].oct;
-        followers[i].active_mode = cfg->i2c[i].mode;
+        st[i].active = 0;
+        st[i].track_en = 0x0f;
+        st[i].oct = 0;
+        st[i].mode = 0;
+    }
+    st[KR_F_ER301].mode = 1;  // ER-301 always gate/cv
+    st[KR_F_WSYN].oct = -2;   // W/syn
+}
+
+void kria_i2c_load(const kria_i2c_fstate_t* st) {
+    kria_i2c_fstate_t def[KRIA_I2C_FOLLOWERS];
+    for (uint8_t i = 0; i < KRIA_I2C_FOLLOWERS; i++) {
+        // sanitize an erased/invalid blob (0xFF after chip erase) -> defaults
+        if (st[i].active > 1 || st[i].track_en > 0x0f) {
+            kria_i2c_defaults(def);
+            st = def;
+            break;
+        }
+    }
+    for (uint8_t i = 0; i < KRIA_I2C_FOLLOWERS; i++) {
+        followers[i].active = st[i].active;
+        followers[i].track_en = st[i].track_en;
+        followers[i].oct = st[i].oct;
+        followers[i].active_mode = st[i].mode;
     }
 }
 
-void kria_i2c_save(kria_config_t* cfg) {
+void kria_i2c_save(kria_i2c_fstate_t* st) {
     for (uint8_t i = 0; i < KRIA_I2C_FOLLOWERS; i++) {
-        cfg->i2c[i].active = followers[i].active;
-        cfg->i2c[i].track_en = followers[i].track_en;
-        cfg->i2c[i].oct = followers[i].oct;
-        cfg->i2c[i].mode = followers[i].active_mode;
+        st[i].active = followers[i].active;
+        st[i].track_en = followers[i].track_en;
+        st[i].oct = followers[i].oct;
+        st[i].mode = followers[i].active_mode;
+    }
+}
+
+// ---- shared i2c view (Ansible ii pages: toggle + per-follower config) ----
+
+#define KM_LB 12  // bright / on
+#define KM_LD 4   // dim / off
+
+static int8_t view_sel = -1;  // follower being configured (-1 = toggle page)
+static uint8_t view_mod = 0;  // (5,7) modifier held (enter config on tap)
+
+void kria_i2c_view_enter(void) {
+    view_sel = -1;
+    view_mod = 0;
+}
+
+uint8_t kria_i2c_take_dirty(void) {
+    uint8_t d = view_dirty;
+    view_dirty = 0;
+    return d;
+}
+
+// follower index at cell (x,y), or -1
+static int8_t view_at(uint8_t x, uint8_t y) {
+    if (y < 2 || y > 5) return -1;
+    int8_t f = (x == 5) ? (y - 2) : (x == 6) ? (y - 2 + 4) : -1;
+    return (f >= 0 && f < KRIA_I2C_FOLLOWERS) ? f : -1;
+}
+
+void kria_i2c_view_render(uint8_t* led, uint8_t vari) {
+    uint8_t i;
+    memset(led, 0, 128);
+
+    for (i = 0; i < KRIA_I2C_FOLLOWERS; i++) {
+        uint8_t cell = 5 + (i / 4) + (2 + i % 4) * 16;
+        if (view_sel >= 0)
+            led[cell] = (i == view_sel) ? KM_LB : KM_LD;
+        else
+            led[cell] = followers[i].active ? KM_LB : KM_LD;
+    }
+    led[112 + 5] = view_mod ? KM_LB : KM_LD;  // (5,7) config modifier
+
+    if (view_sel >= 0) {
+        i2c_follower_t* f = &followers[view_sel];
+        for (i = 0; i < KRIA_NUM_TRACKS; i++)  // per-track routing (row 7)
+            led[112 + i] = (f->track_en & (1 << i)) ? KM_LB : KM_LD;
+        memset(led, KM_LD, 7);  // octave selector (row 0, cols 0-6)
+        led[f->oct + 3] = KM_LB;
+        if (f->ops->mode_ct > 1) {  // operating mode (row 0, cols 12+)
+            memset(led + 12, KM_LD, f->ops->mode_ct);
+            led[12 + f->active_mode] = KM_LB;
+        }
+    }
+
+    for (i = 0; i < 128; i++) {
+        if (led[i] > 15) led[i] = 15;
+        if (!vari && led[i]) led[i] = 15;
+    }
+}
+
+void kria_i2c_view_key(uint8_t x, uint8_t y, uint8_t z) {
+    if (!z) {
+        if (x == 5 && y == 7) view_mod = 0;
+        return;
+    }
+    if (x == 5 && y == 7) {
+        if (view_sel >= 0)
+            view_sel = -1;  // exit config
+        else
+            view_mod = 1;  // arm config modifier
+        return;
+    }
+    if (view_sel >= 0) {  // config page
+        i2c_follower_t* f = &followers[view_sel];
+        int8_t sw = view_at(x, y);
+        if (sw >= 0) {
+            view_sel = sw;  // switch configured follower
+        }
+        else if (y == 0 && x <= 6) {
+            kria_i2c_set_octave(view_sel, (int8_t)(x - 3));
+            view_dirty = 1;
+        }
+        else if (y == 0 && f->ops->mode_ct > 1 && x >= 12 &&
+                 x < 12 + f->ops->mode_ct) {
+            kria_i2c_set_mode(view_sel, x - 12);
+            view_dirty = 1;
+        }
+        else if (y == 7 && x < KRIA_NUM_TRACKS) {
+            kria_i2c_toggle_track(view_sel, x);
+            view_dirty = 1;
+        }
+    }
+    else {  // toggle page
+        int8_t f = view_at(x, y);
+        if (f >= 0) {
+            if (view_mod)
+                view_sel = f;  // enter config
+            else {
+                kria_i2c_toggle_active(f);
+                view_dirty = 1;
+            }
+        }
     }
 }

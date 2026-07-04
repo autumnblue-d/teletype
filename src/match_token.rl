@@ -439,6 +439,7 @@
         "KR.DIR"      => { MATCH_OP(E_OP_KR_DIR); };
         "KR.DUR"      => { MATCH_OP(E_OP_KR_DUR); };
         "KR.RUN"      => { MATCH_OP(E_OP_KR_RUN); };
+        "KR.II"       => { MATCH_OP(E_OP_KR_II); };
         "ME.PRE"      => { MATCH_OP(E_OP_ME_PRE); };
         "ME.RES"      => { MATCH_OP(E_OP_ME_RES); };
         "ME.STOP"     => { MATCH_OP(E_OP_ME_STOP); };

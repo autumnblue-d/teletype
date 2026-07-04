@@ -78,6 +78,10 @@ static void op_KR_DUR_get(const void *data, scene_state_t *ss, exec_state_t *es,
                           command_state_t *cs);
 static void op_KR_RUN_get(const void *data, scene_state_t *ss, exec_state_t *es,
                           command_state_t *cs);
+static void op_KR_II_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                         command_state_t *cs);
+static void op_KR_II_set(const void *data, scene_state_t *ss, exec_state_t *es,
+                         command_state_t *cs);
 static void op_ME_PRE_get(const void *data, scene_state_t *ss, exec_state_t *es,
                           command_state_t *cs);
 static void op_ME_PRE_set(const void *data, scene_state_t *ss, exec_state_t *es,
@@ -191,6 +195,7 @@ const tele_op_t op_KR_CUE      = MAKE_GET_SET_OP(KR.CUE     , op_KR_CUE_get     
 const tele_op_t op_KR_DIR      = MAKE_GET_SET_OP(KR.DIR     , op_KR_DIR_get     , op_KR_DIR_set       , 1, true);
 const tele_op_t op_KR_DUR      = MAKE_GET_OP    (KR.DUR     , op_KR_DUR_get                           , 1, true);
 const tele_op_t op_KR_RUN      = MAKE_GET_OP    (KR.RUN     , op_KR_RUN_get                           , 1, false);
+const tele_op_t op_KR_II       = MAKE_GET_SET_OP(KR.II      , op_KR_II_get       , op_KR_II_set       , 1, true);
 
 const tele_op_t op_ME_PRE      = MAKE_GET_SET_OP(ME.PRE     , op_ME_PRE_get      , op_ME_PRE_set      , 0, true);
 const tele_op_t op_ME_RES      = MAKE_GET_OP    (ME.RES     , op_ME_RES_get                           , 1, false);
@@ -529,6 +534,18 @@ static void op_KR_DUR_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
 static void op_KR_RUN_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
                           exec_state_t *NOTUSED(es), command_state_t *cs) {
     kria_op_run(cs_pop(cs));
+}
+
+static void op_KR_II_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
+                         exec_state_t *NOTUSED(es), command_state_t *cs) {
+    cs_push(cs, kria_op_ii(cs_pop(cs), 0, 0));
+}
+
+static void op_KR_II_set(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
+                         exec_state_t *NOTUSED(es), command_state_t *cs) {
+    int16_t val = cs_pop(cs);
+    int16_t f = cs_pop(cs);
+    kria_op_ii(f, 1, val);
 }
 
 static void op_ME_PRE_set(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
