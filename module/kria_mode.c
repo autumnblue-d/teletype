@@ -59,6 +59,20 @@ static bool cfg_dirty = false;  // song edited, not yet flushed to flash
 static uint64_t last_tick_time = 0;
 static uint32_t clock_delta = KR_CLOCK_PERIOD_DEFAULT;
 
+// Grid views (Ansible Key 1 / Key 2 equivalents), switched from the keyboard
+// (1 = sequencer, 2 = time, 3 = config). Only active while the Kria view is
+// front-most; a background-playing engine keeps showing the sequencer.
+#define KM_VIEW_SEQ 0
+#define KM_VIEW_TIME 1
+#define KM_VIEW_CONFIG 2
+#define KM_ROUGH_STEP 64  // ms per rough tempo step
+#define KM_FINE_STEP 4    // ms per fine tempo step
+static uint8_t km_view = KM_VIEW_SEQ;
+static uint8_t km_rough = 0;
+static uint8_t km_fine = 0;
+
+static void km_set_period(uint16_t p);  // defined in the keyboard section
+
 static int imax(int a, int b) {
     return a > b ? a : b;
 }
@@ -203,6 +217,7 @@ void kria_mode_exit(void) {
         flash_update_scale_bank(kria_scale_bank);  // shared bank, small
         cfg_dirty = false;
     }
+    km_view = KM_VIEW_SEQ;  // next entry starts on the sequencer
     active = false;
 }
 
@@ -283,15 +298,116 @@ bool kria_owns_grid(void) {
     return active || kria_running;
 }
 
+// ---- Time / Config grid views (Ansible Key 1 / Key 2 equivalents) ----
+
+#define KM_LD 4   // dim
+#define KM_LB 12  // bright
+
+static void km_view_finalize(uint8_t* led) {
+    uint8_t v = monome_is_vari();
+    for (int i = 0; i < 128; i++) {
+        if (led[i] > 15) led[i] = 15;
+        if (!v && led[i]) led[i] = 15;  // non-varibright: force lit cells full
+    }
+}
+
+static void km_sync_rc_from_period(void) {
+    int d = (int)clk.period - KR_CLOCK_PERIOD_MIN;
+    if (d < 0) d = 0;
+    km_rough = d / KM_ROUGH_STEP;
+    if (km_rough > 15) km_rough = 15;
+    km_fine = (d - km_rough * KM_ROUGH_STEP) / KM_FINE_STEP;
+    if (km_fine > 15) km_fine = 15;
+}
+
+static void km_apply_tempo_rc(void) {
+    km_set_period((uint16_t)(KR_CLOCK_PERIOD_MIN + km_rough * KM_ROUGH_STEP +
+                             km_fine * KM_FINE_STEP));
+}
+
+// Time view: rough tempo on row 1, fine on row 2 (matches Ansible Key 1).
+static void km_time_render(void) {
+    uint8_t* led = monomeLedBuffer;
+    uint8_t i;
+    memset(led, 0, 128);
+    for (i = 0; i < 16; i++) led[16 + i] = KM_LD;
+    led[16 + km_rough] = KM_LB;
+    for (i = 0; i < 16; i++) led[32 + i] = KM_LD;
+    led[32 + km_fine] = KM_LB;
+    led[0] = KM_LB;  // top-left marker: Time view active
+    km_view_finalize(led);
+}
+
+static void km_time_key(uint8_t x, uint8_t y, uint8_t z) {
+    if (!z) return;
+    if (y == 1) {
+        km_rough = x;
+        km_apply_tempo_rc();
+    }
+    else if (y == 2) {
+        km_fine = x;
+        km_apply_tempo_rc();
+    }
+}
+
+// Config view (matches Ansible Key 2): note-sync, loop-sync, note-tie,
+// meta-reset, plus the tmul fan-out flags. Cells are lit bright when
+// on/selected, dim otherwise.
+static void km_config_render(void) {
+    uint8_t* led = monomeLedBuffer;
+    uint8_t m;
+    memset(led, 0, 128);
+    led[0] = kgrid.note_sync ? KM_LB : KM_LD;       // (0,0) note sync
+    for (m = 0; m < 3; m++)                          // (2, 0..2) loop sync
+        led[16 * m + 2] = (kgrid.loop_sync == m) ? KM_LB : KM_LD;
+    led[4] = eng.cfg.dur_tie_mode ? KM_LB : KM_LD;   // (4,0) note tie
+    led[6] = eng.cfg.meta_reset_all ? KM_LB : KM_LD;  // (6,0) meta reset
+    for (m = 0; m < 3; m++)                          // (8, 0..2) div sync
+        led[16 * m + 8] = (kgrid.div_sync == m) ? KM_LB : KM_LD;
+    led[10] = kgrid.note_div_sync ? KM_LB : KM_LD;   // (10,0) note div sync
+    km_view_finalize(led);
+}
+
+static void km_config_key(uint8_t x, uint8_t y, uint8_t z) {
+    if (!z) return;
+    if (x == 0 && y == 0)
+        kgrid.note_sync = !kgrid.note_sync;
+    else if (x == 2 && y < 3)
+        kgrid.loop_sync = y;
+    else if (x == 4 && y == 0) {
+        eng.cfg.dur_tie_mode = !eng.cfg.dur_tie_mode;
+        cfg_dirty = true;
+    }
+    else if (x == 6 && y == 0) {
+        eng.cfg.meta_reset_all = !eng.cfg.meta_reset_all;
+        cfg_dirty = true;
+    }
+    else if (x == 8 && y < 3)
+        kgrid.div_sync = y;
+    else if (x == 10 && y == 0)
+        kgrid.note_div_sync = !kgrid.note_div_sync;
+}
+
 void kria_grid_key(uint8_t x, uint8_t y, uint8_t z) {
     if (!kria_owns_grid()) return;
-    kria_grid_process_key(&eng, &kgrid, x, y, z);
-    if (z) cfg_dirty = true;
+    if (active && km_view == KM_VIEW_TIME)
+        km_time_key(x, y, z);
+    else if (active && km_view == KM_VIEW_CONFIG)
+        km_config_key(x, y, z);
+    else {
+        kria_grid_process_key(&eng, &kgrid, x, y, z);
+        if (z) cfg_dirty = true;
+    }
     dirty = true;
 }
 
 void kria_grid_render(void) {
-    kria_grid_refresh(&eng, &kgrid, monomeLedBuffer, monome_is_vari());
+    if (active && km_view == KM_VIEW_TIME)
+        km_time_render();
+    else if (active && km_view == KM_VIEW_CONFIG)
+        km_config_render();
+    else
+        kria_grid_refresh(&eng, &kgrid, monomeLedBuffer, monome_is_vari());
 }
 
 // ---- keyboard ----
@@ -329,6 +445,22 @@ void process_kria_keys(uint8_t key, uint8_t mod_key, bool is_held_key) {
         cfg_dirty = false;
         dirty = true;
     }
+    else if (match_no_mod(mod_key, key, HID_1)) {  // sequencer view
+        km_view = KM_VIEW_SEQ;
+        scene_state.grid.grid_dirty = 1;
+        dirty = true;
+    }
+    else if (match_no_mod(mod_key, key, HID_2)) {  // time view (Ansible Key 1)
+        km_view = KM_VIEW_TIME;
+        km_sync_rc_from_period();
+        scene_state.grid.grid_dirty = 1;
+        dirty = true;
+    }
+    else if (match_no_mod(mod_key, key, HID_3)) {  // config view (Ansible Key 2)
+        km_view = KM_VIEW_CONFIG;
+        scene_state.grid.grid_dirty = 1;
+        dirty = true;
+    }
 }
 
 // ---- OLED ----
@@ -340,6 +472,7 @@ void process_kria_keys(uint8_t key, uint8_t mod_key, bool is_held_key) {
 static const char* const km_page_name[9] = { "TRIG", "NOTE", "OCT",
                                              "DUR",  "RPT",  "ALT",
                                              "GLIDE", "SCALE", "PATT" };
+static const char* const km_view_name[3] = { "SEQ", "TIME", "CONFIG" };
 
 static void km_num(uint8_t ln, uint8_t x, int val, uint8_t fg) {
     char s[8];
@@ -514,6 +647,8 @@ uint8_t screen_refresh_kria(void) {
     for (uint8_t i = 0; i < 8; i++) region_fill(&line[i], 0);
 
     font_string_region_clip(&line[0], "KRIA", 0, 0, KM_S_TITLE, 0);
+    font_string_region_clip(&line[0], km_view_name[km_view], 54, 0, KM_S_VALUE,
+                            0);
     font_string_region_clip(&line[0], kria_running ? "RUN" : "STOP", 100, 0,
                             KM_S_VALUE, 0);
 
@@ -535,7 +670,8 @@ uint8_t screen_refresh_kria(void) {
                             kgrid.mode < 9 ? km_page_name[kgrid.mode] : "?", 102,
                             0, KM_S_VALUE, 0);
 
-    font_string_region_clip(&line[7], "SPACE:RUN R:RESET S:SAVE", 0, 0, 3, 0);
+    font_string_region_clip(&line[7], "1SEQ 2TIME 3CFG  SPACE:RUN S:SAVE", 0, 0,
+                            3, 0);
 
     return 0b11111111;
 }
