@@ -298,9 +298,25 @@ CV voices (pitched); MP 8T = 8 gates (modes 2/3).
 5. 8T: MP binding track 4-7 offset + 8-bit track_en; modes 2/3 emit paths.
 6. Build + tests (note math, channel/mode mapping, 8T routing) + flash.
 
+### Status — SHIPPED (commit 201b1e7 on kria, pushed to local; flashed 2026-07-04)
+
+All 6 phases done: built, 111/111 tests, on hardware. Firmware text ->0x5332a,
+nvram 144,980 fits 145K. Verified during impl: MP `cv_gate` passes ch 0-3 (from
+`out_cv_gate(e, n-4, ..)`), so the +4 offset in `mp_out_cv_gate` yields distinct
+follower gates 4-7. 8T mode 3 confirmed = 1 fixed note / 8 selectable channels.
+
+**Editor exit-key gotcha (fixed):** `process_global_keys` (main.c) consumes ESC
+(->preset) and TAB (->mode switch) *before* the mode handler, so the OLED editor
+never receives them. The first cut used ESC/TAB to exit -> got stuck. Fix: the
+editor consumes only the arrows + ENTER (explicit exit) and returns 0 for
+anything else, so the shell falls through -> a view key (1/2/3/4) leaves the
+editor AND switches view. Also `kria/meadowphysics_mode_exit` call
+`kria_i2c_oled_exit()` so the editor never persists across a mode change.
+
 ### Open / watch
 
 - Note-off recomputes note from state (mono-per-track stable); mask/pitch change
   mid-gate could hang a note -> optional `last_note[track]` per MIDI follower.
-- Confirm interpretation of 8T mode 3 = "1 note / 8 selectable channels".
-- MP 8T `ch` argument to `cv_gate` must be verified before the +4 offset.
+- I2M + 8T are hardware-unverified (no i2c2midi module on hand); MO is testable
+  over USB MIDI. Velocity is fixed 100 (velocity-from-duration deferred).
+- No unit tests on the emit path (i2c layer has none; needs seam-capture infra).
