@@ -209,3 +209,98 @@ Phase A (one follower, hardcoded routing) is small — a day-ish spike leveragin
 existing code. B–D are incremental. The genuinely new risk is **i2c timing under
 the sequencer clock**, which only hardware testing settles — so do Phase A first
 and measure before building the config/UI.
+
+---
+
+## PLANNED: MO (USB MIDI out) + I2M (i2c2midi) as followers — OLED-configured
+
+Two new note-based followers extend the table to 8 (`KR_F_I2M = 6`, `KR_F_MO = 7`;
+`KRIA_I2C_FOLLOWERS` 6 -> 8). Both emit MIDI notes rather than CV/gate:
+- **MO** — native USB MIDI out. No i2c: builds a 3-byte packet and calls the
+  existing public seam `tele_midi_out(port, pack, 3)` (`teletype_io.h`). Carries a
+  USB cable select (A=0 / B=1), mirroring the `MO.PORT` op.
+- **I2M** — i2c2midi module at addr `I2C2MIDI = 0x3F`. Note-on `SEND_B3(20, ch,
+  note, vel)`, note-off `SEND_B2(21, ch, note)` (see `src/ops/i2c2midi.c`).
+  Channels 1..32 (device `MAX_CHANNEL`).
+
+### Config UI: OLED + keyboard (NOT the grid)
+
+MIDI config is parameter-rich and numeric (channel 1..32, cable, per-track notes,
+per-gate channels) — a poor fit for a 16x8 LED grid. Instead, a shared module
+unit **`module/kria_i2c_oled.{c,h}`** renders an 8-line `LABEL value` editor to
+`region line[8]` (same substrate as `screen_refresh_kria`), navigated by the
+keyboard: Up/Down move a field cursor, Left/Right (or -/=) change the value,
+Enter/PAGE flips pages, a sub-cursor edits per-slot arrays. Called from BOTH the
+Kria and MP i2c views (shared global bank).
+
+- `src/kria_i2c.c` stays pure (data + i2c/MIDI emit + accessors). Screen access is
+  module-layer only. New accessors: `set/get_channel`, `set/get_port`,
+  `set/get_note(slot)`, `set/get_chan_slot(slot)`, mode/track getters.
+- The **grid** i2c view keeps only the 8 follower TOGGLE cells (activate / show
+  active). Selecting MO/I2M opens the OLED editor; **CV followers keep their grid
+  config pages** (hybrid: grid for CV, OLED+keyboard for MIDI). Minor idiom
+  inconsistency, acceptable; CV pages could migrate to OLED later for uniformity.
+
+### MIDI follower modes (mode_ct = 4)
+
+Pick the mode to match how the follower is driven:
+
+| mode | driven by | note source | channel mapping |
+|------|-----------|-------------|-----------------|
+| 0 PITCH.SINGLE | Kria, MP 1V/2V/4V | sequencer pitch (`kri2c_sem`) | all routed tracks -> base `chan` |
+| 1 PITCH.MULTI  | Kria, MP 1V/2V/4V | sequencer pitch | track n -> `chan + n` (clamped 16/32) |
+| 2 8T.NOTES     | MP 8T | 8 fixed `notes[0..7]` (GM drum defaults) | all on base `chan` |
+| 3 8T.CHANS     | MP 8T | one fixed note (`notes[0]`) | 8 selectable `chans[0..7]`, one per gate |
+
+Note math (pitched): `note = kri2c_sem[track] + 12*(base_oct + oct)`, clamp 0..127
+(same as the Disting-EX MIDI modes already in kria_i2c.c). Velocity: fixed default
+(configurable "fixed / from duration" via `aux_to_midi_vel`).
+
+### 8T (8 gates, no pitch)
+
+`MP_8T` = rows 0-3 -> TR, rows 4-7 -> CV-as-gate; today both call
+`kria_i2c_tr(ch, on)` with ch 0-3, so rows 4-7 ALIAS rows 0-3. To get 8 distinct
+gates: the MP binding offsets the CV-gate rows to follower **tracks 4-7**
+(`mp_out_cv_gate` -> `kria_i2c_tr(ch + 4, on)`; VERIFY the engine's `ch` arg), and
+`track_en` widens to an **8-bit** mask. Kria uses only 0-3. 8T is gate-only so
+`kri2c_sem` is untouched; the note comes from `notes[]` (mode 2) or the single
+fixed note (mode 3). GM drum defaults for `notes[8]`, e.g.
+{36 kick, 38 snare, 42 CH, 46 OH, 39 clap, 45 low tom, 49 crash, 51 ride}
+(finalize at impl).
+
+### Data model / persistence
+
+Add to `i2c_follower_t` (runtime) and `kria_i2c_fstate_t` (persist):
+`chan` (base MIDI ch), `port` (MO cable A/B), `notes[8]` (GM defaults),
+`chans[8]` (8T per-gate channels); widen `track_en` to 8-bit. New `i2c_ops_t`
+descriptors: `midi` flag (drives OLED editor + mode set), `chan_max` (16 MO / 32
+I2M). `FIRSTRUN_KEY` 0x28 -> 0x29. The erased-blob sanitize in `kria_i2c_load`
+switches from the `track_en > 0x0f` test to the `active > 1` sentinel (track_en
+can now legitimately be 0xff). NVRAM grows ~150 B (2 followers x ~19 B extra);
+fits 145K easily. RAM `followers[]` +~150 B — negligible.
+
+### KR/MP channel semantics (recap)
+
+One shared global bank -> MO/I2M `chan`/`mode` are identical whether Kria or MP is
+playing that follower. For independent KR vs MP channels, route KR to one MIDI
+follower and MP to the other. Kria = 4 pitched tracks; MP 1V/2V/4V = its owned
+CV voices (pitched); MP 8T = 8 gates (modes 2/3).
+
+### Phasing
+
+1. Data model: followers 6->8, add fields, `chan_max`/`midi` ops descriptors,
+   FIRSTRUN bump + sanitize fix, NVRAM re-verify.
+2. MO vtable (via `tele_midi_out`, cable-aware) + table row. **Hardware-testable
+   now** (USB MIDI -> DAW/synth) — do first.
+3. I2M vtable (0x3F note-on/off) + table row. (i2c2midi hardware unverified.)
+4. `kria_i2c_oled` unit: render + keyboard nav + pages; wire into KR + MP i2c
+   views; new accessors in kria_i2c.c.
+5. 8T: MP binding track 4-7 offset + 8-bit track_en; modes 2/3 emit paths.
+6. Build + tests (note math, channel/mode mapping, 8T routing) + flash.
+
+### Open / watch
+
+- Note-off recomputes note from state (mono-per-track stable); mask/pitch change
+  mid-gate could hang a note -> optional `last_note[track]` per MIDI follower.
+- Confirm interpretation of 8T mode 3 = "1 note / 8 selectable channels".
+- MP 8T `ch` argument to `cv_gate` must be verified before the +4 offset.
