@@ -1,5 +1,6 @@
 #include <stdint.h>
 
+#include "dejavu_tests.h"
 #include "drum_helpers_tests.h"
 #include "es_tests.h"
 #include "greatest/greatest.h"
@@ -126,6 +127,7 @@ int main(int argc, char** argv) {
     RUN_SUITE(turtle_suite);
     RUN_SUITE(drum_helpers_suite);
     RUN_SUITE(grids_helpers_suite);
+    RUN_SUITE(dejavu_suite);
     RUN_SUITE(serialize_scene_suite);
     RUN_SUITE(meadowphysics_suite);
     RUN_SUITE(kria_suite);

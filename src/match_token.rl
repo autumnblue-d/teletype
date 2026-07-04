@@ -266,6 +266,10 @@
         "GR.P"        => { MATCH_OP(E_OP_GR_P); };
         "GR.L"        => { MATCH_OP(E_OP_GR_L); };
         "GR.A"        => { MATCH_OP(E_OP_GR_A); };
+        "DV"          => { MATCH_OP(E_OP_DV); };
+        "DV.DV"       => { MATCH_OP(E_OP_DV_DV); };
+        "DV.L"        => { MATCH_OP(E_OP_DV_L); };
+        "DV.R"        => { MATCH_OP(E_OP_DV_R); };
         "BPM"         => { MATCH_OP(E_OP_BPM);; };
         "|"           => { MATCH_OP(E_OP_BIT_OR);; };
         "&"           => { MATCH_OP(E_OP_BIT_AND);; };

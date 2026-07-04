@@ -81,6 +81,7 @@ CSRCS = \
 	../src/command.c					\
 	../src/every.c					\
 	../src/helpers.c					\
+	../src/dejavu.c						\
 	../src/drum_helpers.c					\
 	../src/grids_data.c					\
 	../src/grids_helpers.c					\

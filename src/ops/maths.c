@@ -3,6 +3,7 @@
 #include <stdlib.h>  // abs
 
 #include "chaos.h"
+#include "dejavu.h"
 #include "drum_helpers.h"
 #include "euclidean/euclidean.h"
 #include "grids_helpers.h"
@@ -154,6 +155,18 @@ static void op_GR_L_get(const void *data, scene_state_t *ss, exec_state_t *es,
                         command_state_t *cs);
 static void op_GR_A_get(const void *data, scene_state_t *ss, exec_state_t *es,
                         command_state_t *cs);
+static void op_DV_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                      command_state_t *cs);
+static void op_DV_DV_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                         command_state_t *cs);
+static void op_DV_DV_set(const void *data, scene_state_t *ss, exec_state_t *es,
+                         command_state_t *cs);
+static void op_DV_L_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                        command_state_t *cs);
+static void op_DV_L_set(const void *data, scene_state_t *ss, exec_state_t *es,
+                        command_state_t *cs);
+static void op_DV_R_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                        command_state_t *cs);
 static void op_BPM_get(const void *data, scene_state_t *ss, exec_state_t *es,
                        command_state_t *cs);
 static void op_BIT_OR_get(const void *data, scene_state_t *ss, exec_state_t *es,
@@ -262,6 +275,10 @@ const tele_op_t op_DR_V  = MAKE_GET_OP(DR.V    , op_DR_V_get    , 2, true);
 const tele_op_t op_GR_P  = MAKE_GET_OP(GR.P    , op_GR_P_get    , 5, true);
 const tele_op_t op_GR_L  = MAKE_GET_OP(GR.L    , op_GR_L_get    , 4, true);
 const tele_op_t op_GR_A  = MAKE_GET_OP(GR.A    , op_GR_A_get    , 5, true);
+const tele_op_t op_DV     = MAKE_GET_OP(DV     , op_DV_get      , 1, true);
+const tele_op_t op_DV_DV  = MAKE_GET_SET_OP(DV.DV, op_DV_DV_get, op_DV_DV_set, 0, true);
+const tele_op_t op_DV_L   = MAKE_GET_SET_OP(DV.L, op_DV_L_get, op_DV_L_set, 0, true);
+const tele_op_t op_DV_R   = MAKE_GET_OP(DV.R   , op_DV_R_get    , 0, false);
 const tele_op_t op_BPM   = MAKE_GET_OP(BPM     , op_BPM_get     , 1, true);
 const tele_op_t op_BIT_OR  = MAKE_GET_OP(|, op_BIT_OR_get  , 2, true);
 const tele_op_t op_BIT_AND = MAKE_GET_OP(&, op_BIT_AND_get, 2, true);
@@ -1172,6 +1189,52 @@ static void op_GR_A_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
     int16_t density = cs_pop(cs);
     int16_t step = cs_pop(cs);
     cs_push(cs, grids_accent(instrument, x, y, density, step));
+}
+
+// Marbles deja vu: advance the global sequence one step, scale [0,1) to
+// [0,max].
+static void op_DV_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
+                      exec_state_t *NOTUSED(es), command_state_t *cs) {
+    int16_t max = cs_pop(cs);
+    float v = dejavu_next(dejavu_global());
+    int32_t range = (int32_t)max + 1;
+    int32_t scaled = range > 0 ? (int32_t)(v * (float)range) : 0;
+    if (scaled < 0) scaled = 0;
+    if (scaled > max) scaled = max;
+    cs_push(cs, (int16_t)scaled);
+}
+
+// DV.DV: deja vu amount, 0..16383 <-> 0.0..1.0.
+static void op_DV_DV_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
+                         exec_state_t *NOTUSED(es), command_state_t *cs) {
+    float dv = dejavu_get_deja_vu(dejavu_global());
+    cs_push(cs, (int16_t)(dv * 16383.0f + 0.5f));
+}
+
+static void op_DV_DV_set(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
+                         exec_state_t *NOTUSED(es), command_state_t *cs) {
+    int16_t x = cs_pop(cs);
+    if (x < 0) x = 0;
+    if (x > 16383) x = 16383;
+    dejavu_set_deja_vu(dejavu_global(), (float)x / 16383.0f);
+}
+
+// DV.L: loop length, 1..16.
+static void op_DV_L_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
+                        exec_state_t *NOTUSED(es), command_state_t *cs) {
+    cs_push(cs, dejavu_get_length(dejavu_global()));
+}
+
+static void op_DV_L_set(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
+                        exec_state_t *NOTUSED(es), command_state_t *cs) {
+    dejavu_set_length(dejavu_global(), cs_pop(cs));  // clamps 1..16 internally
+}
+
+// DV.R: re-lock a fresh loop.
+static void op_DV_R_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
+                        exec_state_t *NOTUSED(es),
+                        command_state_t *NOTUSED(cs)) {
+    dejavu_record(dejavu_global());
 }
 
 static void op_N_S_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
