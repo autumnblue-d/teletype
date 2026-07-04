@@ -72,3 +72,32 @@ For further detail ["see the manual"][nr_manual].
 [numeric_repetitor]: https://www.noiseengineering.us/shop/numeric-repetitor
 [nr_manual]: https://static1.squarespace.com/static/58c709192e69cf2422026fa6/t/5e6041ad4cbc0979d6d793f2/1583366574430/NR_manual.pdf
 """
+
+["GR.P"]
+prototype = "GR.P i x y d s"
+short = "Grids topographic drum pattern, `i` is instrument (`0-2`: BD/SD/HH), `x`/`y` is the map position (`0-255`), `d` is density (`0-255`) and `s` is step (`0-31`), returns `0` or `1`"
+description = """
+A stateless port of Mutable Instruments **Grids**' topographic drum map. Grids
+arranges drum patterns on a 2D map: `x` and `y` (`0-255`) pick a position, and
+the three instruments — `0` bass drum, `1` snare, `2` hi-hat — each have their
+own 32-step pattern interpolated from the four nearest map nodes.
+
+`d` (density, `0-255`) sets how full the pattern is: a step fires when its map
+level exceeds a threshold derived from `d`, so low densities give sparse hits
+and high densities fill in. `s` is the step counter (`0-31`, negative wraps),
+which Teletype drives itself — typically from a metro or the pattern index.
+
+`GR.P` returns `1` when the instrument triggers on that step, else `0`. Use
+`GR.L` for the raw level (as velocity/probability) and `GR.A` for accents.
+
+Teletype supplies all parameters each call; there is no clock, swing, or
+Euclidean state — those live in your script.
+"""
+
+["GR.L"]
+prototype = "GR.L i x y s"
+short = "Grids map level for instrument `i` at map position `x`/`y` and step `s`, returns `0-255` (the raw pattern value before density thresholding)"
+
+["GR.A"]
+prototype = "GR.A i x y d s"
+short = "returns `1` if the Grids step is an accent (a triggered step whose level exceeds the accent threshold) for the given parameters, else `0`"
