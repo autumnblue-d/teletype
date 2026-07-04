@@ -464,9 +464,13 @@ half (`scale_data[m.scale][7-y] = x-8`), then `calc_scale`. Scales lived in a
    (no more `SCALE_INT` derivation); `[`/`]` cycle all 16 slots; Config view shows slot # + name
    (0-7) / "USER" (8-15). `.flash_nvram` 189,064 → **189,192 (+128 B, ~5.4 KB slack)**; `.text`
    +124 B. No editor yet (Phase 2) — slots 8-15 are chromatic until edited.
-2. **Grid editor:** scale-select + per-degree interval editor in
-   `meadowphysics_grid.c`, shown when the OLED Config view is active; host-test
-   the edit logic (like the existing grid tests). Re-measure `.text` (Phase-0 gate).
+2. **Grid editor — ✅ DONE (builds clean, exit 0).** `mp_grid_scale_key` /
+   `mp_grid_scale_refresh` in `meadowphysics_grid.c` (host-tested): rows 6-7 x cols 0-7 select
+   the slot, the right half (cols 8-15, one row per degree, row y = degree 7-y) sets each degree's
+   interval — ported from Ansible's config view. Shown only while **actively viewing the Config
+   view** (`active && view==CONFIG`); background-running keeps the positions animation. Edits write
+   the RAM bank + `flash_update_scale_bank` (write-through) and re-apply live. `.text` +404 B
+   (~3.7 KB headroom left — the `tele_data_t` reclaim was **not** needed).
 3. **Keyboard/OLED:** `[`/`]` -> bank slot; Config view shows slot + intervals.
 4. **Docs/help.**
 

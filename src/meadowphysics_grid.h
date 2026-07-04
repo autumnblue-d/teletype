@@ -43,4 +43,15 @@ void mp_grid_process_key(mp_engine_t* e, mp_grid_state_t* g, uint8_t x,
 void mp_grid_refresh(mp_engine_t* e, mp_grid_state_t* g, uint8_t* led,
                      uint8_t vari);
 
+// Config-view scale editor over the global bank (`bank` is [MP_SCALE_SLOTS][8];
+// the selected slot is e->cfg.scale). Rows 6-7 x cols 0-7 select the slot; the
+// right half (cols 8-15, one row per degree, row y = degree 7-y) sets each
+// degree's interval (0-7 semitones). Ported from Ansible's config view.
+//   key: returns true if the bank was edited (caller persists + re-applies).
+//   refresh: draws slots + the current slot's interval pattern into `led`.
+bool mp_grid_scale_key(mp_engine_t* e, uint8_t (*bank)[8], uint8_t x, uint8_t y,
+                       uint8_t z);
+void mp_grid_scale_refresh(mp_engine_t* e, uint8_t (*bank)[8], uint8_t* led,
+                           uint8_t vari);
+
 #endif

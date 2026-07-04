@@ -565,6 +565,39 @@ TEST grid_refresh_positions(void) {
     PASS();
 }
 
+// Config-view scale editor: slot select + per-degree interval editing + render.
+TEST grid_scale_editor(void) {
+    isolate();
+    uint8_t bank[MP_SCALE_SLOTS][8];
+    memset(bank, 0, sizeof(bank));
+
+    // slot select: rows 6-7 x cols 0-7 -> slot (y-6)*8 + x (no bank edit)
+    E.cfg.scale = 0;
+    ASSERT_FALSE(mp_grid_scale_key(&E, bank, 3, 6, 1));
+    ASSERT_EQ(3, E.cfg.scale);
+    ASSERT_FALSE(mp_grid_scale_key(&E, bank, 2, 7, 1));  // 8 + 2
+    ASSERT_EQ(10, E.cfg.scale);
+
+    // interval edit: right half, row y -> degree 7-y, value x-8 (edits bank)
+    E.cfg.scale = 5;
+    ASSERT(mp_grid_scale_key(&E, bank, 8 + 3, 7, 1));  // degree 0 = 3
+    ASSERT_EQ(3, bank[5][0]);
+    ASSERT(mp_grid_scale_key(&E, bank, 8 + 2, 0, 1));  // degree 7 = 2
+    ASSERT_EQ(2, bank[5][7]);
+
+    // release and dead zone are no-ops
+    ASSERT_FALSE(mp_grid_scale_key(&E, bank, 8 + 1, 3, 0));  // z=0
+    ASSERT_FALSE(mp_grid_scale_key(&E, bank, 2, 3, 1));      // x<8, y<6
+
+    // render: current slot bright, degree intervals lit
+    uint8_t led[MP_ROWS * 16];
+    mp_grid_scale_refresh(&E, bank, led, 1);
+    ASSERT_EQ(12, led[6 * 16 + 5]);  // slot 5 -> row 6 col 5, bright
+    ASSERT_EQ(8, led[7 * 16 + 11]);  // degree 0 (val 3) -> row 7 col 11
+    ASSERT_EQ(8, led[0 * 16 + 10]);  // degree 7 (val 2) -> row 0 col 10
+    PASS();
+}
+
 SUITE(meadowphysics_suite) {
     RUN_TEST(config_validity);
     RUN_TEST(defaults_match_ansible);
@@ -589,5 +622,6 @@ SUITE(meadowphysics_suite) {
     RUN_TEST(grid_speed_edits);
     RUN_TEST(grid_rules_edits);
     RUN_TEST(grid_refresh_positions);
+    RUN_TEST(grid_scale_editor);
     RUN_TEST(stop_and_reset_row);
 }

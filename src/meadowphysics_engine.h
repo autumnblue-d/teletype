@@ -26,6 +26,11 @@
 // change.
 #define MP_ROWS 8
 
+// Editable scale bank: 16 slots x 8 interval steps (step[0]=base 0,
+// step[1..7]=semitone deltas fed to mp_engine_calc_scale). Shared by the
+// flash store (nvram_data_t) and the grid scale editor.
+#define MP_SCALE_SLOTS 16
+
 // Voice modes (how row events map to outputs; applied in mp_note_on/off).
 #define MP_1V 0  // mono: 1 note/tick
 #define MP_2V 1  // 2 notes/tick, oldest-stolen

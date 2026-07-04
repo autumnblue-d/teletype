@@ -215,3 +215,42 @@ void mp_grid_refresh(mp_engine_t* e, mp_grid_state_t* g, uint8_t* led,
         for (uint16_t i = 0; i < MP_ROWS * MP_GRID_COLS; i++)
             if (led[i]) led[i] = 15;
 }
+
+// ---- config-view scale editor (Ansible view_config / refresh_mp_config) ----
+
+bool mp_grid_scale_key(mp_engine_t* e, uint8_t (*bank)[8], uint8_t x, uint8_t y,
+                       uint8_t z) {
+    if (!z) return false;
+    if (y >= 6 && x < 8) {  // slot select (rows 6-7 x cols 0-7 = 16 slots)
+        uint8_t slot = (y - 6) * 8 + x;
+        if (slot < MP_SCALE_SLOTS) e->cfg.scale = slot;
+        return false;  // slot change only; no bank edit
+    }
+    if (x >= 8) {  // interval edit: row y -> degree 7-y, value = x-8 (0-7)
+        bank[e->cfg.scale][7 - y] = x - 8;
+        return true;  // bank edited -> persist
+    }
+    return false;
+}
+
+void mp_grid_scale_refresh(mp_engine_t* e, uint8_t (*bank)[8], uint8_t* led,
+                           uint8_t vari) {
+    uint8_t slot = e->cfg.scale;
+    memset(led, 0, MP_ROWS * MP_GRID_COLS);
+
+    // interval editor: right half, one row per degree (row y = degree 7-y),
+    // lit column = that degree's interval; dim marker at col 8 as a baseline.
+    for (uint8_t d = 0; d < 8; d++) {
+        uint8_t yy = 7 - d;
+        led_set(led, yy, 8, MP_LED_DIM);
+        led_set(led, yy, 8 + bank[slot][d], MP_LED_MED);
+    }
+    // slot select: rows 6-7 x cols 0-7 (16 slots); current slot bright
+    for (uint8_t s = 0; s < MP_SCALE_SLOTS; s++)
+        led_set(led, 6 + (s >> 3), s & 7, 2);
+    led_set(led, 6 + (slot >> 3), slot & 7, MP_LED_BRI);
+
+    if (!vari)
+        for (uint16_t i = 0; i < MP_ROWS * MP_GRID_COLS; i++)
+            if (led[i]) led[i] = 15;
+}

@@ -195,14 +195,29 @@ bool meadowphysics_owns_grid(void) {
     return active || mp_running;
 }
 
+// The scale editor takes the grid only while you're actively viewing the Config
+// view; when MP merely plays in the background the grid shows the sequence.
+static bool mp_scale_editor_active(void) {
+    return active && view == MP_VIEW_CONFIG;
+}
+
 void meadowphysics_grid_key(uint8_t x, uint8_t y, uint8_t z) {
     if (!meadowphysics_owns_grid()) return;
-    mp_grid_process_key(&mp_eng, &mp_grid, x, y, z);
+    if (mp_scale_editor_active()) {
+        bool edited = mp_grid_scale_key(&mp_eng, mp_scale_bank, x, y, z);
+        mp_apply_scale();  // slot or interval change updates the live scale
+        if (edited) flash_update_scale_bank(mp_scale_bank);  // persist
+    }
+    else { mp_grid_process_key(&mp_eng, &mp_grid, x, y, z); }
     dirty = true;
 }
 
 void meadowphysics_grid_render(void) {
-    mp_grid_refresh(&mp_eng, &mp_grid, monomeLedBuffer, monome_is_vari());
+    if (mp_scale_editor_active())
+        mp_grid_scale_refresh(&mp_eng, mp_scale_bank, monomeLedBuffer,
+                              monome_is_vari());
+    else
+        mp_grid_refresh(&mp_eng, &mp_grid, monomeLedBuffer, monome_is_vari());
 }
 
 void meadowphysics_op_reset(int16_t channel) {

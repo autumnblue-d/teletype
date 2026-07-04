@@ -28,10 +28,8 @@ typedef struct {
     mp_config_t mp;  // Meadowphysics per-scene config
 } nvram_scene_t;
 
-// Meadowphysics global editable scale bank: 16 slots x 8 interval steps
-// (step[0]=base 0, step[1..7]=semitone deltas, matching mp_engine_calc_scale).
-#define MP_SCALE_SLOTS 16
-
+// Meadowphysics global editable scale bank (MP_SCALE_SLOTS x 8, from
+// meadowphysics_engine.h).
 typedef struct {
     nvram_scene_t scenes[SCENE_SLOTS];
     uint8_t last_scene;

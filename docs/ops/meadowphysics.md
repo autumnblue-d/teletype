@@ -35,6 +35,12 @@ Eight rows are the eight counters; the sixteen columns are the range axis. Tap a
 cell to set a counter's position; a second tap in the same row sets its range.
 Hold column 0 for the speed / trigger view, column 1 for the rules view.
 
+In the **Config view** (`3`) the grid becomes a scale editor over a global
+16-slot bank: rows 6–7 (cols 0–7) select the slot, and the right half (cols
+8–15, one row per scale degree) draws that degree's interval. Edits are saved to
+flash and apply live. `[`/`]` also step the slot; slots 0–6 default to the
+diatonic modes, 7 to chromatic, 8–15 are yours to edit.
+
 ### Outputs by voice mode
 
 - **1V** — mono: CV 1 + TR 1
