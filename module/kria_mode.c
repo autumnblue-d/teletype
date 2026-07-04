@@ -15,7 +15,8 @@
 #include "kria_clock.h"
 #include "kria_engine.h"
 #include "kria_grid.h"
-#include "kria_i2c.h"  // follower output
+#include "kria_i2c.h"       // follower output
+#include "kria_i2c_oled.h"  // MIDI-follower OLED editor
 
 // libavr32
 #include "events.h"
@@ -235,6 +236,7 @@ void kria_mode_exit(void) {
         cfg_dirty = false;
     }
     km_flush_i2c();  // persist follower-bank edits
+    kria_i2c_oled_exit();   // don't leave the MIDI editor open across mode exit
     km_view = KM_VIEW_SEQ;  // next entry starts on the sequencer
     active = false;
 }
@@ -457,8 +459,13 @@ void kria_grid_key(uint8_t x, uint8_t y, uint8_t z) {
         km_time_key(x, y, z);
     else if (active && km_view == KM_VIEW_CONFIG)
         km_config_key(x, y, z);
-    else if (active && km_view == KM_VIEW_I2C)
+    else if (active && km_view == KM_VIEW_I2C) {
         kria_i2c_view_key(x, y, z);
+        if (z) {
+            int8_t req = kria_i2c_view_take_oled_req();
+            if (req >= 0) kria_i2c_oled_enter((uint8_t)req);
+        }
+    }
     else {
         kria_grid_process_key(&eng, &kgrid, x, y, z);
         if (z) cfg_dirty = true;
@@ -489,6 +496,19 @@ static void km_set_period(uint16_t p) {
 
 void process_kria_keys(uint8_t key, uint8_t mod_key, bool is_held_key) {
     if (is_held_key) return;
+
+    if (kria_i2c_oled_active()) {  // MIDI-follower editor has the keyboard
+        if (kria_i2c_oled_key(key, mod_key, is_held_key)) {
+            if (!kria_i2c_oled_active()) km_flush_i2c();  // exited via <enter>
+            dirty = true;
+            return;
+        }
+        // not an editor key: leave the editor and process normally below, so
+        // 1/2/3/4 (and other keys) switch views instead of getting stuck.
+        kria_i2c_oled_exit();
+        km_flush_i2c();
+        dirty = true;
+    }
 
     if (match_no_mod(mod_key, key, HID_SPACEBAR)) { kria_toggle_run(); }
     else if (match_no_mod(mod_key, key, HID_R)) {
@@ -728,6 +748,11 @@ int16_t kria_op_ii(int16_t follower, int16_t set, int16_t val) {
 uint8_t screen_refresh_kria(void) {
     if (!dirty) return 0;
     dirty = false;
+
+    if (kria_i2c_oled_active()) {  // MIDI-follower editor owns the screen
+        kria_i2c_oled_render();
+        return 0b11111111;
+    }
 
     for (uint8_t i = 0; i < 8; i++) region_fill(&line[i], 0);
 

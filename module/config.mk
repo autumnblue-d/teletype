@@ -71,6 +71,7 @@ CSRCS = \
 	../module/live_mode.c   				\
 	../module/meadowphysics_mode.c   			\
 	../module/kria_mode.c   				\
+	../module/kria_i2c_oled.c   				\
 	../module/pattern_mode.c   				\
 	../module/preset_r_mode.c   				\
 	../module/preset_w_mode.c   				\

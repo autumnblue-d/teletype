@@ -55,21 +55,33 @@
 
 // i2c followers (index into kria_config_t.i2c[] and kria_i2c.c's table). Order
 // matches Ansible's grid_KR_ii layout: col 5 = JF/TXo/ER301/Disting (rows 2-5),
-// col 6 = WSYN/Crow (rows 2-3).
-#define KRIA_I2C_FOLLOWERS 6
+// col 6 = WSYN/Crow (rows 2-3). I2M + MO are appended MIDI followers (OLED-
+// configured) -- see KRIA_I2C_PLAN.md.
+#define KRIA_I2C_FOLLOWERS 8
 #define KR_F_JF 0
 #define KR_F_TXO 1
 #define KR_F_ER301 2
 #define KR_F_DISTING 3
 #define KR_F_WSYN 4
 #define KR_F_CROW 5
+#define KR_F_I2M 6  // i2c2midi (0x3F), MIDI notes over i2c
+#define KR_F_MO 7   // native USB MIDI out (tele_midi_out)
+
+// Number of gate/track slots a follower can be routed to. Kria uses 0-3; MP 8T
+// uses 0-7 (TR rows 0-3 + CV-gate rows 4-7). track_en is an 8-bit mask.
+#define KRIA_I2C_TRACKS 8
 
 // Persisted per-follower state (mirrors Ansible i2c_follower_t's mutable bits).
+// The MIDI fields (chan/port/notes/chans) are only used by I2M + MO.
 typedef struct {
     uint8_t active;    // follower enabled
-    uint8_t track_en;  // 4-bit mask: which tracks drive this follower
+    uint8_t track_en;  // 8-bit mask: which tracks/gates drive this follower
     int8_t oct;        // octave offset
     uint8_t mode;      // active operating mode (follower-specific)
+    uint8_t chan;      // MIDI: base channel (0-based)
+    uint8_t port;      // MIDI (MO): USB cable, 0=A 1=B
+    uint8_t notes[KRIA_I2C_TRACKS];  // MIDI 8T: fixed note per gate (GM defaults)
+    uint8_t chans[KRIA_I2C_TRACKS];  // MIDI 8T.CHANS: channel per gate (0-based)
 } kria_i2c_fstate_t;
 
 typedef struct {

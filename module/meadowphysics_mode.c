@@ -18,6 +18,7 @@
 
 // kria's i2c follower module (shared, global follower table)
 #include "kria_i2c.h"
+#include "kria_i2c_oled.h"  // shared MIDI-follower OLED editor
 
 // libavr32
 #include "events.h"
@@ -140,7 +141,9 @@ static void mp_out_cv(void* c, uint8_t ch, int16_t note) {
 static void mp_out_cv_gate(void* c, uint8_t ch, uint8_t on) {
     (void)c;
     tele_cv(ch, on ? MP_CV_FULL : 0, 0);
-    kria_i2c_tr(ch, on);  // 8T: CV-as-gate -> follower gate (no pitch)
+    // 8T CV-as-gate: physical CV jack stays 0-3, but drive follower gates 4-7 so
+    // all 8 of 8T's gates are distinct at MIDI followers (cv_gate is 8T-only).
+    kria_i2c_tr(ch + 4, on);
 }
 static const mp_output_t MP_OUT = {
     .tr = mp_out_tr, .cv = mp_out_cv, .cv_gate = mp_out_cv_gate, .ctx = NULL
@@ -177,6 +180,7 @@ void meadowphysics_mode_exit(void) {
     scene_state.mp = mp_eng.cfg;
     mp_flush_bank();  // save any scale edits
     mp_flush_i2c();   // persist follower-bank edits
+    kria_i2c_oled_exit();  // don't leave the MIDI editor open across mode exit
     mp_i2c_view = false;
     active = false;
 }
@@ -254,6 +258,10 @@ void meadowphysics_grid_key(uint8_t x, uint8_t y, uint8_t z) {
     if (!meadowphysics_owns_grid()) return;
     if (active && mp_i2c_view) {
         kria_i2c_view_key(x, y, z);  // shared i2c follower view
+        if (z) {
+            int8_t req = kria_i2c_view_take_oled_req();
+            if (req >= 0) kria_i2c_oled_enter((uint8_t)req);
+        }
         dirty = true;
         return;
     }
@@ -313,6 +321,18 @@ static void set_period(uint16_t period_ms) {
 void process_meadowphysics_keys(uint8_t key, uint8_t mod_key,
                                 bool is_held_key) {
     if (is_held_key) return;
+
+    if (kria_i2c_oled_active()) {  // MIDI-follower editor has the keyboard
+        if (kria_i2c_oled_key(key, mod_key, is_held_key)) {
+            if (!kria_i2c_oled_active()) mp_flush_i2c();  // exited via <enter>
+            dirty = true;
+            return;
+        }
+        // not an editor key: leave the editor and process normally below.
+        kria_i2c_oled_exit();
+        mp_flush_i2c();
+        dirty = true;
+    }
 
     if (match_no_mod(mod_key, key, HID_1)) {
         view = MP_VIEW_POSITIONS;
@@ -404,6 +424,11 @@ static void mp_num(uint8_t ln, uint8_t x, int val, uint8_t fg) {
 uint8_t screen_refresh_meadowphysics(void) {
     if (!dirty) return 0;
     dirty = false;
+
+    if (kria_i2c_oled_active()) {  // MIDI-follower editor owns the screen
+        kria_i2c_oled_render();
+        return 0b11111111;
+    }
 
     static const char* const grid_sub[3] = { "POS", "SPD", "RUL" };
     for (uint8_t i = 0; i < 8; i++) region_fill(&line[i], 0);

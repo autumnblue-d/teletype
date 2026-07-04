@@ -286,7 +286,7 @@ playing that follower. For independent KR vs MP channels, route KR to one MIDI
 follower and MP to the other. Kria = 4 pitched tracks; MP 1V/2V/4V = its owned
 CV voices (pitched); MP 8T = 8 gates (modes 2/3).
 
-### Phasing
+### Phasing — IMPLEMENTED (built + 111/111 tests; not yet flashed)
 
 1. Data model: followers 6->8, add fields, `chan_max`/`midi` ops descriptors,
    FIRSTRUN bump + sanitize fix, NVRAM re-verify.
