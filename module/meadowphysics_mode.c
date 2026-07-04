@@ -16,6 +16,9 @@
 #include "meadowphysics_engine.h"
 #include "meadowphysics_grid.h"
 
+// kria's i2c follower module (shared, global follower table)
+#include "kria_i2c.h"
+
 // libavr32
 #include "events.h"
 #include "flash.h"  // scale-bank persistence + MP_SCALE_SLOTS
@@ -110,10 +113,33 @@ static void mp_load_from_scene(void) {
     mp_apply_scale();
 }
 
+// MP output vtable with i2c follower fan-out. Mirrors meadowphysics_binding but
+// also drives the shared Kria follower table (configure followers in Kria's i2c
+// view; MP shares them). Additive to the CV/TR jacks.
+static void mp_out_tr(void* c, uint8_t ch, uint8_t on) {
+    (void)c;
+    tele_tr(ch, on);
+    kria_i2c_tr(ch, on);
+}
+static void mp_out_cv(void* c, uint8_t ch, int16_t note) {
+    (void)c;
+    tele_cv(ch, mp_note_to_cv(note), 0);
+    kria_i2c_set_voice(ch, note, 0);
+    kria_i2c_cv(ch, mp_note_to_cv(note));
+}
+static void mp_out_cv_gate(void* c, uint8_t ch, uint8_t on) {
+    (void)c;
+    tele_cv(ch, on ? MP_CV_FULL : 0, 0);
+    kria_i2c_tr(ch, on);  // 8T: CV-as-gate -> follower gate (no pitch)
+}
+static const mp_output_t MP_OUT = {
+    .tr = mp_out_tr, .cv = mp_out_cv, .cv_gate = mp_out_cv_gate, .ctx = NULL
+};
+
 // Construct the engine/clock/grid once per session and load the scene config.
 static void mp_init_once(void) {
     if (initialized) return;
-    mp_engine_init(&mp_eng, mp_binding_output(), &mp_rnd, NULL);
+    mp_engine_init(&mp_eng, &MP_OUT, &mp_rnd, NULL);
     mp_clock_init(&mp_clk);
     mp_grid_state_init(&mp_grid);
     flash_get_scale_bank(mp_scale_bank);  // load bank before apply_scale
