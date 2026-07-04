@@ -652,7 +652,14 @@ static void handler_midi_connect(s32 data) {}
 
 static void handler_midi_disconnect(s32 data) {}
 
+// USB virtual cable (port) of the MIDI event currently being parsed. The RX
+// path stashes the cable number in the low byte of the event word (see
+// midi_parse_event in libavr32); the note/CC callbacks below read it so scripts
+// can tell port A (0) from port B (1).
+static u8 midi_in_port = 0;
+
 static void handler_standard_midi_packet(s32 data) {
+    midi_in_port = (u8)((u32)data & 0x0f);
     midi_packet_parse(&midi_behavior, (u32)data);
 }
 
@@ -661,12 +668,14 @@ static void midi_note_on(u8 ch, u8 num, u8 vel) {
     scene_state.midi.last_channel = ch;
     scene_state.midi.last_note = num;
     scene_state.midi.last_velocity = vel;
+    scene_state.midi.last_port = midi_in_port;
 
     if (scene_state.midi.on_script != -1 &&
         scene_state.midi.on_count < MAX_MIDI_EVENTS) {
         scene_state.midi.on_channel[scene_state.midi.on_count] = ch;
         scene_state.midi.note_on[scene_state.midi.on_count] = num;
         scene_state.midi.note_vel[scene_state.midi.on_count] = vel;
+        scene_state.midi.on_port[scene_state.midi.on_count] = midi_in_port;
         scene_state.midi.on_count++;
     }
 }
@@ -676,11 +685,13 @@ static void midi_note_off(u8 ch, u8 num, u8 vel) {
     scene_state.midi.last_channel = ch;
     scene_state.midi.last_note = num;
     scene_state.midi.last_velocity = vel;
+    scene_state.midi.last_port = midi_in_port;
 
     if (scene_state.midi.off_script != -1 &&
         scene_state.midi.off_count < MAX_MIDI_EVENTS) {
         scene_state.midi.off_channel[scene_state.midi.off_count] = ch;
         scene_state.midi.note_off[scene_state.midi.off_count] = num;
+        scene_state.midi.off_port[scene_state.midi.off_count] = midi_in_port;
         scene_state.midi.off_count++;
     }
 }
@@ -690,6 +701,7 @@ static void midi_control_change(u8 ch, u8 num, u8 val) {
     scene_state.midi.last_channel = ch;
     scene_state.midi.last_controller = num;
     scene_state.midi.last_cc = val;
+    scene_state.midi.last_port = midi_in_port;
 
     if (scene_state.midi.cc_script != -1) {
         u8 found = 0;
@@ -706,6 +718,7 @@ static void midi_control_change(u8 ch, u8 num, u8 val) {
             scene_state.midi.cc_channel[scene_state.midi.cc_count] = ch;
             scene_state.midi.cn[scene_state.midi.cc_count] = num;
             scene_state.midi.cc[scene_state.midi.cc_count] = val;
+            scene_state.midi.cc_port[scene_state.midi.cc_count] = midi_in_port;
             scene_state.midi.cc_count++;
         }
     }
@@ -1259,6 +1272,15 @@ void device_flip() {
 
 void reset_midi_counter() {
     midi_clock_counter = 0;
+}
+
+// Send a MIDI message from the MO.* ops to a connected USB MIDI device.
+// midi_write_packet() no-ops safely when no device is connected, and always
+// sends a 3-byte payload (unused bytes are 0); port is the USB virtual cable
+// (0=A, 1=B on a multi-port interface).
+void tele_midi_out(uint8_t port, uint8_t* pack, uint8_t len) {
+    (void)len;
+    midi_write_packet(port, pack);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -30,5 +30,24 @@ extern const tele_op_t op_MI_OCH;
 extern const tele_op_t op_MI_CCH;
 extern const tele_op_t op_MI_CLKD;
 extern const tele_op_t op_MI_CLKR;
+extern const tele_op_t op_MI_LP;
+extern const tele_op_t op_MI_NP;
+extern const tele_op_t op_MI_OP;
+extern const tele_op_t op_MI_CP;
+
+extern const tele_op_t op_MO_CH;
+extern const tele_op_t op_MO_PORT;
+extern const tele_op_t op_MO_N;
+extern const tele_op_t op_MO_N_POUND;
+extern const tele_op_t op_MO_NO;
+extern const tele_op_t op_MO_NO_POUND;
+extern const tele_op_t op_MO_CC;
+extern const tele_op_t op_MO_CC_POUND;
+extern const tele_op_t op_MO_PB;
+extern const tele_op_t op_MO_PRG;
+extern const tele_op_t op_MO_CLK;
+extern const tele_op_t op_MO_START;
+extern const tele_op_t op_MO_STOP;
+extern const tele_op_t op_MO_CONT;
 
 #endif

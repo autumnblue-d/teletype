@@ -16,10 +16,8 @@
 // per-scene mp_config_t), then -> 0x24 for the global MP scale bank in
 // nvram_data_t. Each layout change forces a flash reinit on upgrade (no
 // per-scene migration path).
-// 0x24 -> 0x25: nvram layout changed for Kria (SCENE_SLOTS 30->20 + global
-// kria_config_t bank). The bump forces a clean re-init on upgrade even without
-// a chip erase. The Kria bank itself isn't seeded here (an erased/invalid bank
-// fails kria_engine_config_valid and the mode falls back to defaults on load).
+// 0x24 -> 0x25: Kria (SCENE_SLOTS 30->20 + global kria_config_t bank);
+// -> 0x26/0x27 for the i2c follower bits; -> 0x28 for the global i2c bank.
 #define FIRSTRUN_KEY 0x28
 
 static grid_data_t grid_data;

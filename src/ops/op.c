@@ -322,7 +322,11 @@ const tele_op_t *tele_ops[E_OP__LENGTH] = {
     &op_MI_LC, &op_MI_LCC, &op_MI_LCCV, &op_MI_NL, &op_MI_N, &op_MI_NV,
     &op_MI_V, &op_MI_VV, &op_MI_OL, &op_MI_O, &op_MI_CL, &op_MI_C, &op_MI_CC,
     &op_MI_CCV, &op_MI_LCH, &op_MI_NCH, &op_MI_OCH, &op_MI_CCH, &op_MI_LE,
-    &op_MI_CLKD, &op_MI_CLKR
+    &op_MI_CLKD, &op_MI_CLKR, &op_MI_LP, &op_MI_NP, &op_MI_OP, &op_MI_CP,
+
+    &op_MO_CH, &op_MO_PORT, &op_MO_N, &op_MO_N_POUND, &op_MO_NO,
+    &op_MO_NO_POUND, &op_MO_CC, &op_MO_CC_POUND, &op_MO_PB, &op_MO_PRG,
+    &op_MO_CLK, &op_MO_START, &op_MO_STOP, &op_MO_CONT
 };
 
 /////////////////////////////////////////////////////////////////

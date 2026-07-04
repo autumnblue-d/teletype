@@ -1,0 +1,65 @@
+["MO.CH"]
+prototype = "MO.CH"
+prototype_set = "MO.CH x"
+short = "get or set the default MIDI out channel (1..16)"
+description = """
+All MIDI out ops use the default channel except the `#` ops, which take an explicit channel.
+The default channel is a module-level setting and is not saved per scene.
+"""
+
+["MO.PORT"]
+prototype = "MO.PORT"
+prototype_set = "MO.PORT x"
+short = "get or set the default output port / USB virtual cable (0=A, 1=B on a multi-port interface)"
+description = """
+All MIDI out ops send on the selected port. The default port is a module-level setting and is not saved per scene.
+On the M-Audio MIDISPORT 2x2, port 0 is DIN out A and port 1 is DIN out B.
+"""
+
+["MO.N"]
+prototype = "MO.N x y"
+short = "send MIDI Note On message for note `x` (0..127) and velocity `y` (0..127)"
+
+["MO.N#"]
+prototype = "MO.N# x y z"
+short = "send MIDI Note On message on channel `x` for note `y` (0..127) and velocity `z` (0..127)"
+
+["MO.NO"]
+prototype = "MO.NO x"
+short = "send MIDI Note Off message for note `x` (0..127)"
+
+["MO.NO#"]
+prototype = "MO.NO# x y"
+short = "send MIDI Note Off message on channel `x` for note `y` (0..127)"
+
+["MO.CC"]
+prototype = "MO.CC x y"
+short = "send MIDI CC message for controller `x` (0..127) and value `y` (0..127)"
+
+["MO.CC#"]
+prototype = "MO.CC# x y z"
+short = "send MIDI CC message on channel `x` for controller `y` (0..127) and value `z` (0..127)"
+
+["MO.PB"]
+prototype = "MO.PB x"
+short = "send MIDI Pitch Bend message (14-bit value `x`)"
+
+["MO.PRG"]
+prototype = "MO.PRG x"
+short = "send MIDI Program Change message for program `x` (0..127)"
+
+["MO.CLK"]
+prototype = "MO.CLK"
+short = "send MIDI Timing Clock message"
+
+["MO.START"]
+prototype = "MO.START"
+short = "send MIDI Start message"
+
+["MO.STOP"]
+prototype = "MO.STOP"
+short = "send MIDI Stop message"
+
+["MO.CONT"]
+prototype = "MO.CONT"
+short = "send MIDI Continue message"

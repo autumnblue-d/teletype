@@ -111,6 +111,22 @@ short = "get the controller value (0..127) at index specified by variable `I`"
 prototype = "MI.CCV"
 short = "get the controller value scaled to 0..+10V range at index specified by variable `I`"
 
+["MI.LP"]
+prototype = "MI.LP"
+short = "get the latest event's port / USB virtual cable (0=A, 1=B)"
+
+["MI.NP"]
+prototype = "MI.NP"
+short = "get the Note On event port (0=A, 1=B) at index specified by variable `I`"
+
+["MI.OP"]
+prototype = "MI.OP"
+short = "get the Note Off event port (0=A, 1=B) at index specified by variable `I`"
+
+["MI.CP"]
+prototype = "MI.CP"
+short = "get the controller event port (0=A, 1=B) at index specified by variable `I`"
+
 ["MI.CLKD"]
 prototype = "MI.CLKD"
 prototype_set = "MI.CLKD x"

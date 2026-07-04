@@ -185,6 +185,7 @@ void ss_midi_init(scene_state_t* ss) {
     ss->midi.last_velocity = 0;
     ss->midi.last_controller = 0;
     ss->midi.last_cc = 0;
+    ss->midi.last_port = 0;
 
     ss->midi.on_count = 0;
     ss->midi.off_count = 0;
@@ -198,6 +199,9 @@ void ss_midi_init(scene_state_t* ss) {
         ss->midi.on_channel[i] = 0;
         ss->midi.off_channel[i] = 0;
         ss->midi.cc_channel[i] = 0;
+        ss->midi.on_port[i] = 0;
+        ss->midi.off_port[i] = 0;
+        ss->midi.cc_port[i] = 0;
     }
     ss->midi.clock_div = 24;
 }

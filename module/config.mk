@@ -273,13 +273,11 @@ CPPFLAGS = -D BOARD=USER_BOARD -D UHD_ENABLE
 # Extra flags to use when linking
 # NVRAM size may need to change if additional data is to be stored in scenes.
 # Reduced 200K -> 190K alongside SCENE_SLOTS 32 -> 30 (flash.h): the smaller
-# region still holds the 30-slot NVRAM (incl. Meadowphysics per-scene data,
-# Phase 7) and frees ~10K of program flash below it for the MP mode code.
+# region still holds the 30-slot NVRAM (incl. Meadowphysics per-scene data).
 # Kria (Scenario B): 190K -> 145K alongside SCENE_SLOTS 30 -> 20 and the new
-# 16-pattern global kria_config_t bank. sizeof(nvram_data_t) ~144.8 KB, so 145K
-# (148,480 B) fits with ~3.5 KB margin and frees ~49K of program flash for Kria
-# code. See KRIA_PORT_PLAN.md §0. Re-verify the struct size in the map if fields
-# are added.
+# 16-pattern global kria_config_t bank + global i2c follower bank.
+# sizeof(nvram_data_t) ~144.8 KB, so 145K (148,480 B) fits with ~3.5 KB margin.
+# See KRIA_PORT_PLAN.md §0. Re-verify the struct size in the map if fields added.
 LDFLAGS = -Wl,-e,_trampoline,--defsym=__flash_nvram_size__=145K
 
 # Pre- and post-build commands

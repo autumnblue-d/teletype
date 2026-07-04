@@ -10,3 +10,8 @@ event types to the same script too. Various ops allow you to get detailed inform
 It's possible that more than one event happens before a script is called (say, if you turn multiple knobs at once or play chords).
 To properly process them all, use indexed ops to get each event data instead of only processing the last event. The indexed ops
 use variable `I` as the index to allow easy use in loops.
+
+On a multi-port interface (e.g. the M-Audio MIDISPORT 2x2), each event also records which
+input port / USB virtual cable it arrived on (`0` = port A, `1` = port B). Use `MI.LP` for
+the latest event, or the indexed `MI.NP` / `MI.OP` / `MI.CP` for note-on / note-off /
+controller events, e.g. to route port A and port B to different behaviour.

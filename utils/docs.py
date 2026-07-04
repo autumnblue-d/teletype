@@ -47,6 +47,7 @@ OPS_SECTIONS = [
     "turtle",
     "grid",
     "midi_in",
+    "midi_out",
     "calibration",
     "i2c",
     "ansible",
