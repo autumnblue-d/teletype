@@ -3,6 +3,7 @@
 #include <stdlib.h>  // abs
 
 #include "chaos.h"
+#include "beta.h"
 #include "dejavu.h"
 #include "drum_helpers.h"
 #include "euclidean/euclidean.h"
@@ -167,6 +168,10 @@ static void op_DV_L_set(const void *data, scene_state_t *ss, exec_state_t *es,
                         command_state_t *cs);
 static void op_DV_R_get(const void *data, scene_state_t *ss, exec_state_t *es,
                         command_state_t *cs);
+static void op_DV_B_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                        command_state_t *cs);
+static void op_BETA_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                        command_state_t *cs);
 static void op_BPM_get(const void *data, scene_state_t *ss, exec_state_t *es,
                        command_state_t *cs);
 static void op_BIT_OR_get(const void *data, scene_state_t *ss, exec_state_t *es,
@@ -279,6 +284,8 @@ const tele_op_t op_DV     = MAKE_GET_OP(DV     , op_DV_get      , 1, true);
 const tele_op_t op_DV_DV  = MAKE_GET_SET_OP(DV.DV, op_DV_DV_get, op_DV_DV_set, 0, true);
 const tele_op_t op_DV_L   = MAKE_GET_SET_OP(DV.L, op_DV_L_get, op_DV_L_set, 0, true);
 const tele_op_t op_DV_R   = MAKE_GET_OP(DV.R   , op_DV_R_get    , 0, false);
+const tele_op_t op_DV_B   = MAKE_GET_OP(DV.B   , op_DV_B_get    , 1, true);
+const tele_op_t op_BETA   = MAKE_GET_OP(BETA   , op_BETA_get    , 1, true);
 const tele_op_t op_BPM   = MAKE_GET_OP(BPM     , op_BPM_get     , 1, true);
 const tele_op_t op_BIT_OR  = MAKE_GET_OP(|, op_BIT_OR_get  , 2, true);
 const tele_op_t op_BIT_AND = MAKE_GET_OP(&, op_BIT_AND_get, 2, true);
@@ -1235,6 +1242,30 @@ static void op_DV_R_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
                         exec_state_t *NOTUSED(es),
                         command_state_t *NOTUSED(cs)) {
     dejavu_record(dejavu_global());
+}
+
+// DV.B: advance deja vu, warp its uniform [0,1) output through the fixed
+// beta(3,3) shaper (Marbles X character), scale to [0,max].
+static void op_DV_B_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
+                        exec_state_t *NOTUSED(es), command_state_t *cs) {
+    int16_t max = cs_pop(cs);
+    float v = beta_fast(dejavu_next(dejavu_global()));
+    int32_t range = (int32_t)max + 1;
+    int32_t scaled = range > 0 ? (int32_t)(v * (float)range) : 0;
+    if (scaled < 0) scaled = 0;
+    if (scaled > max) scaled = max;
+    cs_push(cs, (int16_t)scaled);
+}
+
+// BETA: stateless beta(3,3) shaper. Treat x (0..16383) as a uniform value and
+// return it warped to a bell-with-fat-tails, mapped back to 0..16383.
+static void op_BETA_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
+                        exec_state_t *NOTUSED(es), command_state_t *cs) {
+    int16_t x = cs_pop(cs);
+    if (x < 0) x = 0;
+    if (x > 16383) x = 16383;
+    float v = beta_fast((float)x / 16383.0f);
+    cs_push(cs, (int16_t)(v * 16383.0f + 0.5f));
 }
 
 static void op_N_S_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),

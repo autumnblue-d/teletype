@@ -200,7 +200,7 @@ const char* help3[HELP3_LENGTH] = { "3/19 PARAMETERS",
                                     "FB.C.R X",
                                     "   RESET FADER X CALIBRATION" };
 
-#define HELP4_LENGTH 118
+#define HELP4_LENGTH 124
 const char* help4[HELP4_LENGTH] = { "4/19 DATA AND TABLES",
                                     " ",
                                     "ALL PARAMS HAVE 16B RANGE",
@@ -318,7 +318,13 @@ const char* help4[HELP4_LENGTH] = { "4/19 DATA AND TABLES",
                                     "   0=RND 8192=LOOP 16383=SHUF",
                                     "DEJA VU LENGTH - DV.L",
                                     "DV.L|DV.L N (1-16)",
-                                    "DEJA VU RELOCK LOOP - DV.R"
+                                    "DEJA VU RELOCK LOOP - DV.R",
+                                    "DEJA VU BETA OUT - DV.B",
+                                    "DV.B MAX",
+                                    "   BETA-SHAPED 0-MAX",
+                                    "BETA SHAPER - BETA",
+                                    "BETA X (0-16383)",
+                                    "   BELL-SHAPED 0-16383"
                                     };
 
 #define HELP5_LENGTH 130

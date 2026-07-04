@@ -270,6 +270,8 @@
         "DV.DV"       => { MATCH_OP(E_OP_DV_DV); };
         "DV.L"        => { MATCH_OP(E_OP_DV_L); };
         "DV.R"        => { MATCH_OP(E_OP_DV_R); };
+        "DV.B"        => { MATCH_OP(E_OP_DV_B); };
+        "BETA"        => { MATCH_OP(E_OP_BETA); };
         "BPM"         => { MATCH_OP(E_OP_BPM);; };
         "|"           => { MATCH_OP(E_OP_BIT_OR);; };
         "&"           => { MATCH_OP(E_OP_BIT_AND);; };
