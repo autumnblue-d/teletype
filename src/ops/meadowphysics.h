@@ -6,5 +6,6 @@
 extern const tele_op_t op_MP_PRESET;
 extern const tele_op_t op_MP_RESET;
 extern const tele_op_t op_MP_STOP;
+extern const tele_op_t op_MP_RUN;
 
 #endif

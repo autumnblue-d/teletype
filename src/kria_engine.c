@@ -212,6 +212,40 @@ void kria_engine_set_mute(kria_engine_t* e, uint8_t track, uint8_t mute) {
     e->rt.mutes[track] = mute ? 1 : 0;
 }
 
+void kria_engine_set_loop_start(kria_engine_t* e, uint8_t track, uint8_t param,
+                                uint8_t start) {
+    if (track >= KRIA_NUM_TRACKS || param >= KRIA_NUM_PARAMS) return;
+    kria_track_t* t = &e->cfg.p[e->cfg.pattern].t[track];
+    t->lstart[param] = start & 0x0f;
+    int end = (int)t->lstart[param] + (int)t->llen[param] - 1;
+    if (end > 15) {
+        t->lend[param] = (uint8_t)(end - 16);
+        t->lswap[param] = 1;
+    }
+    else {
+        t->lend[param] = (uint8_t)end;
+        t->lswap[param] = 0;
+    }
+}
+
+void kria_engine_set_loop_len(kria_engine_t* e, uint8_t track, uint8_t param,
+                              uint8_t len) {
+    if (track >= KRIA_NUM_TRACKS || param >= KRIA_NUM_PARAMS) return;
+    if (len < 1) len = 1;
+    if (len > 16) len = 16;
+    kria_track_t* t = &e->cfg.p[e->cfg.pattern].t[track];
+    t->llen[param] = len;
+    int end = (int)t->lstart[param] + (int)len - 1;
+    if (end > 15) {
+        t->lend[param] = (uint8_t)(end - 16);
+        t->lswap[param] = 1;
+    }
+    else {
+        t->lend[param] = (uint8_t)end;
+        t->lswap[param] = 0;
+    }
+}
+
 void kria_engine_reset(kria_engine_t* e) {
     for (uint8_t t = 0; t < KRIA_NUM_TRACKS; t++) {
         kria_track_t* track = &e->cfg.p[e->cfg.pattern].t[t];

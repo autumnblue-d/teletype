@@ -347,6 +347,166 @@ static void km_num(uint8_t ln, uint8_t x, int val, uint8_t fg) {
     font_string_region_clip(&line[ln], s, x, 0, fg, 0);
 }
 
+// ---- native ops (KR.* retargeted from external-Ansible i2c to the engine) ----
+// All ensure the engine is constructed so ops work even before entering the
+// mode. get/set pairs: set != 0 writes val; every op returns the current value.
+
+void kria_op_run(int16_t on) {
+    km_init_once();
+    if (on && !kria_running)
+        kria_toggle_run();
+    else if (!on && kria_running)
+        kria_toggle_run();
+}
+
+void kria_op_reset(void) {
+    km_init_once();
+    kria_engine_reset(&eng);
+    dirty = true;
+}
+
+int16_t kria_op_pattern(int16_t set, int16_t val) {
+    km_init_once();
+    if (set) {
+        if (val < 0) val = 0;
+        if (val >= KRIA_NUM_PATTERNS) val = KRIA_NUM_PATTERNS - 1;
+        kria_engine_change_pattern(&eng, (uint8_t)val);
+        if (!kgrid.meta_lock) kgrid.edit_pattern = (uint8_t)val;
+        cfg_dirty = true;
+        dirty = true;
+    }
+    return eng.cfg.pattern;
+}
+
+int16_t kria_op_scale(int16_t set, int16_t val) {
+    km_init_once();
+    if (set) {
+        if (val < 0) val = 0;
+        if (val >= MP_SCALE_SLOTS) val = MP_SCALE_SLOTS - 1;
+        eng.cfg.p[eng.cfg.pattern].scale = (uint8_t)val;
+        km_apply_scale();
+        cfg_dirty = true;
+        dirty = true;
+    }
+    return eng.cfg.p[eng.cfg.pattern].scale;
+}
+
+int16_t kria_op_period(int16_t set, int16_t val) {
+    km_init_once();
+    if (set) km_set_period((uint16_t)(val < 1 ? 1 : val));
+    return (int16_t)clk.period;
+}
+
+int16_t kria_op_mute(int16_t track, int16_t set, int16_t val) {
+    km_init_once();
+    if (track < 0 || track >= KRIA_NUM_TRACKS) return 0;
+    if (set) {
+        kria_engine_set_mute(&eng, (uint8_t)track, val ? 1 : 0);
+        dirty = true;
+    }
+    return eng.rt.mutes[track];
+}
+
+void kria_op_tmute(int16_t track) {
+    km_init_once();
+    if (track < 0 || track >= KRIA_NUM_TRACKS) return;
+    kria_engine_set_mute(&eng, (uint8_t)track, !eng.rt.mutes[track]);
+    dirty = true;
+}
+
+void kria_op_clock(int16_t track) {
+    km_init_once();
+    if (track < 0 || track >= KRIA_NUM_TRACKS) return;
+    writing = true;
+    kria_engine_clock_track(&eng, (uint8_t)track);
+    writing = false;
+    dirty = true;
+}
+
+int16_t kria_op_dir(int16_t track, int16_t set, int16_t val) {
+    km_init_once();
+    if (track < 0 || track >= KRIA_NUM_TRACKS) return 0;
+    kria_track_t* t = &eng.cfg.p[eng.cfg.pattern].t[track];
+    if (set) {
+        if (val < 0) val = 0;
+        if (val > KR_DIR_RANDOM) val = KR_DIR_RANDOM;
+        t->direction = (uint8_t)val;
+        cfg_dirty = true;
+    }
+    return t->direction;
+}
+
+int16_t kria_op_cue(int16_t set, int16_t val) {
+    km_init_once();
+    if (set) {
+        if (val < 0) val = 0;
+        if (val >= KRIA_NUM_PATTERNS) val = KRIA_NUM_PATTERNS - 1;
+        eng.rt.cue_pat_next = (uint8_t)(val + 1);
+        dirty = true;
+    }
+    return eng.rt.cue_pat_next ? (int16_t)(eng.rt.cue_pat_next - 1)
+                               : (int16_t)eng.cfg.pattern;
+}
+
+int16_t kria_op_pos(int16_t track, int16_t param, int16_t set, int16_t val) {
+    km_init_once();
+    if (track < 0 || track >= KRIA_NUM_TRACKS || param < 0 ||
+        param >= KRIA_NUM_PARAMS)
+        return 0;
+    if (set) {
+        eng.rt.pos[track][param] = (uint8_t)(val & 0x0f);
+        dirty = true;
+    }
+    return eng.rt.pos[track][param];
+}
+
+int16_t kria_op_loop_start(int16_t track, int16_t param, int16_t set,
+                           int16_t val) {
+    km_init_once();
+    if (track < 0 || track >= KRIA_NUM_TRACKS || param < 0 ||
+        param >= KRIA_NUM_PARAMS)
+        return 0;
+    if (set) {
+        kria_engine_set_loop_start(&eng, (uint8_t)track, (uint8_t)param,
+                                   (uint8_t)val);
+        cfg_dirty = true;
+        dirty = true;
+    }
+    return eng.cfg.p[eng.cfg.pattern].t[track].lstart[param];
+}
+
+int16_t kria_op_loop_len(int16_t track, int16_t param, int16_t set,
+                         int16_t val) {
+    km_init_once();
+    if (track < 0 || track >= KRIA_NUM_TRACKS || param < 0 ||
+        param >= KRIA_NUM_PARAMS)
+        return 0;
+    if (set) {
+        kria_engine_set_loop_len(&eng, (uint8_t)track, (uint8_t)param,
+                                 (uint8_t)val);
+        cfg_dirty = true;
+        dirty = true;
+    }
+    return eng.cfg.p[eng.cfg.pattern].t[track].llen[param];
+}
+
+int16_t kria_op_cv(int16_t track) {
+    km_init_once();
+    if (track < 0 || track >= KRIA_NUM_TRACKS) return 0;
+    uint8_t combined = eng.rt.note[track] + eng.rt.alt_note[track];
+    uint8_t nis = combined % 7;
+    uint8_t ob = combined / 7;
+    return (int16_t)((int)eng.rt.cur_scale[nis] + eng.rt.scale_adj[nis] +
+                     (int)((eng.rt.oct[track] + ob) * 12));
+}
+
+int16_t kria_op_dur(int16_t track) {
+    km_init_once();
+    if (track < 0 || track >= KRIA_NUM_TRACKS) return 0;
+    kria_track_t* t = &eng.cfg.p[eng.cfg.pattern].t[track];
+    return t->dur[eng.rt.pos[track][KR_P_DUR]];
+}
+
 uint8_t screen_refresh_kria(void) {
     if (!dirty) return 0;
     dirty = false;

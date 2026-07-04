@@ -211,4 +211,11 @@ void kria_engine_change_pattern(kria_engine_t* e, uint8_t pattern);
 // Mute/unmute a track (muted tracks advance but emit no gate/CV).
 void kria_engine_set_mute(kria_engine_t* e, uint8_t track, uint8_t mute);
 
+// Set a (track, param) loop start / length (0..15 / 1..16), recomputing lend +
+// lswap wrap. For the KR.L.ST / KR.L.LEN ops.
+void kria_engine_set_loop_start(kria_engine_t* e, uint8_t track, uint8_t param,
+                                uint8_t start);
+void kria_engine_set_loop_len(kria_engine_t* e, uint8_t track, uint8_t param,
+                              uint8_t len);
+
 #endif

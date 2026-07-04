@@ -249,6 +249,14 @@ void meadowphysics_op_stop(int16_t channel) {
     dirty = true;
 }
 
+// MP.RUN x -- start (x != 0) or stop (x == 0) the engine, from scripts.
+void meadowphysics_op_run(int16_t on) {
+    if (on && !mp_running)
+        meadowphysics_toggle_run();
+    else if (!on && mp_running)
+        meadowphysics_toggle_run();
+}
+
 static void set_period(uint16_t period_ms) {
     mp_clock_set_period(&mp_clk, period_ms);
     if (timer_enabled) mpClockTimer.ticks = mp_clk.period;

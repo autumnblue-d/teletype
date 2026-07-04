@@ -69,6 +69,28 @@ extern void device_flip(void);
 // meadowphysics ops (native engine): channel 0 = all rows, 1-8 = one row
 extern void meadowphysics_op_reset(int16_t channel);
 extern void meadowphysics_op_stop(int16_t channel);
+extern void meadowphysics_op_run(int16_t on);  // 1 = play, 0 = stop
+
+// kria ops (native engine). For get/set pairs, `set` != 0 writes `val`; all
+// return the current value. track/param are 0-indexed.
+extern void kria_op_run(int16_t on);  // 1 = play, 0 = stop
+extern void kria_op_reset(void);
+extern int16_t kria_op_pattern(int16_t set, int16_t val);
+extern int16_t kria_op_scale(int16_t set, int16_t val);
+extern int16_t kria_op_period(int16_t set, int16_t val);
+extern int16_t kria_op_mute(int16_t track, int16_t set, int16_t val);
+extern void kria_op_tmute(int16_t track);
+extern void kria_op_clock(int16_t track);
+extern int16_t kria_op_dir(int16_t track, int16_t set, int16_t val);
+extern int16_t kria_op_cue(int16_t set, int16_t val);
+extern int16_t kria_op_pos(int16_t track, int16_t param, int16_t set,
+                           int16_t val);
+extern int16_t kria_op_loop_start(int16_t track, int16_t param, int16_t set,
+                                  int16_t val);
+extern int16_t kria_op_loop_len(int16_t track, int16_t param, int16_t set,
+                                int16_t val);
+extern int16_t kria_op_cv(int16_t track);
+extern int16_t kria_op_dur(int16_t track);
 
 // live screen / dashboard
 extern void set_live_submode(uint8_t submode);

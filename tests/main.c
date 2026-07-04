@@ -56,6 +56,46 @@ void tele_save_calibration() {}
 void grid_key_press(uint8_t x, uint8_t y, uint8_t z) {}
 void meadowphysics_op_reset(int16_t channel) {}
 void meadowphysics_op_stop(int16_t channel) {}
+void meadowphysics_op_run(int16_t on) {}
+void kria_op_run(int16_t on) {}
+void kria_op_reset(void) {}
+int16_t kria_op_pattern(int16_t set, int16_t val) {
+    return 0;
+}
+int16_t kria_op_scale(int16_t set, int16_t val) {
+    return 0;
+}
+int16_t kria_op_period(int16_t set, int16_t val) {
+    return 0;
+}
+int16_t kria_op_mute(int16_t track, int16_t set, int16_t val) {
+    return 0;
+}
+void kria_op_tmute(int16_t track) {}
+void kria_op_clock(int16_t track) {}
+int16_t kria_op_dir(int16_t track, int16_t set, int16_t val) {
+    return 0;
+}
+int16_t kria_op_cue(int16_t set, int16_t val) {
+    return 0;
+}
+int16_t kria_op_pos(int16_t track, int16_t param, int16_t set, int16_t val) {
+    return 0;
+}
+int16_t kria_op_loop_start(int16_t track, int16_t param, int16_t set,
+                           int16_t val) {
+    return 0;
+}
+int16_t kria_op_loop_len(int16_t track, int16_t param, int16_t set,
+                         int16_t val) {
+    return 0;
+}
+int16_t kria_op_cv(int16_t track) {
+    return 0;
+}
+int16_t kria_op_dur(int16_t track) {
+    return 0;
+}
 
 GREATEST_MAIN_DEFS();
 

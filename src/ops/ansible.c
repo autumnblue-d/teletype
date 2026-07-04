@@ -76,6 +76,8 @@ static void op_KR_DIR_set(const void *data, scene_state_t *ss, exec_state_t *es,
                           command_state_t *cs);
 static void op_KR_DUR_get(const void *data, scene_state_t *ss, exec_state_t *es,
                           command_state_t *cs);
+static void op_KR_RUN_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                          command_state_t *cs);
 static void op_ME_PRE_get(const void *data, scene_state_t *ss, exec_state_t *es,
                           command_state_t *cs);
 static void op_ME_PRE_set(const void *data, scene_state_t *ss, exec_state_t *es,
@@ -188,6 +190,7 @@ const tele_op_t op_KR_PG       = MAKE_GET_SET_OP(KR.PG      , op_KR_PG_get      
 const tele_op_t op_KR_CUE      = MAKE_GET_SET_OP(KR.CUE     , op_KR_CUE_get      , op_KR_CUE_set      , 0, true);
 const tele_op_t op_KR_DIR      = MAKE_GET_SET_OP(KR.DIR     , op_KR_DIR_get     , op_KR_DIR_set       , 1, true);
 const tele_op_t op_KR_DUR      = MAKE_GET_OP    (KR.DUR     , op_KR_DUR_get                           , 1, true);
+const tele_op_t op_KR_RUN      = MAKE_GET_OP    (KR.RUN     , op_KR_RUN_get                           , 1, false);
 
 const tele_op_t op_ME_PRE      = MAKE_GET_SET_OP(ME.PRE     , op_ME_PRE_get      , op_ME_PRE_set      , 0, true);
 const tele_op_t op_ME_RES      = MAKE_GET_OP    (ME.RES     , op_ME_RES_get                           , 1, false);
@@ -356,273 +359,177 @@ static void op_ANS_APP_set(const void *NOTUSED(data),
     tele_ii_tx(ES, d, 2);
 }
 
+// --- Kria ops: retargeted from external-Ansible i2c to the native on-board
+// --- engine (kria_mode.c / teletype_io.h). KR.PRE / KR.PG have no native
+// --- meaning (single global song; grid-only page) and are accepted no-ops.
+
 static void op_KR_PRE_set(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
                           exec_state_t *NOTUSED(es), command_state_t *cs) {
-    int16_t a = cs_pop(cs);
-    uint8_t d[] = { II_KR_PRESET, a };
-    tele_ii_tx(II_KR_ADDR, d, 2);
+    cs_pop(cs);  // no presets in the native engine
 }
 
 static void op_KR_PRE_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
                           exec_state_t *NOTUSED(es), command_state_t *cs) {
-    uint8_t d[] = { II_KR_PRESET | II_GET };
-    uint8_t addr = II_KR_ADDR;
-    tele_ii_tx(addr, d, 1);
-    d[0] = 0;
-    tele_ii_rx(addr, d, 1);
-    cs_push(cs, d[0]);
+    cs_push(cs, 0);
 }
 
 static void op_KR_PAT_set(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
                           exec_state_t *NOTUSED(es), command_state_t *cs) {
-    int16_t a = cs_pop(cs);
-    uint8_t d[] = { II_KR_PATTERN, a };
-    tele_ii_tx(II_KR_ADDR, d, 2);
+    kria_op_pattern(1, cs_pop(cs));
 }
 
 static void op_KR_PAT_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
                           exec_state_t *NOTUSED(es), command_state_t *cs) {
-    uint8_t d[] = { II_KR_PATTERN | II_GET };
-    uint8_t addr = II_KR_ADDR;
-    tele_ii_tx(addr, d, 1);
-    d[0] = 0;
-    tele_ii_rx(addr, d, 1);
-    cs_push(cs, d[0]);
+    cs_push(cs, kria_op_pattern(0, 0));
 }
 
 static void op_KR_SCALE_set(const void *NOTUSED(data),
                             scene_state_t *NOTUSED(ss),
                             exec_state_t *NOTUSED(es), command_state_t *cs) {
-    int16_t a = cs_pop(cs);
-    uint8_t d[] = { II_KR_SCALE, a };
-    tele_ii_tx(II_KR_ADDR, d, 2);
+    kria_op_scale(1, cs_pop(cs));
 }
 
 static void op_KR_SCALE_get(const void *NOTUSED(data),
                             scene_state_t *NOTUSED(ss),
                             exec_state_t *NOTUSED(es), command_state_t *cs) {
-    uint8_t d[] = { II_KR_SCALE | II_GET };
-    uint8_t addr = II_KR_ADDR;
-    tele_ii_tx(addr, d, 1);
-    d[0] = 0;
-    tele_ii_rx(addr, d, 1);
-    cs_push(cs, d[0]);
+    cs_push(cs, kria_op_scale(0, 0));
 }
 
 static void op_KR_PERIOD_set(const void *NOTUSED(data),
                              scene_state_t *NOTUSED(ss),
                              exec_state_t *NOTUSED(es), command_state_t *cs) {
-    int16_t a = cs_pop(cs);
-    uint8_t d[] = { II_KR_PERIOD, a >> 8, a & 0xff };
-    tele_ii_tx(II_KR_ADDR, d, 3);
+    kria_op_period(1, cs_pop(cs));
 }
 
 static void op_KR_PERIOD_get(const void *NOTUSED(data),
                              scene_state_t *NOTUSED(ss),
                              exec_state_t *NOTUSED(es), command_state_t *cs) {
-    uint8_t d[] = { II_KR_PERIOD | II_GET, 0 };
-    uint8_t addr = II_KR_ADDR;
-    tele_ii_tx(addr, d, 1);
-    d[0] = 0;
-    d[1] = 0;
-    tele_ii_rx(addr, d, 2);
-    cs_push(cs, (d[0] << 8) + d[1]);
+    cs_push(cs, kria_op_period(0, 0));
 }
 
 static void op_KR_POS_set(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
                           exec_state_t *NOTUSED(es), command_state_t *cs) {
-    int16_t a = cs_pop(cs);
-    int16_t b = cs_pop(cs);
-    int16_t c = cs_pop(cs);
-    uint8_t d[] = { II_KR_POS, a, b, c };
-    tele_ii_tx(II_KR_ADDR, d, 4);
+    int16_t val = cs_pop(cs);
+    int16_t param = cs_pop(cs);
+    int16_t track = cs_pop(cs);
+    kria_op_pos(track, param, 1, val);
 }
 
 static void op_KR_POS_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
                           exec_state_t *NOTUSED(es), command_state_t *cs) {
-    int16_t a = cs_pop(cs);
-    int16_t b = cs_pop(cs);
-    uint8_t d[] = { II_KR_POS | II_GET, a, b };
-    uint8_t addr = II_KR_ADDR;
-    tele_ii_tx(addr, d, 3);
-    d[0] = 0;
-    tele_ii_rx(addr, d, 1);
-    cs_push(cs, d[0]);
+    int16_t param = cs_pop(cs);
+    int16_t track = cs_pop(cs);
+    cs_push(cs, kria_op_pos(track, param, 0, 0));
 }
 
-static void op_KR_L_ST_set(const void *NOTUSED(data),
-                           scene_state_t *NOTUSED(ss),
+static void op_KR_L_ST_set(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
                            exec_state_t *NOTUSED(es), command_state_t *cs) {
-    int16_t a = cs_pop(cs);
-    int16_t b = cs_pop(cs);
-    int16_t c = cs_pop(cs);
-    uint8_t d[] = { II_KR_LOOP_ST, a, b, c };
-    tele_ii_tx(II_KR_ADDR, d, 4);
+    int16_t val = cs_pop(cs);
+    int16_t param = cs_pop(cs);
+    int16_t track = cs_pop(cs);
+    kria_op_loop_start(track, param, 1, val);
 }
 
-static void op_KR_L_ST_get(const void *NOTUSED(data),
-                           scene_state_t *NOTUSED(ss),
+static void op_KR_L_ST_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
                            exec_state_t *NOTUSED(es), command_state_t *cs) {
-    int16_t a = cs_pop(cs);
-    int16_t b = cs_pop(cs);
-    uint8_t d[] = { II_KR_LOOP_ST | II_GET, a, b };
-    uint8_t addr = II_KR_ADDR;
-    tele_ii_tx(addr, d, 3);
-    d[0] = 0;
-    tele_ii_rx(addr, d, 1);
-    cs_push(cs, d[0]);
+    int16_t param = cs_pop(cs);
+    int16_t track = cs_pop(cs);
+    cs_push(cs, kria_op_loop_start(track, param, 0, 0));
 }
 
 static void op_KR_L_LEN_set(const void *NOTUSED(data),
                             scene_state_t *NOTUSED(ss),
                             exec_state_t *NOTUSED(es), command_state_t *cs) {
-    int16_t a = cs_pop(cs);
-    int16_t b = cs_pop(cs);
-    int16_t c = cs_pop(cs);
-    uint8_t d[] = { II_KR_LOOP_LEN, a, b, c };
-    tele_ii_tx(II_KR_ADDR, d, 4);
+    int16_t val = cs_pop(cs);
+    int16_t param = cs_pop(cs);
+    int16_t track = cs_pop(cs);
+    kria_op_loop_len(track, param, 1, val);
 }
 
 static void op_KR_L_LEN_get(const void *NOTUSED(data),
                             scene_state_t *NOTUSED(ss),
                             exec_state_t *NOTUSED(es), command_state_t *cs) {
-    int16_t a = cs_pop(cs);
-    int16_t b = cs_pop(cs);
-    uint8_t d[] = { II_KR_LOOP_LEN | II_GET, a, b };
-    uint8_t addr = II_KR_ADDR;
-    tele_ii_tx(addr, d, 3);
-    d[0] = 0;
-    tele_ii_rx(addr, d, 1);
-    cs_push(cs, d[0]);
+    int16_t param = cs_pop(cs);
+    int16_t track = cs_pop(cs);
+    cs_push(cs, kria_op_loop_len(track, param, 0, 0));
 }
 
 static void op_KR_RES_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
                           exec_state_t *NOTUSED(es), command_state_t *cs) {
-    int16_t a = cs_pop(cs);
-    int16_t b = cs_pop(cs);
-    uint8_t d[] = { II_KR_RESET, a, b };
-    tele_ii_tx(II_KR_ADDR, d, 3);
+    cs_pop(cs);  // (track, arg) accepted for compat; native reset is global
+    cs_pop(cs);
+    kria_op_reset();
 }
 
 static void op_KR_CV_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
                          exec_state_t *NOTUSED(es), command_state_t *cs) {
-    int16_t a = cs_pop(cs);
-    a--;
-    uint8_t d[] = { II_KR_CV | II_GET, a & 0x3 };
-    uint8_t addr = II_KR_ADDR;
-    tele_ii_tx(addr, d, 2);
-    d[0] = 0;
-    d[1] = 0;
-    tele_ii_rx(addr, d, 2);
-    cs_push(cs, (d[0] << 8) + d[1]);
+    cs_push(cs, kria_op_cv(cs_pop(cs) - 1));  // track is 1-indexed
 }
 
-static void op_KR_MUTE_set(const void *NOTUSED(data),
-                           scene_state_t *NOTUSED(ss),
+static void op_KR_MUTE_set(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
                            exec_state_t *NOTUSED(es), command_state_t *cs) {
-    int16_t a = cs_pop(cs);
-    int16_t b = cs_pop(cs);
-    uint8_t d[] = { II_KR_MUTE, a, b };
-    tele_ii_tx(II_KR_ADDR, d, 3);
+    int16_t val = cs_pop(cs);
+    int16_t track = cs_pop(cs);
+    kria_op_mute(track, 1, val);
 }
 
-static void op_KR_MUTE_get(const void *NOTUSED(data),
-                           scene_state_t *NOTUSED(ss),
+static void op_KR_MUTE_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
                            exec_state_t *NOTUSED(es), command_state_t *cs) {
-    int16_t a = cs_pop(cs);
-    uint8_t d[] = { II_KR_MUTE | II_GET, a };
-    uint8_t addr = II_KR_ADDR;
-    tele_ii_tx(addr, d, 2);
-    d[0] = 0;
-    tele_ii_rx(addr, d, 1);
-    cs_push(cs, d[0]);
+    cs_push(cs, kria_op_mute(cs_pop(cs), 0, 0));
 }
 
 static void op_KR_TMUTE_get(const void *NOTUSED(data),
                             scene_state_t *NOTUSED(ss),
                             exec_state_t *NOTUSED(es), command_state_t *cs) {
-    int16_t a = cs_pop(cs);
-    uint8_t d[] = { II_KR_TMUTE, a };
-    tele_ii_tx(II_KR_ADDR, d, 2);
+    kria_op_tmute(cs_pop(cs));
 }
 
 static void op_KR_CLK_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
                           exec_state_t *NOTUSED(es), command_state_t *cs) {
-    int16_t a = cs_pop(cs);
-    uint8_t d[] = { II_KR_CLK, a };
-    tele_ii_tx(II_KR_ADDR, d, 2);
+    kria_op_clock(cs_pop(cs));
 }
-
 
 static void op_KR_PG_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
                          exec_state_t *NOTUSED(es), command_state_t *cs) {
-    uint8_t d[] = { II_KR_PAGE | II_GET };
-    tele_ii_tx(II_KR_ADDR, d, 1);
-
-    d[0] = 0;
-    tele_ii_rx(II_KR_ADDR, d, 1);
-    cs_push(cs, d[0]);
+    cs_push(cs, 0);  // grid page has no script meaning natively
 }
 
 static void op_KR_PG_set(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
                          exec_state_t *NOTUSED(es), command_state_t *cs) {
-    int16_t n = cs_pop(cs);
-
-    uint8_t d[] = { II_KR_PAGE, n };
-    tele_ii_tx(II_KR_ADDR, d, 2);
+    cs_pop(cs);
 }
 
 static void op_KR_CUE_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
                           exec_state_t *NOTUSED(es), command_state_t *cs) {
-    uint8_t d[] = { II_KR_CUE | II_GET };
-    tele_ii_tx(II_KR_ADDR, d, 1);
-
-    d[0] = 0;
-    tele_ii_rx(II_KR_ADDR, d, 1);
-    cs_push(cs, (int8_t)d[0]);
+    cs_push(cs, kria_op_cue(0, 0));
 }
 
 static void op_KR_CUE_set(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
                           exec_state_t *NOTUSED(es), command_state_t *cs) {
-    uint8_t pat = cs_pop(cs);
-
-    uint8_t d[] = { II_KR_CUE, pat };
-    tele_ii_tx(II_KR_ADDR, d, 2);
+    kria_op_cue(1, cs_pop(cs));
 }
 
 static void op_KR_DIR_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
                           exec_state_t *NOTUSED(es), command_state_t *cs) {
-    int16_t n = cs_pop(cs);
-    uint8_t d[] = { II_KR_DIR | II_GET, n };
-    tele_ii_tx(II_KR_ADDR, d, 2);
-
-    d[0] = 0;
-    tele_ii_rx(II_KR_ADDR, d, 1);
-    cs_push(cs, d[0]);
+    cs_push(cs, kria_op_dir(cs_pop(cs), 0, 0));
 }
 
 static void op_KR_DIR_set(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
                           exec_state_t *NOTUSED(es), command_state_t *cs) {
-    int16_t n = cs_pop(cs);
-    int16_t x = cs_pop(cs);
-
-    uint8_t d[] = { II_KR_DIR, n, x };
-    tele_ii_tx(II_KR_ADDR, d, 3);
+    int16_t dir = cs_pop(cs);
+    int16_t track = cs_pop(cs);
+    kria_op_dir(track, 1, dir);
 }
 
 static void op_KR_DUR_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
                           exec_state_t *NOTUSED(es), command_state_t *cs) {
-    int16_t a = cs_pop(cs);
-    a--;
-    uint8_t d[] = { II_KR_DURATION | II_GET, a & 0x3 };
-    uint8_t addr = II_KR_ADDR;
-    tele_ii_tx(addr, d, 2);
-    d[0] = 0;
-    d[1] = 0;
-    tele_ii_rx(addr, d, 2);
-    cs_push(cs, (d[0] << 8) + d[1]);
+    cs_push(cs, kria_op_dur(cs_pop(cs) - 1));  // track is 1-indexed
 }
 
+static void op_KR_RUN_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
+                          exec_state_t *NOTUSED(es), command_state_t *cs) {
+    kria_op_run(cs_pop(cs));
+}
 
 static void op_ME_PRE_set(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
                           exec_state_t *NOTUSED(es), command_state_t *cs) {

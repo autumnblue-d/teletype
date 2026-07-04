@@ -383,6 +383,7 @@
         "MP.PRESET"   => { MATCH_OP(E_OP_MP_PRESET); };
         "MP.RESET"    => { MATCH_OP(E_OP_MP_RESET); };
         "MP.STOP"     => { MATCH_OP(E_OP_MP_STOP); };
+        "MP.RUN"      => { MATCH_OP(E_OP_MP_RUN); };
 
         # earthsea
         "ES.PRESET"   => { MATCH_OP(E_OP_ES_PRESET); };
@@ -437,6 +438,7 @@
         "KR.CUE"      => { MATCH_OP(E_OP_KR_CUE); };
         "KR.DIR"      => { MATCH_OP(E_OP_KR_DIR); };
         "KR.DUR"      => { MATCH_OP(E_OP_KR_DUR); };
+        "KR.RUN"      => { MATCH_OP(E_OP_KR_RUN); };
         "ME.PRE"      => { MATCH_OP(E_OP_ME_PRE); };
         "ME.RES"      => { MATCH_OP(E_OP_ME_RES); };
         "ME.STOP"     => { MATCH_OP(E_OP_ME_STOP); };

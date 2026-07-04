@@ -26,7 +26,13 @@ static void op_MP_STOP_get(const void* NOTUSED(data),
     meadowphysics_op_stop(cs_pop(cs));
 }
 
+static void op_MP_RUN_get(const void* NOTUSED(data), scene_state_t* NOTUSED(ss),
+                          exec_state_t* NOTUSED(es), command_state_t* cs) {
+    meadowphysics_op_run(cs_pop(cs));
+}
+
 const tele_op_t op_MP_PRESET =
     MAKE_GET_OP(MP.PRESET, op_MP_PRESET_get, 1, false);
 const tele_op_t op_MP_RESET = MAKE_GET_OP(MP.RESET, op_MP_RESET_get, 1, false);
 const tele_op_t op_MP_STOP = MAKE_GET_OP(MP.STOP, op_MP_STOP_get, 1, false);
+const tele_op_t op_MP_RUN = MAKE_GET_OP(MP.RUN, op_MP_RUN_get, 1, false);

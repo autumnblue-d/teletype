@@ -446,8 +446,21 @@ TEST grid_render_smoke(void) {
     PASS();
 }
 
+TEST loop_setters_wrap(void) {
+    kria_engine_set_defaults(&E.cfg);
+    kria_engine_init(&E, &OUT, test_rnd, &RND, NULL);
+    kria_engine_set_loop_start(&E, 0, KR_P_TR, 14);
+    kria_engine_set_loop_len(&E, 0, KR_P_TR, 4);  // start 14, len 4 -> wraps
+    ASSERT_EQ(14, E.cfg.p[0].t[0].lstart[KR_P_TR]);
+    ASSERT_EQ(4, E.cfg.p[0].t[0].llen[KR_P_TR]);
+    ASSERT_EQ(1, E.cfg.p[0].t[0].lend[KR_P_TR]);   // 14+4-1 = 17 -> 1
+    ASSERT_EQ(1, E.cfg.p[0].t[0].lswap[KR_P_TR]);  // wrapped
+    PASS();
+}
+
 SUITE(kria_suite) {
     RUN_TEST(defaults_are_valid);
+    RUN_TEST(loop_setters_wrap);
     RUN_TEST(config_valid_rejects_bad);
     RUN_TEST(calc_scale_is_cumulative);
     RUN_TEST(forward_stepping_fires_each_clock);
