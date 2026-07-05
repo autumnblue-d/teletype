@@ -197,7 +197,7 @@ void meadowphysics_mode_exit(void) {
     active = false;
 }
 
-// Play/pause the engine (Space in the MP view, or alt-P from anywhere).
+// Play/pause the engine (Space in the MP view, or the MP.RUN script op).
 // Running owns the CV/TR outputs; stopping releases them back to scripts.
 void meadowphysics_toggle_run(void) {
     mp_init_once();
@@ -219,6 +219,9 @@ void meadowphysics_toggle_run(void) {
             timer_enabled = true;
         }
     }
+    // repaint the grid too: on stop there is no further clock tick to clear the
+    // last-lit frame, and the script (MP.RUN) path never touches the grid.
+    scene_state.grid.grid_dirty = 1;
     dirty = true;
 }
 
@@ -351,32 +354,27 @@ void process_meadowphysics_keys(uint8_t key, uint8_t mod_key,
         mp_flush_bank();  // leaving the Config view: save scale edits
         if (mp_i2c_view) mp_flush_i2c();
         mp_i2c_view = false;
-        dirty = true;
     }
     else if (match_no_mod(mod_key, key, HID_2)) {
         view = MP_VIEW_CLOCK;
         mp_flush_bank();
         if (mp_i2c_view) mp_flush_i2c();
         mp_i2c_view = false;
-        dirty = true;
     }
     else if (match_no_mod(mod_key, key, HID_3)) {
         view = MP_VIEW_CONFIG;
         if (mp_i2c_view) mp_flush_i2c();
         mp_i2c_view = false;
-        dirty = true;
     }
     else if (match_no_mod(mod_key, key, HID_4)) {  // shared i2c follower view
         mp_i2c_view = true;
         kria_i2c_view_enter();
-        dirty = true;
     }
     else if (match_no_mod(mod_key, key, HID_SPACEBAR)) {
         meadowphysics_toggle_run();  // play / pause
     }
     else if (match_no_mod(mod_key, key, HID_R)) {
         mp_engine_reset(&mp_eng);  // reset counters (independent of run state)
-        dirty = true;
     }
     else if (match_no_mod(mod_key, key, HID_S)) {  // save the current scene
         // MP config is per-scene, so "save" = commit the whole active scene to
@@ -388,7 +386,6 @@ void process_meadowphysics_keys(uint8_t key, uint8_t mod_key,
         flash_write(preset_select, &scene_state, &scene_text);
         flash_update_last_saved_scene(preset_select);
         mode_confirm_show("SAVED");
-        dirty = true;
     }
     else if (match_no_mod(mod_key, key, HID_V)) {
         mp_eng.cfg.voice_mode = (mp_eng.cfg.voice_mode + 1) & 0x3;
@@ -396,11 +393,9 @@ void process_meadowphysics_keys(uint8_t key, uint8_t mod_key,
         // uses, so scripts get clean TR channels
         if (mp_running)
             for (uint8_t i = mp_owned_channels(); i < 4; i++) tele_tr(i, 0);
-        dirty = true;
     }
     else if (match_no_mod(mod_key, key, HID_X)) {
         mp_clock_set_external(&mp_clk, !mp_clk.external);
-        dirty = true;
     }
     else if (match_no_mod(mod_key, key, HID_UNDERSCORE)) {  // '-' : slower
         set_period(mp_clk.period + MP_TEMPO_STEP);
@@ -414,14 +409,17 @@ void process_meadowphysics_keys(uint8_t key, uint8_t mod_key,
         mp_eng.cfg.scale =
             (mp_eng.cfg.scale + MP_SCALE_SLOTS - 1) % MP_SCALE_SLOTS;
         mp_apply_scale();
-        dirty = true;
     }
     else if (match_no_mod(mod_key, key,
                           HID_CLOSE_BRACKET)) {  // ']' : next scale
         mp_eng.cfg.scale = (mp_eng.cfg.scale + 1) % MP_SCALE_SLOTS;
         mp_apply_scale();
-        dirty = true;
     }
+    else { return; }
+
+    // every handled key repaints both the OLED and the grid
+    scene_state.grid.grid_dirty = 1;
+    dirty = true;
 }
 
 // Brightness levels for the OLED (label / value / title).

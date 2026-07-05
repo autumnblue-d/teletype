@@ -281,6 +281,9 @@ void kria_toggle_run(void) {
             timer_enabled = true;
         }
     }
+    // repaint the grid too: on stop there is no further clock tick to clear the
+    // last-lit playhead, and the script (KR.RUN) path never touches the grid.
+    scene_state.grid.grid_dirty = 1;
     dirty = true;
 }
 
@@ -558,13 +561,9 @@ void process_kria_keys(uint8_t key, uint8_t mod_key, bool is_held_key) {
     }
 
     if (match_no_mod(mod_key, key, HID_SPACEBAR)) { kria_toggle_run(); }
-    else if (match_no_mod(mod_key, key, HID_R)) {
-        kria_engine_reset(&eng);
-        dirty = true;
-    }
+    else if (match_no_mod(mod_key, key, HID_R)) { kria_engine_reset(&eng); }
     else if (match_no_mod(mod_key, key, HID_X)) {
         kria_clock_set_external(&clk, !clk.external);
-        dirty = true;
     }
     else if (match_no_mod(mod_key, key, HID_UNDERSCORE)) {  // '-' slower
         km_set_period(clk.period + KM_TEMPO_STEP);
@@ -576,31 +575,27 @@ void process_kria_keys(uint8_t key, uint8_t mod_key, bool is_held_key) {
     else if (match_no_mod(mod_key, key, HID_S)) {  // explicit save
         kria_flush_if_dirty();
         mode_confirm_show("SAVED");
-        dirty = true;
     }
     else if (match_no_mod(mod_key, key, HID_1)) {  // sequencer view
         km_view = KM_VIEW_SEQ;
-        scene_state.grid.grid_dirty = 1;
-        dirty = true;
     }
     else if (match_no_mod(mod_key, key, HID_2)) {  // time view (Ansible Key 1)
         km_view = KM_VIEW_TIME;
         km_sync_rc_from_period();
-        scene_state.grid.grid_dirty = 1;
-        dirty = true;
     }
     else if (match_no_mod(mod_key, key,
                           HID_3)) {  // config view (Ansible Key 2)
         km_view = KM_VIEW_CONFIG;
-        scene_state.grid.grid_dirty = 1;
-        dirty = true;
     }
     else if (match_no_mod(mod_key, key, HID_4)) {  // i2c follower routing view
         km_view = KM_VIEW_I2C;
         kria_i2c_view_enter();
-        scene_state.grid.grid_dirty = 1;
-        dirty = true;
     }
+    else { return; }
+
+    // every handled key repaints both the OLED and the grid
+    scene_state.grid.grid_dirty = 1;
+    dirty = true;
 }
 
 // ---- OLED ----

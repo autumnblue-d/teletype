@@ -883,6 +883,10 @@ void set_mode(tele_mode_t m) {
             break;
     }
     if (mode != M_HELP) flash_update_last_mode(mode);
+    // repaint the grid immediately on any mode change: the new view may own the
+    // grid while stopped (no clock tick to self-refresh), so mark it dirty here
+    // rather than leaving the previous view's LEDs until the first grid event.
+    scene_state.grid.grid_dirty = 1;
 }
 
 // defined in globals.h
@@ -991,11 +995,6 @@ bool process_global_keys(uint8_t k, uint8_t m, bool is_held_key) {
             set_last_mode();
         else
             set_mode(M_MEADOWPHYSICS);
-        return true;
-    }
-    // <alt>-P: play/pause meadowphysics from any mode (it runs in background)
-    else if (match_alt(m, k, HID_P)) {
-        meadowphysics_toggle_run();
         return true;
     }
     // <alt>-K: toggle kria mode

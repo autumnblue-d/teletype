@@ -21,7 +21,7 @@ void set_meadowphysics_mode(void);
 void meadowphysics_mode_exit(void);
 
 // Play/pause the MP engine, independent of which view is front-most. Bound to
-// Space in the MP view and to a global key (alt-P) elsewhere. While running,
+// Space in the MP view, and also driven by the MP.RUN script op. While running,
 // MP owns the CV/TR outputs; stopping releases them back to scripts.
 void meadowphysics_toggle_run(void);
 

@@ -7,7 +7,7 @@ when a counter rolls over it fires its triggers/toggles, optionally re-syncs oth
 rows, and applies a rule (`inc / dec / max / min / rnd / pole / stop`) to a
 destination row's count and/or speed.
 
-`alt-M` shows/hides the Meadowphysics view; `alt-P` (or `space` in the MP view)
+`alt-M` shows/hides the Meadowphysics view; `space` (in the MP view)
 plays/pauses the sequencer. The engine runs **independently of the view**, so
 you can leave MP playing and switch to Edit to work on scripts. While playing,
 Meadowphysics owns **only the CV/TR channels its voice mode uses** — 1 in `1V`,
@@ -19,7 +19,6 @@ runs on its own internal clock, or an external clock on trigger input 1.
 ### Keys
 
 - `alt-M` — show / hide the MP view (the engine keeps running either way)
-- `alt-P` — play / pause from any mode
 - `1` / `2` / `3` — Positions / Clock / Config views
 - `space` — play / pause (in the MP view)
 - `R` — reset (re-arm all counters)

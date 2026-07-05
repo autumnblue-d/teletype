@@ -1671,7 +1671,7 @@ const char* help17[HELP17_LENGTH] = { "17/21 I2C2MIDI",
                                       "    SEND NOTE OFF TO ALL",
                                       "    RESET NOTE PARAMETERS" };
 
-#define HELP18_LENGTH 49
+#define HELP18_LENGTH 48
 const char* help18[HELP18_LENGTH] = { "18/21 MEADOWPHYSICS",
                                       " ",
                                       "CASCADING COUNTER",
@@ -1680,7 +1680,6 @@ const char* help18[HELP18_LENGTH] = { "18/21 MEADOWPHYSICS",
                                       "DRIVING CV/TR.",
                                       " ",
                                       "ALT-M|VIEW TOGGLE",
-                                      "ALT-P|PLAY GLOBAL",
                                       " ",
                                       "KEYS:",
                                       "1/2/3|VIEWS",
