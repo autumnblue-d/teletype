@@ -61,7 +61,7 @@ on power cycle.
 ["DV.DV"]
 prototype = "DV.DV"
 prototype_set = "DV.DV x"
-short = "get / set the déjà vu amount `0`–`16383`: `0` = locked loop, `8192` = fresh random, `16383` = shuffled loop"
+short = "get / set the déjà vu amount `0`–`100`: `0` = fresh random, `50` = locked loop, `100` = shuffled loop"
 
 ["DV.L"]
 prototype = "DV.L"

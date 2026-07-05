@@ -1211,19 +1211,20 @@ static void op_DV_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
     cs_push(cs, (int16_t)scaled);
 }
 
-// DV.DV: deja vu amount, 0..16383 <-> 0.0..1.0.
+// DV.DV: deja vu amount, 0..100 <-> 0.0..1.0 (0=random, 50=locked loop,
+// 100=shuffled loop).
 static void op_DV_DV_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
                          exec_state_t *NOTUSED(es), command_state_t *cs) {
     float dv = dejavu_get_deja_vu(dejavu_global());
-    cs_push(cs, (int16_t)(dv * 16383.0f + 0.5f));
+    cs_push(cs, (int16_t)(dv * 100.0f + 0.5f));
 }
 
 static void op_DV_DV_set(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
                          exec_state_t *NOTUSED(es), command_state_t *cs) {
     int16_t x = cs_pop(cs);
     if (x < 0) x = 0;
-    if (x > 16383) x = 16383;
-    dejavu_set_deja_vu(dejavu_global(), (float)x / 16383.0f);
+    if (x > 100) x = 100;
+    dejavu_set_deja_vu(dejavu_global(), (float)x / 100.0f);
 }
 
 // DV.L: loop length, 1..16.

@@ -68,7 +68,7 @@ instance in v1 (multi-channel deferred, §6):
 | Op | Params | Returns | Semantics |
 |---|---|---|---|
 | `DV max` | 1 | 0..max | advance the sequence one step; return the value scaled to `0..max` |
-| `DV.DV x` | 1 (set) | — | set déjà-vu amount, `x` = 0..16383 → 0.0..1.0 (0.5 = fresh random; 0 = locked loop; 1 = locked loop, jumpy) |
+| `DV.DV x` | 1 (set) | — | set déjà-vu amount, `x` = 0..100 → 0.0..1.0 (0 = fresh random; 50 = locked loop; 100 = shuffled loop) |
 | `DV.L n` | 1 (set) | — | set loop length, `n` = 1..16 |
 | `DV.R` | 0 | — | `Record()` — mark the current position as the loop start (re-lock a fresh loop) |
 
@@ -229,8 +229,8 @@ Stateful + float + RNG makes this trickier to unit-test than Grids. Strategy:
   (every op in `tele_ops` needs an enum + token entry).
 - **Shared-object gotcha:** `make clean` between host tests and the AVR32 build
   (host and target share `src/*.o`).
-- On device: `DV.L 4`, `DV.DV 0`, then `DV 16383` inside a metro — output should
-  lock to a repeating 4-step loop; nudging `DV.DV` toward 8192 should start
+- On device: `DV.L 4`, `DV.DV 50`, then `DV 16383` inside a metro — output should
+  lock to a repeating 4-step loop; nudging `DV.DV` away from 50 should start
   mutating it.
 
 ---

@@ -445,6 +445,23 @@ TEST test_KR_MUTE() {
     PASS();
 }
 
+// DV.DV amount is scaled 0..100 (50 = locked loop). Round-trip set -> get.
+TEST test_DV_DV() {
+    char* mid[2] = { "DV.DV 50", "DV.DV" };
+    CHECK_CALL(process_helper(2, mid, 50));
+
+    char* max[2] = { "DV.DV 100", "DV.DV" };
+    CHECK_CALL(process_helper(2, max, 100));
+
+    char* zero[2] = { "DV.DV 0", "DV.DV" };
+    CHECK_CALL(process_helper(2, zero, 0));
+
+    char* over[2] = { "DV.DV 200", "DV.DV" };  // clamps to 100
+    CHECK_CALL(process_helper(2, over, 100));
+
+    PASS();
+}
+
 SUITE(process_suite) {
     RUN_TEST(test_numbers);
     RUN_TEST(test_ADD);
@@ -463,4 +480,5 @@ SUITE(process_suite) {
     RUN_TEST(test_P_ROT_3);
     RUN_TEST(test_MO);
     RUN_TEST(test_KR_MUTE);
+    RUN_TEST(test_DV_DV);
 }
