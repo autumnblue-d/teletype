@@ -288,7 +288,7 @@ CPPFLAGS = -D BOARD=USER_BOARD -D UHD_ENABLE
 # 16-pattern global kria_config_t bank + global i2c follower bank.
 # sizeof(nvram_data_t) ~144.8 KB, so 145K (148,480 B) fits with ~3.5 KB margin.
 # See KRIA_PORT_PLAN.md §0. Re-verify the struct size in the map if fields added.
-LDFLAGS = -Wl,-e,_trampoline,--defsym=__flash_nvram_size__=145K
+LDFLAGS = -Wl,-e,_trampoline,--defsym=__flash_nvram_size__=142K
 
 # Pre- and post-build commands
 PREBUILD_CMD =
