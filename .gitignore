@@ -41,6 +41,10 @@
 # Debug files
 *.dSYM/
 
+# Core dumps
+core
+core.*
+
 # Python
 __pycache__/
 
