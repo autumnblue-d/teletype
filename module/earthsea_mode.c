@@ -15,7 +15,7 @@
 #include "es_binding.h"
 #include "es_engine.h"
 #include "es_grid.h"
-#include "kria_binding.h"  // kria_note_to_cv (ES.CV)
+#include "kria_binding.h"   // kria_note_to_cv (ES.CV)
 #include "kria_i2c.h"       // shared follower bank + ii view
 #include "kria_i2c_oled.h"  // MIDI-follower OLED editor
 
@@ -47,9 +47,9 @@ static uint8_t em_idx[ES_NUM_VOICES] = { 0, 1, 2, 3 };
 static uint8_t es_scale_bank[MP_SCALE_SLOTS][8];  // shared w/ Kria + MP
 
 static bool initialized = false;
-static bool active = false;    // Earthsea view front-most
-static bool writing = false;   // inside our own output write
-static bool dirty = true;      // OLED
+static bool active = false;     // Earthsea view front-most
+static bool writing = false;    // inside our own output write
+static bool dirty = true;       // OLED
 static bool cfg_dirty = false;  // bank edited, not yet flushed to flash
 
 // Absolute deadline for the next play event (drift-free re-arm; see
@@ -143,7 +143,8 @@ static void em_pos_cb(void* o) {
 static void em_arm_play(uint32_t interval, uint32_t now, bool fresh) {
     timer_remove(&esPlayTimer);
     if (!interval || eng.rt.mode != es_playing) return;
-    if (fresh) play_deadline = now + interval;
+    if (fresh)
+        play_deadline = now + interval;
     else {
         play_deadline += interval;
         // fell badly behind (long stall): resync instead of firing a burst
@@ -206,7 +207,7 @@ void set_earthsea_mode(void) {
 
 void earthsea_mode_exit(void) {
     earthsea_flush_if_dirty();  // bank + scale + i2c follower bank
-    kria_i2c_oled_exit();  // don't leave the MIDI editor open across exit
+    kria_i2c_oled_exit();       // don't leave the MIDI editor open across exit
     em_view = EM_VIEW_ES;
     active = false;
     // nothing playing in the background: silence live/drone notes and
@@ -320,9 +321,7 @@ static void em_start_stop(void) {
         es_engine_stop_playback(&eng);
         iv = 0;
     }
-    else {
-        iv = es_engine_start_playback(&eng, 0, now);
-    }
+    else { iv = es_engine_start_playback(&eng, 0, now); }
     writing = false;
     em_sync_transport(iv, now);
 }
@@ -544,9 +543,8 @@ uint8_t screen_refresh_earthsea(void) {
     const char* cmsg;
     const char* title = mode_confirm_active(&cmsg) ? cmsg : "EARTHSEA";
     font_string_region_clip(&line[0], title, 0, 0, EM_S_TITLE, 0);
-    font_string_region_clip(&line[0],
-                            em_view == EM_VIEW_I2C ? "I2C" : "", 66, 0,
-                            EM_S_VALUE, 0);
+    font_string_region_clip(&line[0], em_view == EM_VIEW_I2C ? "I2C" : "", 66,
+                            0, EM_S_VALUE, 0);
     font_string_region_clip(&line[0], mode_name[eng.rt.mode & 3], 100, 0,
                             EM_S_VALUE, 0);
 
@@ -567,14 +565,13 @@ uint8_t screen_refresh_earthsea(void) {
     }
 
     font_string_region_clip(&line[3], "CLOCK", 0, 0, EM_S_LABEL, 0);
-    font_string_region_clip(&line[3], eng.rt.clock_external ? "EXT" : "INT",
-                            42, 0, EM_S_VALUE, 0);
+    font_string_region_clip(&line[3], eng.rt.clock_external ? "EXT" : "INT", 42,
+                            0, EM_S_VALUE, 0);
     font_string_region_clip(&line[3], eng.cfg.arp ? "ARP" : "", 84, 0,
                             EM_S_VALUE, 0);
 
-    font_string_region_clip(&line[7],
-                            "SPC:PLAY A:ARM X:EXT [ ]:PATT S:SAVE 4:I2C", 0, 0,
-                            3, 0);
+    font_string_region_clip(
+        &line[7], "SPC:PLAY A:ARM X:EXT [ ]:PATT S:SAVE 4:I2C", 0, 0, 3, 0);
 
     return 0b11111111;
 }

@@ -32,12 +32,12 @@
 #define ES_VIEW_PATTERNS 2       // locked (y1 then y0)
 
 typedef struct {
-    uint8_t view;         // ES_VIEW_*
-    uint8_t runes_held;   // momentary overlays (control keys held)
+    uint8_t view;        // ES_VIEW_*
+    uint8_t runes_held;  // momentary overlays (control keys held)
     uint8_t edge_held;
     uint8_t voices_held;
     uint8_t ignore_arm_release;
-    uint8_t blinker;      // toggled by the shell's ~288 ms timer (rec blink)
+    uint8_t blinker;  // toggled by the shell's ~288 ms timer (rec blink)
     uint8_t held[ES_KEYMAP_SIZE / 8];  // held-key bitmap, index y*16+x
 
     // caller-owned shared scale bank (16 x 8 interval steps) for the scale

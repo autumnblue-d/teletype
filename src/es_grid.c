@@ -11,8 +11,10 @@
 
 static void held_set(es_grid_state_t* g, uint8_t idx, uint8_t z) {
     if (idx >= ES_KEYMAP_SIZE) return;
-    if (z) g->held[idx >> 3] |= (uint8_t)(1 << (idx & 7));
-    else g->held[idx >> 3] &= (uint8_t)~(1 << (idx & 7));
+    if (z)
+        g->held[idx >> 3] |= (uint8_t)(1 << (idx & 7));
+    else
+        g->held[idx >> 3] &= (uint8_t) ~(1 << (idx & 7));
 }
 
 static uint8_t held_get(const es_grid_state_t* g, uint8_t idx) {
@@ -63,7 +65,8 @@ static uint32_t control_column_key(es_engine_t* e, es_grid_state_t* g,
     }
     else if (y == 1) {  // pattern view
         if (z && e->rt.mode == es_recording) es_engine_stop_recording(e, now);
-        if (z && g->view == ES_VIEW_PATTERNS) g->view = ES_VIEW_MAIN;
+        if (z && g->view == ES_VIEW_PATTERNS)
+            g->view = ES_VIEW_MAIN;
         else if (z && g->view == ES_VIEW_MAIN)
             g->view = ES_VIEW_PATTERNS_HELD;
         else if (!z && g->view == ES_VIEW_PATTERNS_HELD)
@@ -113,7 +116,9 @@ static void runes_key(es_engine_t* e, uint8_t x, uint8_t y) {
     if (x > 1 && x < 5 && y > 1 && y < 5) {
         es_engine_set_linearize(e, !e->cfg.p[e->cfg.p_select].linearize);
     }
-    else if (x > 5 && x < 8 && y > 1 && y < 5) { es_engine_set_direction(e, 1); }
+    else if (x > 5 && x < 8 && y > 1 && y < 5) {
+        es_engine_set_direction(e, 1);
+    }
     else if (x > 8 && x < 11 && y > 1 && y < 5) {
         es_engine_set_direction(e, 0);
     }
@@ -125,7 +130,8 @@ static void edge_key(es_engine_t* e, uint8_t x, uint8_t y) {
     es_pattern_t* p = &e->cfg.p[e->cfg.p_select];
     if (y == 7) { es_engine_set_edge(e, ES_EDGE_FIXED, (x + 1) << 4); }
     else if (x) {
-        if (x < 6) es_engine_set_edge(e, ES_EDGE_PATTERN, 0);
+        if (x < 6)
+            es_engine_set_edge(e, ES_EDGE_PATTERN, 0);
         else if (x < 11)
             es_engine_set_edge(e, ES_EDGE_FIXED, p->edge_time);
         else
@@ -150,15 +156,16 @@ static uint32_t patterns_key(es_engine_t* e, es_grid_state_t* g, uint8_t x,
     if (x > 7 && y > 2 && y < 5) {
         // scale display select (toggle off by re-pressing)
         uint8_t scale = (uint8_t)(x - 8 + ((y - 3) << 3));
-        if (scale == e->cfg.scale) e->cfg.scale = 16;
-        else e->cfg.scale = scale;
+        if (scale == e->cfg.scale)
+            e->cfg.scale = 16;
+        else
+            e->cfg.scale = scale;
         return 0;
     }
 
     if (x < 2 || x > 5 || y < 2 || y > 5) return 0;
     es_engine_set_pattern(e, (uint8_t)((x - 2) + ((y - 2) << 2)));
-    if (g->view == ES_VIEW_PATTERNS)
-        return es_engine_start_playback(e, 0, now);
+    if (g->view == ES_VIEW_PATTERNS) return es_engine_start_playback(e, 0, now);
     return 0;
 }
 
@@ -307,7 +314,8 @@ static void render_main(es_engine_t* e, es_grid_state_t* g, uint8_t* led) {
         for (uint8_t x = 1; x < 16; x++)
             for (uint8_t y = ystart; y < 8; y++) {
                 uint8_t i = (uint8_t)((y << 4) + x);
-                if (e->cfg.keymap[i]) L(x, y) = (uint8_t)(e->cfg.keymap[i] << 1);
+                if (e->cfg.keymap[i])
+                    L(x, y) = (uint8_t)(e->cfg.keymap[i] << 1);
             }
     }
     else if (g->scale_bank) {
@@ -362,8 +370,10 @@ void es_grid_refresh(es_engine_t* e, es_grid_state_t* g, uint8_t* led,
     // control column
     for (uint8_t y = 0; y < 8; y++) L(0, y) = 2;
 
-    if (e->rt.mode == es_playing) L(0, 0) = 15;
-    else if (p->length) L(0, 0) = 8;
+    if (e->rt.mode == es_playing)
+        L(0, 0) = 15;
+    else if (p->length)
+        L(0, 0) = 8;
 
     if (g->view == ES_VIEW_PATTERNS) L(0, 1) = 15;
 
@@ -379,7 +389,8 @@ void es_grid_refresh(es_engine_t* e, es_grid_state_t* g, uint8_t* led,
     if (e->rt.mode == es_playing) {
         uint8_t pos = 0;
         if (e->rt.clock_external) {
-            if (p->length > 1) pos = (uint8_t)((e->rt.pos << 4) / (p->length - 1));
+            if (p->length > 1)
+                pos = (uint8_t)((e->rt.pos << 4) / (p->length - 1));
         }
         else if (e->rt.p_total) {
             uint32_t el = ((now - e->rt.p_start) << 4) / e->rt.p_total;
@@ -394,8 +405,7 @@ void es_grid_refresh(es_engine_t* e, es_grid_state_t* g, uint8_t* led,
     uint8_t show_patterns =
         g->view == ES_VIEW_PATTERNS || g->view == ES_VIEW_PATTERNS_HELD;
     uint8_t show_edge = g->edge_held && !g->runes_held;
-    uint8_t show_voices =
-        g->voices_held && !(g->runes_held || g->edge_held);
+    uint8_t show_voices = g->voices_held && !(g->runes_held || g->edge_held);
 
     if (g->runes_held) { render_runes(e, led); }
     else if (show_edge) { render_edge(e, led); }

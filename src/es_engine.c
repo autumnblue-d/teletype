@@ -179,8 +179,7 @@ static void play_pattern_note(es_engine_t* e, uint32_t now) {
 
     if (p->e[e->rt.pos].on == 1)
         note_on_xy(e, (int8_t)x, (int8_t)y, 1,
-                   p->edge == ES_EDGE_FIXED ? p->edge_time : 0, p->voices,
-                   now);
+                   p->edge == ES_EDGE_FIXED ? p->edge_time : 0, p->voices, now);
     else if (p->e[e->rt.pos].on == 0 && p->edge == ES_EDGE_PATTERN)
         note_off_xy(e, (int8_t)x, (int8_t)y);
 }
@@ -219,8 +218,10 @@ void es_engine_stop_playback(es_engine_t* e) {
 uint32_t es_engine_start_playback(es_engine_t* e, uint8_t pos, uint32_t now) {
     es_pattern_t* p = sel(e);
 
-    if (e->rt.mode == es_playing) es_engine_stop_playback(e);
-    else if (e->rt.mode == es_recording) complete_recording(e, now);
+    if (e->rt.mode == es_playing)
+        es_engine_stop_playback(e);
+    else if (e->rt.mode == es_recording)
+        complete_recording(e, now);
 
     if (!p->length) {
         e->rt.mode = es_stopped;
@@ -332,8 +333,7 @@ uint32_t es_engine_grid_press(es_engine_t* e, uint8_t x, uint8_t y, uint8_t z,
     }
     else if (e->rt.mode == es_stopped && rest_held && z) {
         uint8_t i = (y << 4) + x;
-        if (i < ES_KEYMAP_SIZE)
-            e->cfg.keymap[i] = (e->cfg.keymap[i] + 1) % 3;
+        if (i < ES_KEYMAP_SIZE) e->cfg.keymap[i] = (e->cfg.keymap[i] + 1) % 3;
     }
     else {
         if (p->edge == ES_EDGE_DRONE) {
@@ -351,10 +351,10 @@ uint32_t es_engine_grid_press(es_engine_t* e, uint8_t x, uint8_t y, uint8_t z,
         else {
             if (z) {
                 if (x != 15 || y != 0)
-                    note_on_xy(e, x, y, 0, 0,
-                               e->rt.mode == es_recording ? p->voices
-                                                          : e->cfg.voices,
-                               now);
+                    note_on_xy(
+                        e, x, y, 0, 0,
+                        e->rt.mode == es_recording ? p->voices : e->cfg.voices,
+                        now);
             }
             else
                 note_off_xy(e, x, y);
@@ -409,10 +409,14 @@ static void reverse_pattern(es_engine_t* e) {
 
     for (uint16_t i = 0; i < l; i++) {
         te[i] = p->e[i];
-        if (te[i].on == 3) te[i].on = 2;
-        else if (te[i].on == 2) te[i].on = 3;
-        else if (te[i].on == 1) te[i].on = 0;
-        else if (te[i].on == 0) te[i].on = 1;
+        if (te[i].on == 3)
+            te[i].on = 2;
+        else if (te[i].on == 2)
+            te[i].on = 3;
+        else if (te[i].on == 1)
+            te[i].on = 0;
+        else if (te[i].on == 0)
+            te[i].on = 1;
     }
 
     for (uint16_t i = 0; i < l; i++) p->e[i] = te[l - i - 1];

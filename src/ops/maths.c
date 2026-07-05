@@ -2,8 +2,8 @@
 
 #include <stdlib.h>  // abs
 
-#include "chaos.h"
 #include "beta.h"
+#include "chaos.h"
 #include "dejavu.h"
 #include "drum_helpers.h"
 #include "euclidean/euclidean.h"

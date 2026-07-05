@@ -248,7 +248,7 @@ TEST playback_intervals_and_loop_end(void) {
     uint32_t iv = es_engine_start_playback(&E, 0, 2000);
     ASSERT_EQ(100, iv);  // e[0].interval
     ASSERT_EQ(es_playing, E.rt.mode);
-    ASSERT_EQ(1, ev_count(EV_ON, 0));  // e[0] emitted immediately
+    ASSERT_EQ(1, ev_count(EV_ON, 0));       // e[0] emitted immediately
     iv = es_engine_play_advance(&E, 2100);  // e[1]: note off
     ASSERT_EQ(100, iv);
     ASSERT_EQ(1, ev_count(EV_OFF, 0));
@@ -301,9 +301,9 @@ TEST scrub_start_positions_mid_pattern(void) {
     ev_reset();
     // pos 8/16 -> start offset 500; events cover [0,100,200,300,1000)
     uint32_t iv = es_engine_start_playback(&E, 8, 5000);
-    ASSERT_EQ(3, E.rt.pos);    // event 3 spans 300..1000
-    ASSERT_EQ(500, iv);        // remaining part of its interval
-    ASSERT_EQ(0, evn);         // scrub start: no immediate note
+    ASSERT_EQ(3, E.rt.pos);         // event 3 spans 300..1000
+    ASSERT_EQ(500, iv);             // remaining part of its interval
+    ASSERT_EQ(0, evn);              // scrub start: no immediate note
     ASSERT_EQ(4500, E.rt.p_start);  // now - offset
     PASS();
 }
@@ -646,8 +646,8 @@ TEST grid_render_smoke(void) {
     gsetup();
     uint8_t led[ES_KEYMAP_SIZE];
     record_phrase();
-    es_grid_refresh(&E, &G, led, 1, 2000);  // recording view
-    ASSERT(led[2 << 4] >= 11);              // arm cell blinking bright
+    es_grid_refresh(&E, &G, led, 1, 2000);       // recording view
+    ASSERT(led[2 << 4] >= 11);                   // arm cell blinking bright
     es_grid_process_key(&E, &G, 0, 0, 1, 2000);  // play
     es_grid_refresh(&E, &G, led, 1, 2500);
     ASSERT_EQ(15, led[0]);  // start cell bright while playing

@@ -43,7 +43,7 @@
 
 // If you edit this array, you need to run 'utils/op_enums.py' to update the
 // values in 'op_enum.h' so that the order matches.
-const tele_op_t* tele_ops[E_OP__LENGTH] = {
+const tele_op_t *tele_ops[E_OP__LENGTH] = {
     // variables
     &op_A, &op_B, &op_C, &op_D, &op_DRUNK, &op_DRUNK_MAX, &op_DRUNK_MIN,
     &op_DRUNK_WRAP, &op_FLIP, &op_I, &op_O, &op_O_INC, &op_O_MAX, &op_O_MIN,
@@ -99,14 +99,14 @@ const tele_op_t* tele_ops[E_OP__LENGTH] = {
     &op_VN, &op_HZ, &op_N_S, &op_N_C, &op_N_CS, &op_N_B, &op_N_BX, &op_V,
     &op_VV, &op_ER, &op_NR, &op_DR_T, &op_DR_P, &op_DR_V, &op_GR_P, &op_GR_L,
     &op_GR_A, &op_DV, &op_DV_DV, &op_DV_L, &op_DV_R, &op_DV_B, &op_BETA,
-    &op_BPM, &op_BIT_OR,
-    &op_BIT_AND, &op_BIT_NOT, &op_BIT_XOR, &op_BSET, &op_BGET, &op_BCLR,
-    &op_BTOG, &op_BREV, &op_XOR, &op_CHAOS, &op_CHAOS_R, &op_CHAOS_ALG,
-    &op_SYM_PLUS, &op_SYM_DASH, &op_SYM_STAR, &op_SYM_FORWARD_SLASH,
-    &op_SYM_PERCENTAGE, &op_SYM_EQUAL_x2, &op_SYM_EXCLAMATION_EQUAL,
-    &op_SYM_LEFT_ANGLED, &op_SYM_RIGHT_ANGLED, &op_SYM_LEFT_ANGLED_EQUAL,
-    &op_SYM_RIGHT_ANGLED_EQUAL, &op_SYM_RIGHT_ANGLED_LEFT_ANGLED,
-    &op_SYM_LEFT_ANGLED_RIGHT_ANGLED, &op_SYM_RIGHT_ANGLED_EQUAL_LEFT_ANGLED,
+    &op_BPM, &op_BIT_OR, &op_BIT_AND, &op_BIT_NOT, &op_BIT_XOR, &op_BSET,
+    &op_BGET, &op_BCLR, &op_BTOG, &op_BREV, &op_XOR, &op_CHAOS, &op_CHAOS_R,
+    &op_CHAOS_ALG, &op_SYM_PLUS, &op_SYM_DASH, &op_SYM_STAR,
+    &op_SYM_FORWARD_SLASH, &op_SYM_PERCENTAGE, &op_SYM_EQUAL_x2,
+    &op_SYM_EXCLAMATION_EQUAL, &op_SYM_LEFT_ANGLED, &op_SYM_RIGHT_ANGLED,
+    &op_SYM_LEFT_ANGLED_EQUAL, &op_SYM_RIGHT_ANGLED_EQUAL,
+    &op_SYM_RIGHT_ANGLED_LEFT_ANGLED, &op_SYM_LEFT_ANGLED_RIGHT_ANGLED,
+    &op_SYM_RIGHT_ANGLED_EQUAL_LEFT_ANGLED,
     &op_SYM_LEFT_ANGLED_EQUAL_RIGHT_ANGLED, &op_SYM_EXCLAMATION,
     &op_SYM_LEFT_ANGLED_x2, &op_SYM_RIGHT_ANGLED_x2, &op_SYM_LEFT_ANGLED_x3,
     &op_SYM_RIGHT_ANGLED_x3, &op_SYM_AMPERSAND_x2, &op_SYM_PIPE_x2,

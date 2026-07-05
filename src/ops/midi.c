@@ -69,46 +69,46 @@ static void op_MI_CLKR_get(const void *data, scene_state_t *ss,
 static u8 midi_out_channel = 0;
 static u8 midi_out_port = 0;
 
-static void op_MO_CH_get(const void* data, scene_state_t* ss, exec_state_t* es,
-                         command_state_t* cs);
-static void op_MO_PORT_get(const void* data, scene_state_t* ss,
-                           exec_state_t* es, command_state_t* cs);
-static void op_MO_PORT_set(const void* data, scene_state_t* ss,
-                           exec_state_t* es, command_state_t* cs);
-static void op_MI_LP_get(const void* data, scene_state_t* ss, exec_state_t* es,
-                         command_state_t* cs);
-static void op_MI_NP_get(const void* data, scene_state_t* ss, exec_state_t* es,
-                         command_state_t* cs);
-static void op_MI_OP_get(const void* data, scene_state_t* ss, exec_state_t* es,
-                         command_state_t* cs);
-static void op_MI_CP_get(const void* data, scene_state_t* ss, exec_state_t* es,
-                         command_state_t* cs);
-static void op_MO_CH_set(const void* data, scene_state_t* ss, exec_state_t* es,
-                         command_state_t* cs);
-static void op_MO_N_get(const void* data, scene_state_t* ss, exec_state_t* es,
-                        command_state_t* cs);
-static void op_MO_N_POUND_get(const void* data, scene_state_t* ss,
-                              exec_state_t* es, command_state_t* cs);
-static void op_MO_NO_get(const void* data, scene_state_t* ss, exec_state_t* es,
-                         command_state_t* cs);
-static void op_MO_NO_POUND_get(const void* data, scene_state_t* ss,
-                               exec_state_t* es, command_state_t* cs);
-static void op_MO_CC_get(const void* data, scene_state_t* ss, exec_state_t* es,
-                         command_state_t* cs);
-static void op_MO_CC_POUND_get(const void* data, scene_state_t* ss,
-                               exec_state_t* es, command_state_t* cs);
-static void op_MO_PB_get(const void* data, scene_state_t* ss, exec_state_t* es,
-                         command_state_t* cs);
-static void op_MO_PRG_get(const void* data, scene_state_t* ss, exec_state_t* es,
-                          command_state_t* cs);
-static void op_MO_CLK_get(const void* data, scene_state_t* ss, exec_state_t* es,
-                          command_state_t* cs);
-static void op_MO_START_get(const void* data, scene_state_t* ss,
-                            exec_state_t* es, command_state_t* cs);
-static void op_MO_STOP_get(const void* data, scene_state_t* ss,
-                           exec_state_t* es, command_state_t* cs);
-static void op_MO_CONT_get(const void* data, scene_state_t* ss,
-                           exec_state_t* es, command_state_t* cs);
+static void op_MO_CH_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                         command_state_t *cs);
+static void op_MO_PORT_get(const void *data, scene_state_t *ss,
+                           exec_state_t *es, command_state_t *cs);
+static void op_MO_PORT_set(const void *data, scene_state_t *ss,
+                           exec_state_t *es, command_state_t *cs);
+static void op_MI_LP_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                         command_state_t *cs);
+static void op_MI_NP_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                         command_state_t *cs);
+static void op_MI_OP_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                         command_state_t *cs);
+static void op_MI_CP_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                         command_state_t *cs);
+static void op_MO_CH_set(const void *data, scene_state_t *ss, exec_state_t *es,
+                         command_state_t *cs);
+static void op_MO_N_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                        command_state_t *cs);
+static void op_MO_N_POUND_get(const void *data, scene_state_t *ss,
+                              exec_state_t *es, command_state_t *cs);
+static void op_MO_NO_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                         command_state_t *cs);
+static void op_MO_NO_POUND_get(const void *data, scene_state_t *ss,
+                               exec_state_t *es, command_state_t *cs);
+static void op_MO_CC_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                         command_state_t *cs);
+static void op_MO_CC_POUND_get(const void *data, scene_state_t *ss,
+                               exec_state_t *es, command_state_t *cs);
+static void op_MO_PB_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                         command_state_t *cs);
+static void op_MO_PRG_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                          command_state_t *cs);
+static void op_MO_CLK_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                          command_state_t *cs);
+static void op_MO_START_get(const void *data, scene_state_t *ss,
+                            exec_state_t *es, command_state_t *cs);
+static void op_MO_STOP_get(const void *data, scene_state_t *ss,
+                           exec_state_t *es, command_state_t *cs);
+static void op_MO_CONT_get(const void *data, scene_state_t *ss,
+                           exec_state_t *es, command_state_t *cs);
 
 // clang-format off
 
@@ -372,25 +372,25 @@ static void op_MI_CCH_get(const void *NOTUSED(data), scene_state_t *ss,
 }
 
 // Port (USB virtual cable, 0-based: 0=A, 1=B) the event arrived on.
-static void op_MI_LP_get(const void* NOTUSED(data), scene_state_t* ss,
-                         exec_state_t* NOTUSED(es), command_state_t* cs) {
+static void op_MI_LP_get(const void *NOTUSED(data), scene_state_t *ss,
+                         exec_state_t *NOTUSED(es), command_state_t *cs) {
     cs_push(cs, ss->midi.last_port);
 }
 
-static void op_MI_NP_get(const void* NOTUSED(data), scene_state_t* ss,
-                         exec_state_t* es, command_state_t* cs) {
+static void op_MI_NP_get(const void *NOTUSED(data), scene_state_t *ss,
+                         exec_state_t *es, command_state_t *cs) {
     s16 i = es_variables(es)->i;
     cs_push(cs, i < 1 || i > ss->midi.on_count ? 0 : ss->midi.on_port[i - 1]);
 }
 
-static void op_MI_OP_get(const void* NOTUSED(data), scene_state_t* ss,
-                         exec_state_t* es, command_state_t* cs) {
+static void op_MI_OP_get(const void *NOTUSED(data), scene_state_t *ss,
+                         exec_state_t *es, command_state_t *cs) {
     s16 i = es_variables(es)->i;
     cs_push(cs, i < 1 || i > ss->midi.off_count ? 0 : ss->midi.off_port[i - 1]);
 }
 
-static void op_MI_CP_get(const void* NOTUSED(data), scene_state_t* ss,
-                         exec_state_t* es, command_state_t* cs) {
+static void op_MI_CP_get(const void *NOTUSED(data), scene_state_t *ss,
+                         exec_state_t *es, command_state_t *cs) {
     s16 i = es_variables(es)->i;
     cs_push(cs, i < 1 || i > ss->midi.cc_count ? 0 : ss->midi.cc_port[i - 1]);
 }
@@ -421,34 +421,34 @@ static void mo_send(u8 status, u8 d1, u8 d2) {
     tele_midi_out(midi_out_port, pack, 3);
 }
 
-static void op_MO_CH_get(const void* NOTUSED(data), scene_state_t* NOTUSED(ss),
-                         exec_state_t* NOTUSED(es), command_state_t* cs) {
+static void op_MO_CH_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
+                         exec_state_t *NOTUSED(es), command_state_t *cs) {
     cs_push(cs, midi_out_channel + 1);
 }
 
-static void op_MO_CH_set(const void* NOTUSED(data), scene_state_t* NOTUSED(ss),
-                         exec_state_t* NOTUSED(es), command_state_t* cs) {
+static void op_MO_CH_set(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
+                         exec_state_t *NOTUSED(es), command_state_t *cs) {
     s16 ch = cs_pop(cs) - 1;
     if (ch < 0 || ch > 15) return;
     midi_out_channel = ch;
 }
 
-static void op_MO_PORT_get(const void* NOTUSED(data),
-                           scene_state_t* NOTUSED(ss),
-                           exec_state_t* NOTUSED(es), command_state_t* cs) {
+static void op_MO_PORT_get(const void *NOTUSED(data),
+                           scene_state_t *NOTUSED(ss),
+                           exec_state_t *NOTUSED(es), command_state_t *cs) {
     cs_push(cs, midi_out_port);
 }
 
-static void op_MO_PORT_set(const void* NOTUSED(data),
-                           scene_state_t* NOTUSED(ss),
-                           exec_state_t* NOTUSED(es), command_state_t* cs) {
+static void op_MO_PORT_set(const void *NOTUSED(data),
+                           scene_state_t *NOTUSED(ss),
+                           exec_state_t *NOTUSED(es), command_state_t *cs) {
     s16 port = cs_pop(cs);
     if (port < 0 || port > 15) return;
     midi_out_port = port;
 }
 
-static void op_MO_N_get(const void* NOTUSED(data), scene_state_t* NOTUSED(ss),
-                        exec_state_t* NOTUSED(es), command_state_t* cs) {
+static void op_MO_N_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
+                        exec_state_t *NOTUSED(es), command_state_t *cs) {
     u16 note = cs_pop(cs);
     u16 velocity = cs_pop(cs);
     if (note > 127) return;
@@ -456,9 +456,9 @@ static void op_MO_N_get(const void* NOTUSED(data), scene_state_t* NOTUSED(ss),
     mo_send(0x90 + midi_out_channel, note, velocity);
 }
 
-static void op_MO_N_POUND_get(const void* NOTUSED(data),
-                              scene_state_t* NOTUSED(ss),
-                              exec_state_t* NOTUSED(es), command_state_t* cs) {
+static void op_MO_N_POUND_get(const void *NOTUSED(data),
+                              scene_state_t *NOTUSED(ss),
+                              exec_state_t *NOTUSED(es), command_state_t *cs) {
     s16 ch = cs_pop(cs) - 1;
     u16 note = cs_pop(cs);
     u16 velocity = cs_pop(cs);
@@ -468,16 +468,16 @@ static void op_MO_N_POUND_get(const void* NOTUSED(data),
     mo_send(0x90 + ch, note, velocity);
 }
 
-static void op_MO_NO_get(const void* NOTUSED(data), scene_state_t* NOTUSED(ss),
-                         exec_state_t* NOTUSED(es), command_state_t* cs) {
+static void op_MO_NO_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
+                         exec_state_t *NOTUSED(es), command_state_t *cs) {
     u16 note = cs_pop(cs);
     if (note > 127) return;
     mo_send(0x80 + midi_out_channel, note, 0);
 }
 
-static void op_MO_NO_POUND_get(const void* NOTUSED(data),
-                               scene_state_t* NOTUSED(ss),
-                               exec_state_t* NOTUSED(es), command_state_t* cs) {
+static void op_MO_NO_POUND_get(const void *NOTUSED(data),
+                               scene_state_t *NOTUSED(ss),
+                               exec_state_t *NOTUSED(es), command_state_t *cs) {
     s16 ch = cs_pop(cs) - 1;
     u16 note = cs_pop(cs);
     if (ch < 0 || ch > 15) return;
@@ -485,8 +485,8 @@ static void op_MO_NO_POUND_get(const void* NOTUSED(data),
     mo_send(0x80 + ch, note, 0);
 }
 
-static void op_MO_CC_get(const void* NOTUSED(data), scene_state_t* NOTUSED(ss),
-                         exec_state_t* NOTUSED(es), command_state_t* cs) {
+static void op_MO_CC_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
+                         exec_state_t *NOTUSED(es), command_state_t *cs) {
     u16 controller = cs_pop(cs);
     u16 value = cs_pop(cs);
     if (controller > 127) return;
@@ -494,9 +494,9 @@ static void op_MO_CC_get(const void* NOTUSED(data), scene_state_t* NOTUSED(ss),
     mo_send(0xB0 + midi_out_channel, controller, value);
 }
 
-static void op_MO_CC_POUND_get(const void* NOTUSED(data),
-                               scene_state_t* NOTUSED(ss),
-                               exec_state_t* NOTUSED(es), command_state_t* cs) {
+static void op_MO_CC_POUND_get(const void *NOTUSED(data),
+                               scene_state_t *NOTUSED(ss),
+                               exec_state_t *NOTUSED(es), command_state_t *cs) {
     s16 ch = cs_pop(cs) - 1;
     u16 controller = cs_pop(cs);
     u16 value = cs_pop(cs);
@@ -506,42 +506,42 @@ static void op_MO_CC_POUND_get(const void* NOTUSED(data),
     mo_send(0xB0 + ch, controller, value);
 }
 
-static void op_MO_PB_get(const void* NOTUSED(data), scene_state_t* NOTUSED(ss),
-                         exec_state_t* NOTUSED(es), command_state_t* cs) {
+static void op_MO_PB_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
+                         exec_state_t *NOTUSED(es), command_state_t *cs) {
     u16 bend = cs_pop(cs);
     mo_send(0xE0 + midi_out_channel, bend, bend >> 8);
 }
 
-static void op_MO_PRG_get(const void* NOTUSED(data), scene_state_t* NOTUSED(ss),
-                          exec_state_t* NOTUSED(es), command_state_t* cs) {
+static void op_MO_PRG_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
+                          exec_state_t *NOTUSED(es), command_state_t *cs) {
     u16 program = cs_pop(cs);
     if (program > 127) return;
     mo_send(0xC0 + midi_out_channel, program, 0);
 }
 
-static void op_MO_CLK_get(const void* NOTUSED(data), scene_state_t* NOTUSED(ss),
-                          exec_state_t* NOTUSED(es),
-                          command_state_t* NOTUSED(cs)) {
+static void op_MO_CLK_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
+                          exec_state_t *NOTUSED(es),
+                          command_state_t *NOTUSED(cs)) {
     mo_send(0xF8, 0, 0);
 }
 
-static void op_MO_START_get(const void* NOTUSED(data),
-                            scene_state_t* NOTUSED(ss),
-                            exec_state_t* NOTUSED(es),
-                            command_state_t* NOTUSED(cs)) {
+static void op_MO_START_get(const void *NOTUSED(data),
+                            scene_state_t *NOTUSED(ss),
+                            exec_state_t *NOTUSED(es),
+                            command_state_t *NOTUSED(cs)) {
     mo_send(0xFA, 0, 0);
 }
 
-static void op_MO_STOP_get(const void* NOTUSED(data),
-                           scene_state_t* NOTUSED(ss),
-                           exec_state_t* NOTUSED(es),
-                           command_state_t* NOTUSED(cs)) {
+static void op_MO_STOP_get(const void *NOTUSED(data),
+                           scene_state_t *NOTUSED(ss),
+                           exec_state_t *NOTUSED(es),
+                           command_state_t *NOTUSED(cs)) {
     mo_send(0xFC, 0, 0);
 }
 
-static void op_MO_CONT_get(const void* NOTUSED(data),
-                           scene_state_t* NOTUSED(ss),
-                           exec_state_t* NOTUSED(es),
-                           command_state_t* NOTUSED(cs)) {
+static void op_MO_CONT_get(const void *NOTUSED(data),
+                           scene_state_t *NOTUSED(ss),
+                           exec_state_t *NOTUSED(es),
+                           command_state_t *NOTUSED(cs)) {
     mo_send(0xFB, 0, 0);
 }

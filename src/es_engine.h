@@ -60,17 +60,18 @@ typedef struct {
     uint8_t loop;
     uint8_t root_x;  // pattern root (transpose reference), grid coords
     uint8_t root_y;
-    uint8_t edge;       // ES_EDGE_*
+    uint8_t edge;        // ES_EDGE_*
     uint16_t edge_time;  // fixed-edge gate length, ticks (16..256)
-    uint8_t voices;     // playback voice mask (bit n = voice n)
-    uint8_t dir;        // 0 = forward, 1 = reverse (event list is rewritten)
-    uint8_t linearize;  // all intervals -> the interval at interval_ind
-    uint8_t start;      // reserved (Ansible loop-range remnant; kept for
-    uint8_t end;        //  layout fidelity, always 0/15)
+    uint8_t voices;      // playback voice mask (bit n = voice n)
+    uint8_t dir;         // 0 = forward, 1 = reverse (event list is rewritten)
+    uint8_t linearize;   // all intervals -> the interval at interval_ind
+    uint8_t start;       // reserved (Ansible loop-range remnant; kept for
+    uint8_t end;         //  layout fidelity, always 0/15)
 } es_pattern_t;
 
 // The single global Earthsea bank persisted in NVRAM (one instance; Ansible's
-// 8 grid presets + glyphs are dropped). ~8.6 KB -- see EARTHSEA_PORT_PLAN.md §0.
+// 8 grid presets + glyphs are dropped). ~8.6 KB -- see EARTHSEA_PORT_PLAN.md
+// §0.
 typedef struct {
     uint8_t arp;       // arp mode: live presses re-root the playing pattern
     uint8_t p_select;  // active pattern 0..15
@@ -84,7 +85,7 @@ typedef struct {
 
 typedef enum {
     es_stopped,
-    es_armed,      // first key press starts recording
+    es_armed,  // first key press starts recording
     es_recording,
     es_playing,
 } es_mode_t;
@@ -105,10 +106,10 @@ typedef struct {
 typedef struct {
     es_mode_t mode;
     es_note_t notes[ES_NUM_VOICES];
-    uint16_t pos;          // playback event index
-    uint32_t rec_tick;     // recording: timestamp of the previous event
-    uint32_t p_start;      // playback: timestamp of pattern start (UI/scrub)
-    uint32_t p_total;      // playback: total pattern time (linearize-aware)
+    uint16_t pos;            // playback event index
+    uint32_t rec_tick;       // recording: timestamp of the previous event
+    uint32_t p_start;        // playback: timestamp of pattern start (UI/scrub)
+    uint32_t p_total;        // playback: total pattern time (linearize-aware)
     uint8_t clock_external;  // set by the shell; suppresses timer-driven
                              // playback (start_playback returns 0, stepping
                              // happens via es_engine_clock_step)

@@ -27,8 +27,8 @@ static void op_ES_STOP_get(const void* data, scene_state_t* ss,
                            exec_state_t* es, command_state_t* cs);
 static void op_ES_MAGIC_get(const void* data, scene_state_t* ss,
                             exec_state_t* es, command_state_t* cs);
-static void op_ES_CV_get(const void *data, scene_state_t *ss, exec_state_t *es,
-                         command_state_t *cs);
+static void op_ES_CV_get(const void* data, scene_state_t* ss, exec_state_t* es,
+                         command_state_t* cs);
 static void op_ES_RUN_get(const void* data, scene_state_t* ss, exec_state_t* es,
                           command_state_t* cs);
 
@@ -89,8 +89,8 @@ static void op_ES_MAGIC_get(const void* NOTUSED(data),
     es_op_magic(cs_pop(cs));
 }
 
-static void op_ES_CV_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
-                         exec_state_t *NOTUSED(es), command_state_t *cs) {
+static void op_ES_CV_get(const void* NOTUSED(data), scene_state_t* NOTUSED(ss),
+                         exec_state_t* NOTUSED(es), command_state_t* cs) {
     int16_t a = cs_pop(cs);
     cs_push(cs, es_op_cv(a - 1));  // 1-based voice, like the i2c op
 }
