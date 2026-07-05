@@ -130,7 +130,7 @@ static void km_cv(void* c, uint8_t ch, int16_t sem) {
         kria_i2c_set_voice(ch, sem, eng.rt.dur_unscaled[ch]);
         kria_i2c_cv(ch, cv);
     }
-    tele_cv(ch, cv, 0);
+    tele_cv(ch, cv, 1);
 }
 static void km_slew(void* c, uint8_t ch, uint16_t s) {
     (void)c;
