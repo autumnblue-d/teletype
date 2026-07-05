@@ -92,6 +92,31 @@ which Teletype drives itself — typically from a metro or the pattern index.
 
 Teletype supplies all parameters each call; there is no clock, swing, or
 Euclidean state — those live in your script.
+
+#### Example: a 3-voice drum pattern, live-morphed by `PARAM`
+
+  ```text
+  I:
+  Y 96
+  D 180
+  M 125
+  TR.TIME 1 10
+  TR.TIME 2 10
+  TR.TIME 3 10
+
+  M:
+  Z % + Z 1 32
+  X SCL 0 16383 0 255 PARAM
+  IF GR.P 0 X Y D Z: TR.PULSE 1  => bass drum
+  IF GR.P 1 X Y D Z: TR.PULSE 2  => snare
+  IF GR.P 2 X Y D Z: TR.PULSE 3  => hi-hat
+  ```
+
+  `Z` is the step counter, advanced and wrapped to `0-31` on every metro tick.
+  `X` tracks the `PARAM` knob, scaled from its native range down to `0-255`,
+  so turning the knob sweeps across Grids' 2D pattern map live; `Y` and `D`
+  are fixed at init here, but can be driven the same way from another
+  CV/knob to explore the full map. Patch `TR 1`/`2`/`3` to three drum voices.
 """
 
 ["GR.L"]
