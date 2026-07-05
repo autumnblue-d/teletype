@@ -21,7 +21,9 @@
 // -> 0x26/0x27 for the i2c follower bits; -> 0x28 for the global i2c bank.
 // -> 0x29: I2M + MO MIDI followers (6->8 followers + MIDI fields in fstate).
 // -> 0x2A: Earthsea (SCENE_SLOTS 20->18 + global es_config_t bank).
-#define FIRSTRUN_KEY 0x2A
+// -> 0x2B: force reformat so f.kria / f.kria_i2c get seeded at first-run
+// (previously only repaired by boot-time fallbacks).
+#define FIRSTRUN_KEY 0x2B
 
 static grid_data_t grid_data;
 
