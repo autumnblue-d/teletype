@@ -4,12 +4,20 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "kria_engine.h"  // KRIA_NUM_TRACKS (AppCustom range widths)
+
 // Native Kria mode shell: owns the engine + clock + grid instances, drives the
 // clock timer and the per-track note-off/repeat/blink timers, binds output, and
 // renders the OLED. See KRIA_PORT_PLAN.md §5-§7.
 
 // Trigger input (0-indexed) carrying Kria's external clock when enabled.
 #define KR_EXT_CLOCK_INPUT 1
+
+// handler_AppCustom event codes: our ISR timers post these, main.c dispatches
+// them. Single values plus per-track ranges [BASE, BASE+KRIA_NUM_TRACKS).
+#define KR_APPEVT_CLOCK 2          // internal clock tick
+#define KR_APPEVT_NOTEOFF_BASE 10  // + track -> note-off
+#define KR_APPEVT_REPEAT_BASE 20   // + track -> repeat retrigger
 
 // Enter/leave the Kria view (from set_mode). The engine keeps running in the
 // background after exit; exit only relinquishes keyboard/grid + persists.
@@ -26,10 +34,8 @@ void process_kria_keys(uint8_t key, uint8_t mod_key, bool is_held_key);
 // OLED refresh (from handler_ScreenRefresh); returns a dirty bitmask.
 uint8_t screen_refresh_kria(void);
 
-// Event-loop services dispatched from handler_AppCustom:
-//   data == 2       -> kria_clock_tick (internal clock)
-//   data == 10..13  -> kria_service_note_off(track)
-//   data == 20..23  -> kria_service_repeat(track)
+// Event-loop services dispatched from handler_AppCustom (see the KR_APPEVT_*
+// codes above): clock tick, per-track note-off, per-track repeat.
 void kria_clock_tick(void);
 void kria_service_note_off(uint8_t track);
 void kria_service_repeat(uint8_t track);

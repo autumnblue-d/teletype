@@ -69,7 +69,8 @@ static bool es_engaged(void) {
 static void em_note_cb(void* o) {
     uint8_t v = *(uint8_t*)o;
     timer_remove(&esNoteTimer[v]);
-    event_t e = { .type = kEventAppCustom, .data = (int32_t)(30 + v) };
+    event_t e = { .type = kEventAppCustom,
+                  .data = (int32_t)(ES_APPEVT_NOTEOFF_BASE + v) };
     event_post(&e);
 }
 
@@ -103,7 +104,7 @@ static const es_output_t EM_OUT = { .note_on = em_note_on,
 static void em_play_cb(void* o) {
     (void)o;
     timer_remove(&esPlayTimer);
-    event_t e = { .type = kEventAppCustom, .data = 3 };
+    event_t e = { .type = kEventAppCustom, .data = ES_APPEVT_PLAY };
     event_post(&e);
 }
 

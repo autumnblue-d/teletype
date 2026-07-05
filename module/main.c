@@ -50,6 +50,7 @@
 #include "pattern_mode.h"
 #include "preset_r_mode.h"
 #include "preset_w_mode.h"
+#include "tele_app.h"  // grid-app registry (suppresses_output)
 #include "teletype.h"
 #include "teletype_io.h"
 #include "usb_disk_mode.h"
@@ -580,37 +581,39 @@ void handler_EventTimer(int32_t data) {
 }
 
 void handler_AppCustom(int32_t data) {
-    // data selects the custom event source: 0 = metro, 1 = meadowphysics clock.
-    if (data == 1) {
+    // data selects the custom event source: 0 = metro, otherwise one of the
+    // grid apps' APPEVT codes (defined in their mode headers; the posting ISR
+    // timers live in each mode shell).
+    if (data == MP_APPEVT_CLOCK) {
         meadowphysics_clock_tick();
         // keep the grid animating whenever MP drives it (its view, or while
         // it's playing in the background)
         if (meadowphysics_owns_grid()) scene_state.grid.grid_dirty = 1;
         return;
     }
-    // Kria: 2 = clock tick, 10-13 = note-off, 20-23 = repeat (see kria_mode.h).
-    if (data == 2) {
+    if (data == KR_APPEVT_CLOCK) {
         kria_clock_tick();
         if (kria_owns_grid()) scene_state.grid.grid_dirty = 1;
         return;
     }
-    if (data >= 10 && data < 14) {
-        kria_service_note_off((uint8_t)(data - 10));
+    if (data >= KR_APPEVT_NOTEOFF_BASE &&
+        data < KR_APPEVT_NOTEOFF_BASE + KRIA_NUM_TRACKS) {
+        kria_service_note_off((uint8_t)(data - KR_APPEVT_NOTEOFF_BASE));
         return;
     }
-    if (data >= 20 && data < 24) {
-        kria_service_repeat((uint8_t)(data - 20));
+    if (data >= KR_APPEVT_REPEAT_BASE &&
+        data < KR_APPEVT_REPEAT_BASE + KRIA_NUM_TRACKS) {
+        kria_service_repeat((uint8_t)(data - KR_APPEVT_REPEAT_BASE));
         return;
     }
-    // Earthsea: 3 = play-timer tick, 30-33 = fixed-edge note-off (see
-    // earthsea_mode.h).
-    if (data == 3) {
+    if (data == ES_APPEVT_PLAY) {
         es_service_play();
         if (es_owns_grid()) scene_state.grid.grid_dirty = 1;
         return;
     }
-    if (data >= 30 && data < 34) {
-        es_service_note_off((uint8_t)(data - 30));
+    if (data >= ES_APPEVT_NOTEOFF_BASE &&
+        data < ES_APPEVT_NOTEOFF_BASE + ES_NUM_VOICES) {
+        es_service_note_off((uint8_t)(data - ES_APPEVT_NOTEOFF_BASE));
         return;
     }
     if (ss_get_script_len(&scene_state, METRO_SCRIPT)) {
@@ -1164,9 +1167,8 @@ void tele_metro_reset() {
 }
 
 void tele_tr(uint8_t i, int16_t v) {
-    if (meadowphysics_suppresses_output(i)) return;
-    if (kria_suppresses_output(i)) return;
-    if (es_suppresses_output(i)) return;
+    for (int a = 0; a < TELE_APP_COUNT; a++)
+        if (tele_apps[a].suppresses_output(i)) return;  // app owns this channel
     uint32_t pin = B08 + (device_config.flip ? 3 - i : i);
 
     if (v)
@@ -1204,9 +1206,8 @@ void trPulseTimer_callback(void* obj) {
 }
 
 void tele_cv(uint8_t i, int16_t v, uint8_t s) {
-    if (meadowphysics_suppresses_output(i)) return;
-    if (kria_suppresses_output(i)) return;
-    if (es_suppresses_output(i)) return;
+    for (int a = 0; a < TELE_APP_COUNT; a++)
+        if (tele_apps[a].suppresses_output(i)) return;  // app owns this channel
     int16_t t = v + aout[i].off;
     if (t < 0)
         t = 0;

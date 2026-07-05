@@ -32,7 +32,10 @@ void process_meadowphysics_keys(uint8_t key, uint8_t mod_key, bool is_held_key);
 // bitmask.
 uint8_t screen_refresh_meadowphysics(void);
 
-// Internal clock tick, dispatched from handler_AppCustom (data == 1).
+// handler_AppCustom event code: our clock ISR posts it, main.c dispatches it.
+#define MP_APPEVT_CLOCK 1  // internal clock tick
+
+// Internal clock tick, dispatched from handler_AppCustom (MP_APPEVT_CLOCK).
 void meadowphysics_clock_tick(void);
 
 // External-clock edge from handler_Trigger for the configured Tr input (A3);

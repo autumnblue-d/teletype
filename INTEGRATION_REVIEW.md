@@ -103,22 +103,30 @@ iterating the same three apps in the same order:
 | Output suppression | 3 calls in `tele_tr`+`tele_cv` `main.c:1166`,`1206` |
 | Grid key/render | 2 cascades `grid.c:1066`,`1433` |
 
-**Recommendation: a small `tele_app_t` registry for the *uniform* seams only** —
-`{owns_grid, grid_key, grid_render, suppresses_output}`. Those four are already
-signature-uniform at the shell level. A `static const tele_app_t apps[3]`
-iterated once collapses the two grid cascades and the two suppression cascades.
-On AVR32 a const function-pointer table lives in flash and a loop is smaller than
-four inline if-chains, so this should be flash-neutral-to-positive — **verify
-against the `teletype.elf` PT_LOAD LMAs before committing.**
+**8a — `tele_app_t` registry for the *uniform* seams. [IMPLEMENTED]**
+`{owns_grid, grid_key, grid_render, suppresses_output}` in new
+`module/tele_app.{h,c}`; a `static const tele_app_t tele_apps[3]` iterated once
+now drives the two grid cascades (`grid.c`) and the two output-suppression
+cascades (`main.c` `tele_tr`/`tele_cv`). `grid.c` dropped its three per-app mode
+includes for the single `tele_app.h`. Adding/removing an app here is now one
+table row instead of four edit sites.
+**Flash: measured +44 bytes** (`0x58846` → `0x58872`) — the const
+function-pointer table costs slightly more than the inline if-chains it
+replaced, so the "neutral-to-positive" guess didn't hold. Small, and the session
+net is still well positive, but it *is* a cost, not a saving.
 
-Do *not* force a full vtable over everything: the `switch(mode)` sites also cover
-the 6 built-in modes, and the AppCustom/trigger sites are genuinely
+Did *not* force a full vtable over everything: the `switch(mode)` sites also
+cover the 6 built-in modes, and the AppCustom/trigger sites are genuinely
 per-app-shaped (Kria 3 services + 1 trigger; ES 2 + 2; MP 1 + 1).
 
-**8b. Fix the AppCustom magic-number encoding regardless.** `main.c:582` routes
-on bare integers (`1`=MP clock, `2`=Kria clock, `10-13`=Kria note-off,
-`20-23`=repeat, `3`=ES play, `30-33`=ES note-off) with the ranges only in a
-comment. Encode as named `#define`d bases shared between poster and dispatcher.
+**8b — AppCustom magic-number encoding. [IMPLEMENTED]** The bare integers
+(`1`=MP clock, `2`=Kria clock, `10-13`=note-off, `20-23`=repeat, `3`=ES play,
+`30-33`=ES note-off) are now named `#define`s in the mode headers
+(`MP_APPEVT_CLOCK`, `KR_APPEVT_CLOCK`/`_NOTEOFF_BASE`/`_REPEAT_BASE`,
+`ES_APPEVT_PLAY`/`_NOTEOFF_BASE`), shared by the posting ISR timers and the
+`main.c` dispatcher. The per-track/voice ranges are bounded by
+`KRIA_NUM_TRACKS`/`ES_NUM_VOICES` (the mode headers now include their engine
+header for the count), so the range width has a single source of truth.
 
 ## Leave alone — real divergences, not accidental
 

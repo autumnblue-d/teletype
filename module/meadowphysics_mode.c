@@ -81,7 +81,7 @@ static uint32_t mp_rnd(void* ctx) {
 // (handler_AppCustom, data == 1), mirroring the metro timer.
 static void mpClockTimer_callback(void* o) {
     (void)o;
-    event_t e = { .type = kEventAppCustom, .data = 1 };
+    event_t e = { .type = kEventAppCustom, .data = MP_APPEVT_CLOCK };
     event_post(&e);
 }
 

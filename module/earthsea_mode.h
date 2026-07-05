@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "es_engine.h"  // ES_NUM_VOICES (AppCustom range width)
+
 // Native Earthsea mode shell: owns the engine + grid instances, drives the
 // variable-interval play timer (absolute-deadline re-arm) and the per-voice
 // fixed-edge note-off timers, binds output (jacks + shared i2c followers),
@@ -16,6 +18,11 @@
 // Trigger inputs (0-indexed). MP owns 0, Kria owns 1.
 #define ES_EXT_CLOCK_INPUT 2  // stepped playback while clock_external
 #define ES_PLAY_INPUT 3       // rising edge (re)starts playback
+
+// handler_AppCustom event codes: our ISR timers post these, main.c dispatches
+// them. Single value plus per-voice range [BASE, BASE+ES_NUM_VOICES).
+#define ES_APPEVT_PLAY 3           // play-timer tick
+#define ES_APPEVT_NOTEOFF_BASE 30  // + voice -> fixed-edge note-off
 
 // Enter/leave the Earthsea view (from set_mode). Exit persists edits and
 // releases keyboard/grid; a playing pattern keeps playing in the background.

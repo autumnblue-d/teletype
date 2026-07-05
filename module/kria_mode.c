@@ -134,19 +134,21 @@ static const kria_output_t KM_OUT = {
 
 static void km_clock_cb(void* o) {
     (void)o;
-    event_t e = { .type = kEventAppCustom, .data = 2 };
+    event_t e = { .type = kEventAppCustom, .data = KR_APPEVT_CLOCK };
     event_post(&e);
 }
 static void km_aux_cb(void* o) {
     uint8_t t = *(uint8_t*)o;
     timer_remove(&auxTimer[t]);
-    event_t e = { .type = kEventAppCustom, .data = (int32_t)(10 + t) };
+    event_t e = { .type = kEventAppCustom,
+                  .data = (int32_t)(KR_APPEVT_NOTEOFF_BASE + t) };
     event_post(&e);
 }
 static void km_rpt_cb(void* o) {
     uint8_t t = *(uint8_t*)o;
     timer_remove(&repeatTimer[t]);
-    event_t e = { .type = kEventAppCustom, .data = (int32_t)(20 + t) };
+    event_t e = { .type = kEventAppCustom,
+                  .data = (int32_t)(KR_APPEVT_REPEAT_BASE + t) };
     event_post(&e);
 }
 static void km_blink_cb(void* o) {

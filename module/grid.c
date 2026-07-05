@@ -1,17 +1,15 @@
 #include "grid.h"
 
-#include "earthsea_mode.h"
 #include "edit_mode.h"
 #include "flash.h"
 #include "font.h"
 #include "globals.h"
-#include "kria_mode.h"
 #include "live_mode.h"
-#include "meadowphysics_mode.h"
 #include "mode_persist.h"
 #include "pattern_mode.h"
 #include "preset_r_mode.h"
 #include "state.h"
+#include "tele_app.h"  // grid-app registry (owns_grid / grid_key / grid_render)
 #include "teletype.h"
 #include "teletype_io.h"
 #include "timers.h"
@@ -1062,24 +1060,14 @@ void grid_process_key(scene_state_t* ss, u8 _x, u8 _y, u8 z, u8 emulated) {
     u8 x = SG.rotate && !emulated ? size_x - _x - 1 : _x;
     u8 y = SG.rotate && !emulated ? size_y - _y - 1 : _y;
 
-    // Meadowphysics owns the whole grid while active.
-    if (meadowphysics_owns_grid()) {
-        meadowphysics_grid_key(x, y, z);
-        ss->grid.grid_dirty = 1;
-        return;
-    }
-    // Kria owns the whole grid while active.
-    if (kria_owns_grid()) {
-        kria_grid_key(x, y, z);
-        ss->grid.grid_dirty = 1;
-        return;
-    }
-    // Earthsea owns the whole grid while active.
-    if (es_owns_grid()) {
-        es_grid_key(x, y, z);
-        ss->grid.grid_dirty = 1;
-        return;
-    }
+    // A ported app (Meadowphysics/Kria/Earthsea) owns the whole grid while
+    // active; route the key to whichever one does.
+    for (int a = 0; a < TELE_APP_COUNT; a++)
+        if (tele_apps[a].owns_grid()) {
+            tele_apps[a].grid_key(x, y, z);
+            ss->grid.grid_dirty = 1;
+            return;
+        }
 
     if (SG.clear_held) {
         grid_clear_held_keys();
@@ -1429,24 +1417,13 @@ void grid_refresh(scene_state_t* ss) {
     if (size_x == 0) size_x = 16;
     if (size_y == 0) size_y = 8;
 
-    // Meadowphysics owns the whole grid while active (renders its own buffer).
-    if (meadowphysics_owns_grid()) {
-        meadowphysics_grid_render();
-        ss->grid.grid_dirty = 0;
-        return;
-    }
-    // Kria owns the whole grid while active (renders its own buffer).
-    if (kria_owns_grid()) {
-        kria_grid_render();
-        ss->grid.grid_dirty = 0;
-        return;
-    }
-    // Earthsea owns the whole grid while active (renders its own buffer).
-    if (es_owns_grid()) {
-        es_grid_render();
-        ss->grid.grid_dirty = 0;
-        return;
-    }
+    // A ported app owns the whole grid while active (renders its own buffer).
+    for (int a = 0; a < TELE_APP_COUNT; a++)
+        if (tele_apps[a].owns_grid()) {
+            tele_apps[a].grid_render();
+            ss->grid.grid_dirty = 0;
+            return;
+        }
 
     grid_fill_area(0, 0, size_x, size_y, 0);
 
