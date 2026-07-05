@@ -6,7 +6,8 @@
 #include "flashc.h"
 #include "gpio.h"
 #include "init_teletype.h"
-#include "music.h"  // SCALE_INT (MP scale-bank defaults)
+#include "kria_i2c.h"  // kria_i2c_defaults (follower-bank first-run seed)
+#include "music.h"     // SCALE_INT (MP scale-bank defaults)
 #include "print_funcs.h"
 
 // this
@@ -37,6 +38,26 @@ u8 is_flash_fresh() {
     return f.fresh != FIRSTRUN_KEY;
 }
 
+// First-run seeding helpers. Each holds an ~18 KB staging buffer (scene_state_t
+// / kria_config_t). They are kept as separate non-inlined functions so their
+// frames never coexist -- inlined into flash_prepare they would sum to ~37 KB
+// and overflow the 8 KB stack.
+static __attribute__((noinline)) void flash_seed_blank_scenes(void) {
+    scene_state_t scene;
+    ss_init(&scene);
+
+    char text[SCENE_TEXT_LINES][SCENE_TEXT_CHARS];
+    memset(text, 0, SCENE_TEXT_LINES * SCENE_TEXT_CHARS);
+
+    for (uint8_t i = 0; i < SCENE_SLOTS; i++) { flash_write(i, &scene, &text); }
+}
+
+static __attribute__((noinline)) void flash_seed_kria_bank(void) {
+    kria_config_t kcfg;
+    kria_engine_set_defaults(&kcfg);
+    flashc_memcpy((void*)&f.kria, &kcfg, sizeof(kcfg), true);
+}
+
 void flash_prepare() {
     // if it's not empty return
     if (f.fresh != FIRSTRUN_KEY) {
@@ -61,16 +82,8 @@ void flash_prepare() {
         print_dbg("\r\nflash size: ");
         print_dbg_ulong(sizeof(f));
 
-        // blank scene to write to flash
-        scene_state_t scene;
-        ss_init(&scene);
-
-        char text[SCENE_TEXT_LINES][SCENE_TEXT_CHARS];
-        memset(text, 0, SCENE_TEXT_LINES * SCENE_TEXT_CHARS);
-
-        for (uint8_t i = 0; i < SCENE_SLOTS; i++) {
-            flash_write(i, &scene, &text);
-        }
+        // blank scenes (large stack frame, see helper note above)
+        flash_seed_blank_scenes();
 
         cal_data_t blank_cal_data;
         init_cal_data(&blank_cal_data);
@@ -108,6 +121,16 @@ void flash_prepare() {
         for (uint8_t p = 0; p < ES_NUM_PATTERNS; p++)
             flashc_memcpy((void*)&f.earthsea.p[p], &es_pattern_default,
                           sizeof(es_pattern_default), true);
+
+        // Kria global song/config bank defaults (large stack frame, see helper)
+        flash_seed_kria_bank();
+
+        // Global i2c follower bank defaults (shared by Kria + MP).
+        {
+            kria_i2c_fstate_t idef[KRIA_I2C_FOLLOWERS];
+            kria_i2c_defaults(idef);
+            flashc_memcpy((void*)&f.kria_i2c, idef, sizeof(idef), true);
+        }
 
         flash_update_last_saved_scene(0);
         flash_update_last_mode(M_LIVE);
