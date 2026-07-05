@@ -310,7 +310,12 @@ static void draw_oct(kria_engine_t* e, kria_grid_state_t* g, uint8_t* led) {
     for (i = 0; i < 16; i++) {
         int octsum = sum_clip(t->oct[i], t->octshift, 5);
         int in = step_in_loop(t, KR_P_OCT, i);
-        for (j = t->octshift; j <= octsum; j++) {
+        // Bar spans between the octshift baseline and octsum in EITHER
+        // direction, so steps set below the baseline draw a downward bar
+        // (Ansible refresh_kria octave view).
+        int lo = t->octshift <= octsum ? t->octshift : octsum;
+        int hi = t->octshift <= octsum ? octsum : t->octshift;
+        for (j = lo; j <= hi; j++) {
             uint8_t idx = (uint8_t)(R6 - 16 * j + i);
             led[idx] = L0;
             loop_shade(led, idx, in, modloop);
