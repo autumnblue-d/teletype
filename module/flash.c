@@ -25,6 +25,14 @@
 // (previously only repaired by boot-time fallbacks).
 #define FIRSTRUN_KEY 0x2B
 
+// Independent version tag for the global scale bank. The scale bank has no
+// load-time validity check (unlike the kria/mp configs, which self-repair via
+// *_config_valid), so a stale or never-seeded bank is used verbatim and shows
+// up as garbage default scales. flash_prepare() reseeds it on mismatch, which
+// self-heals on upgrade WITHOUT the scene-wiping full first-run. Bump when the
+// default scales change.
+#define SCALE_BANK_KEY 0x01
+
 static grid_data_t grid_data;
 
 #if defined(__AVR32__)
@@ -58,6 +66,19 @@ static __attribute__((noinline)) void flash_seed_kria_bank(void) {
     kria_config_t kcfg;
     kria_engine_set_defaults(&kcfg);
     flashc_memcpy((void*)&f.kria, &kcfg, sizeof(kcfg), true);
+}
+
+// Global scale bank defaults: slots 0-6 = the 7 diatonic modes, 7-15 =
+// chromatic (editable). step[0]=0 base; step[1..7]=semitone deltas, matching
+// Ansible's default_kria/default_mp seeding.
+static void flash_seed_scale_bank(void) {
+    uint8_t scale_bank[MP_SCALE_SLOTS][8];
+    for (uint8_t s = 0; s < MP_SCALE_SLOTS; s++) {
+        scale_bank[s][0] = 0;
+        for (uint8_t i = 0; i < 7; i++)
+            scale_bank[s][i + 1] = (s < 7) ? SCALE_INT[s][i] : 1;
+    }
+    flashc_memcpy((void*)&f.scale_bank, scale_bank, sizeof(scale_bank), true);
 }
 
 void flash_prepare() {
@@ -95,16 +116,8 @@ void flash_prepare() {
         flashc_memcpy((void*)&f.device_config, &device_config,
                       sizeof(device_config), true);
 
-        // MP scale bank defaults: 0-6 = the 7 diatonic modes, 7-15 = chromatic
-        // (editable). step[0]=0 base; step[1..7]=semitone deltas.
-        uint8_t scale_bank[MP_SCALE_SLOTS][8];
-        for (uint8_t s = 0; s < MP_SCALE_SLOTS; s++) {
-            scale_bank[s][0] = 0;
-            for (uint8_t i = 0; i < 7; i++)
-                scale_bank[s][i + 1] = (s < 7) ? SCALE_INT[s][i] : 1;
-        }
-        flashc_memcpy((void*)&f.scale_bank, scale_bank, sizeof(scale_bank),
-                      true);
+        // (the global scale bank is seeded by the version-tagged self-heal
+        // below, which also refreshes it on upgrade without a full first-run)
 
         // Earthsea bank defaults (single global instance), written piecewise:
         // a full es_config_t staging buffer would cost 8.6 KB of RAM, and the
@@ -137,6 +150,18 @@ void flash_prepare() {
         flash_update_last_saved_scene(0);
         flash_update_last_mode(M_LIVE);
         flashc_memset8((void*)&f.fresh, FIRSTRUN_KEY, 1, true);
+    }
+
+    // Self-heal the global scale bank independently of the scene-wiping first
+    // run above. Because the bank is used verbatim from flash (no *_config_valid
+    // check like kria/mp), a stale or never-seeded bank surfaces as garbage
+    // default scales. Reseed from defaults whenever the version tag mismatches:
+    // this runs on every boot but only writes flash once per version bump, and
+    // never touches scenes or the kria song. Covers upgrades and any device
+    // whose bank predates SCALE_BANK_KEY.
+    if (f.scale_fresh != SCALE_BANK_KEY) {
+        flash_seed_scale_bank();
+        flashc_memset8((void*)&f.scale_fresh, SCALE_BANK_KEY, 1, true);
     }
 }
 

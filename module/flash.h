@@ -48,6 +48,9 @@ typedef struct {
     kria_config_t kria;  // Kria global preset bank (single song), not per-scene
     kria_i2c_fstate_t kria_i2c[KRIA_I2C_FOLLOWERS];  // global i2c follower bank
     es_config_t earthsea;  // Earthsea global bank (single instance)
+    uint8_t scale_fresh;   // version tag for the scale-bank self-heal (see
+                           // SCALE_BANK_KEY in flash.c); kept last so adding it
+                           // doesn't shift any existing field's flash offset
 } nvram_data_t;
 
 u8 is_flash_fresh(void);
