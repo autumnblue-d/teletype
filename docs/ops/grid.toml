@@ -631,3 +631,41 @@ different range use a different group when initializing a fader.
 The default range is 0..16383. `G.RST` and `G.GRP.RST` reset ranges to the
 default value.
 """
+
+["G.XYP"]
+prototype = "G.XYP id x y w h level script"
+short = "initialize XY pad"
+description = """
+Initializes and enables an XY pad with the specified id. 8 XY pads are
+available (ids are 0-based so the possible id range is 0..7). The pad will be
+assigned to the current group (set with `G.GRP`). XY pads can be
+reinitialized at any point.
+
+`x` and `y` specify the coordinates of the top left corner, and `w` and `h`
+specify width and height respectively.
+
+`level` sets the background brightness level (0..15).
+
+`script` specifies the script to be executed whenever the pressed position
+within the pad changes. Use 9 for Metro and 10 for Init. Use 0 if you don't
+need a script assigned.
+
+Reinitializing a pad resets its current value (as read by `G.XYP.X` and
+`G.XYP.Y`) to 0.
+"""
+
+["G.XYP.X"]
+prototype = "G.XYP.X id"
+short = "get XY pad X value"
+description = """
+Get the current X value (0-based, up to `w - 1`) of the last pressed position
+within the specified XY pad.
+"""
+
+["G.XYP.Y"]
+prototype = "G.XYP.Y id"
+short = "get XY pad Y value"
+description = """
+Get the current Y value (0-based, up to `h - 1`) of the last pressed position
+within the specified XY pad.
+"""

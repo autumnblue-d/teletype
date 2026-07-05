@@ -554,7 +554,7 @@ const char* help7[HELP7_LENGTH] = { "7/19 PATTERNS",
                                     "P.ROT|ROTATE (NEG OK)",
                                     "P.MAP:|APPLY FUNC" };
 
-#define HELP8_LENGTH 135
+#define HELP8_LENGTH 141
 const char* help8[HELP8_LENGTH] = { "8/19 GRID",
                                     " ",
                                     "G.RST|RESET EVERYTHING",
@@ -689,7 +689,13 @@ const char* help8[HELP8_LENGTH] = { "8/19 GRID",
                                     "G.GFDR.L grp odd_lvl even_lvl",
                                     "    SET LEVEL FOR ALL IN GROUP",
                                     "G.GFDR.RN group min max",
-                                    "    SET FADER RANGE FOR .V" };
+                                    "    SET FADER RANGE FOR .V",
+                                    " ",
+                                    "XY PAD",
+                                    "G.XYP id x y w h",
+                                    "    level script",
+                                    "G.XYP.X id|GET X VALUE",
+                                    "G.XYP.Y id|GET Y VALUE" };
 #define HELP9_LENGTH 17
 const char* help9[HELP9_LENGTH] = { "9/19 TURTLE",
                                     " ",
