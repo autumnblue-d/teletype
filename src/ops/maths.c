@@ -372,15 +372,9 @@ static int16_t volts_to_note_number(int16_t v_in) {
 }
 
 static int16_t note_number_to_volts(int16_t note_in) {
-    if (note_in < 0) {
-        if (note_in < -127) note_in = -127;
-        note_in = -note_in;
-        return -table_n[note_in];
-    }
-    else {
-        if (note_in > 127) note_in = 127;
-        return table_n[note_in];
-    }
+    // note_to_cv() in helpers.c is the single source of truth (table_n == ET);
+    // the Kria/MP/ES bindings call it too, so all pitch shares this tuning.
+    return note_to_cv(note_in);
 }
 
 static int16_t scale_n_s_to_bitmask(int16_t scale_n_s) {

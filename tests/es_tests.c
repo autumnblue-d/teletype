@@ -10,8 +10,8 @@
 #include "es_engine.h"
 #include "es_grid.h"
 #include "greatest/greatest.h"
-#include "kria_binding.h"  // kria_note_to_cv (shared pitch mapping)
-#include "music.h"         // ET
+#include "helpers.h"  // note_to_cv (shared pitch mapping)
+#include "music.h"    // ET
 
 // ---- recording output vtable ----
 
@@ -686,8 +686,8 @@ TEST binding_vtable_drives_engine(void) {
 
 TEST binding_pitch_matches_n_op(void) {
     // ES pitch goes through the same ET mapping as the N op / Kria / MP.
-    ASSERT_EQ((int16_t)ET[14], kria_note_to_cv(es_engine_note_index(5, 5)));
-    ASSERT_EQ((int16_t)ET[0], kria_note_to_cv(es_engine_note_index(1, 7)));
+    ASSERT_EQ((int16_t)ET[14], note_to_cv(es_engine_note_index(5, 5)));
+    ASSERT_EQ((int16_t)ET[0], note_to_cv(es_engine_note_index(1, 7)));
     PASS();
 }
 

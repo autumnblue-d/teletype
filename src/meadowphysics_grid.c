@@ -7,10 +7,12 @@
 
 #include <string.h>  // memset
 
-// LED brightness levels (Ansible L0/L1/L2).
-#define MP_LED_DIM 4
-#define MP_LED_MED 8
-#define MP_LED_BRI 12
+#include "grid_led.h"  // GRID_L0/1/2 ramp + grid_led_finalize
+
+// LED brightness levels (Ansible L0/L1/L2) -- shared ramp, local aliases.
+#define MP_LED_DIM GRID_L0
+#define MP_LED_MED GRID_L1
+#define MP_LED_BRI GRID_L2
 
 #define MP_GRID_COLS 16
 
@@ -211,9 +213,7 @@ void mp_grid_refresh(mp_engine_t* e, mp_grid_state_t* g, uint8_t* led,
         }
     }
 
-    if (!vari)  // mono grid: any lit cell to full brightness (B5 fallback)
-        for (uint16_t i = 0; i < MP_ROWS * MP_GRID_COLS; i++)
-            if (led[i]) led[i] = 15;
+    grid_led_finalize(led, vari);
 }
 
 // ---- config-view scale editor (Ansible view_config / refresh_mp_config) ----
@@ -250,7 +250,5 @@ void mp_grid_scale_refresh(mp_engine_t* e, uint8_t (*bank)[8], uint8_t* led,
         led_set(led, 6 + (s >> 3), s & 7, 2);
     led_set(led, 6 + (slot >> 3), slot & 7, MP_LED_BRI);
 
-    if (!vari)
-        for (uint16_t i = 0; i < MP_ROWS * MP_GRID_COLS; i++)
-            if (led[i]) led[i] = 15;
+    grid_led_finalize(led, vari);
 }

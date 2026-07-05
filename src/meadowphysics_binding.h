@@ -14,12 +14,8 @@
 // (Ansible's DAC_10V). tele_cv() clamps its input to this ceiling.
 #define MP_CV_FULL 16383
 
-// Convert an engine scale degree / semitone (as passed to out.cv by
-// mp_note_on) into a raw 14-bit CV value using Teletype's equal-temperament
-// table (ET) -- identical to the N op's note_number_to_volts(). The per-channel
-// calibration offset is applied later inside tele_cv(). Note is clamped to
-// +/-127; negatives map below 0V.
-int16_t mp_note_to_cv(int16_t note);
+// Scale degree / semitone -> CV conversion is shared: see note_to_cv() in
+// helpers.h (used by the N op and all three grid-app bindings).
 
 // The output vtable routing engine events to TT hardware (tele_tr / tele_cv).
 // Pass to mp_engine_init(); ctx is unused. Gates are held levels (set on

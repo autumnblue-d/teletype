@@ -11,9 +11,9 @@
 // Scope vs Ansible: this renders/edits the primary 16x8 view. The 256-grid
 // second view (rows 8-15) and the OLED preset/clock/config/tuning screens are
 // out of scope here (shell/keyboard concern). Long-press gestures (pattern
-// copy, rpt reset) are exposed via kria_grid_key_hold() for the shell's key
-// timer to drive. Persisted edit-behavior flags (note_sync/loop_sync/div_sync/
-// note_div_sync) live in the grid state with Ansible defaults for now.
+// copy, rpt reset) are not ported. Persisted edit-behavior flags
+// (note_sync/loop_sync/div_sync/note_div_sync) live in the grid state with
+// Ansible defaults for now.
 
 #include <stdint.h>
 
@@ -69,11 +69,6 @@ void kria_grid_state_init(kria_grid_state_t* g);
 // grid state per the current page/mod-mode.
 void kria_grid_process_key(kria_engine_t* e, kria_grid_state_t* g, uint8_t x,
                            uint8_t y, uint8_t z);
-
-// A held key reached the long-press threshold (shell key timer). Handles the
-// pattern-copy and rpt-reset gestures. (x,y) is the still-held cell.
-void kria_grid_key_hold(kria_engine_t* e, kria_grid_state_t* g, uint8_t x,
-                        uint8_t y);
 
 // Render the current page into `led` (16*8 = 128 bytes, index y*16+x). Clears
 // first, clamps to 15. If `vari` is 0 (non-varibright), any lit cell is forced

@@ -12,6 +12,7 @@
 #include "teletype_io.h"
 
 // meadowphysics engine + output binding + clock + grid (src/)
+#include "helpers.h"  // note_to_cv (shared ET semitone mapping)
 #include "meadowphysics_binding.h"
 #include "meadowphysics_clock.h"
 #include "meadowphysics_engine.h"
@@ -53,7 +54,7 @@ static const char* const mp_scale_name[MP_SCALE_NAMED] = {
 static uint8_t mp_scale_bank[MP_SCALE_SLOTS][8];  // RAM mirror of f.scale_bank
 
 static mp_engine_t mp_eng;
-static mp_clock_t mp_clk;
+static grid_clock_t mp_clk;
 static mp_grid_state_t mp_grid;
 static softTimer_t mpClockTimer = { .next = NULL, .prev = NULL };
 static softTimer_t mpUiTimer = { .next = NULL,
@@ -69,15 +70,6 @@ static bool mp_bank_dirty =
     false;  // scale bank edited, not yet flushed to flash
 static uint8_t view = MP_VIEW_POSITIONS;
 static bool mp_i2c_view = false;  // grid shows the shared i2c view (keyboard 4)
-
-// Flush the shared i2c follower bank to flash if it was edited.
-static void mp_flush_i2c(void) {
-    if (kria_i2c_take_dirty()) {
-        kria_i2c_fstate_t t[KRIA_I2C_FOLLOWERS];
-        kria_i2c_save(t);
-        flash_update_kria_i2c(t);
-    }
-}
 
 // RNG adapter for the MP_RULE_RND rule (engine takes an injected source).
 static uint32_t mp_rnd(void* ctx) {
@@ -144,9 +136,10 @@ static void mp_out_tr(void* c, uint8_t ch, uint8_t on) {
 }
 static void mp_out_cv(void* c, uint8_t ch, int16_t note) {
     (void)c;
-    tele_cv(ch, mp_note_to_cv(note), 0);
+    int16_t cv = note_to_cv(note);
+    tele_cv(ch, cv, 0);
     kria_i2c_set_voice(ch, note, 0);
-    kria_i2c_cv(ch, mp_note_to_cv(note));
+    kria_i2c_cv(ch, cv);
 }
 static void mp_out_cv_gate(void* c, uint8_t ch, uint8_t on) {
     (void)c;
@@ -164,7 +157,8 @@ static const mp_output_t MP_OUT = {
 static void mp_init_once(void) {
     if (initialized) return;
     mp_engine_init(&mp_eng, &MP_OUT, &mp_rnd, NULL);
-    mp_clock_init(&mp_clk);
+    grid_clock_init(&mp_clk, MP_CLOCK_PERIOD_MIN, MP_CLOCK_PERIOD_MAX,
+                    MP_CLOCK_PERIOD_DEFAULT);
     mp_grid_state_init(&mp_grid);
     flash_get_scale_bank(mp_scale_bank);  // load bank before apply_scale
     mp_load_from_scene();
@@ -190,8 +184,8 @@ void meadowphysics_mode_exit(void) {
     // Persist the working config back to the scene so a later scene save
     // captures it.
     scene_state.mp = mp_eng.cfg;
-    mp_flush_bank();       // save any scale edits
-    mp_flush_i2c();        // persist follower-bank edits
+    mp_flush_bank();            // save any scale edits
+    mode_flush_i2c_if_dirty();  // persist follower-bank edits
     kria_i2c_oled_exit();  // don't leave the MIDI editor open across mode exit
     mp_i2c_view = false;
     active = false;
@@ -228,13 +222,13 @@ void meadowphysics_toggle_run(void) {
 void meadowphysics_clock_tick(void) {
     if (!mp_running) return;
     uint8_t phase;
-    if (mp_clock_internal_fire(&mp_clk, &phase)) run_clock(phase);
+    if (grid_clock_internal_fire(&mp_clk, &phase)) run_clock(phase);
 }
 
 bool meadowphysics_external_clock(uint8_t level) {
     if (!mp_running || !mp_clk.external) return false;
     uint8_t phase;
-    if (mp_clock_external_edge(&mp_clk, level, &phase)) run_clock(phase);
+    if (grid_clock_external_edge(&mp_clk, level, &phase)) run_clock(phase);
     return true;
 }
 
@@ -272,11 +266,7 @@ static bool mp_scale_editor_active(void) {
 void meadowphysics_grid_key(uint8_t x, uint8_t y, uint8_t z) {
     if (!meadowphysics_owns_grid()) return;
     if (active && mp_i2c_view) {
-        kria_i2c_view_key(x, y, z);  // shared i2c follower view
-        if (z) {
-            int8_t req = kria_i2c_view_take_oled_req();
-            if (req >= 0) kria_i2c_oled_enter((uint8_t)req);
-        }
+        mode_i2c_view_grid_key(x, y, z);  // shared i2c follower view
         dirty = true;
         return;
     }
@@ -328,7 +318,7 @@ void meadowphysics_op_run(int16_t on) {
 }
 
 static void set_period(uint16_t period_ms) {
-    mp_clock_set_period(&mp_clk, period_ms);
+    grid_clock_set_period(&mp_clk, period_ms);
     if (timer_enabled) mpClockTimer.ticks = mp_clk.period;
     dirty = true;
 }
@@ -337,33 +327,24 @@ void process_meadowphysics_keys(uint8_t key, uint8_t mod_key,
                                 bool is_held_key) {
     if (is_held_key) return;
 
-    if (kria_i2c_oled_active()) {  // MIDI-follower editor has the keyboard
-        if (kria_i2c_oled_key(key, mod_key, is_held_key)) {
-            if (!kria_i2c_oled_active()) mp_flush_i2c();  // exited via <enter>
-            dirty = true;
-            return;
-        }
-        // not an editor key: leave the editor and process normally below.
-        kria_i2c_oled_exit();
-        mp_flush_i2c();
-        dirty = true;
-    }
+    // MIDI-follower editor: consumes the key (return) or exits + falls through.
+    if (mode_i2c_oled_handle_key(key, mod_key, is_held_key, &dirty)) return;
 
     if (match_no_mod(mod_key, key, HID_1)) {
         view = MP_VIEW_POSITIONS;
         mp_flush_bank();  // leaving the Config view: save scale edits
-        if (mp_i2c_view) mp_flush_i2c();
+        if (mp_i2c_view) mode_flush_i2c_if_dirty();
         mp_i2c_view = false;
     }
     else if (match_no_mod(mod_key, key, HID_2)) {
         view = MP_VIEW_CLOCK;
         mp_flush_bank();
-        if (mp_i2c_view) mp_flush_i2c();
+        if (mp_i2c_view) mode_flush_i2c_if_dirty();
         mp_i2c_view = false;
     }
     else if (match_no_mod(mod_key, key, HID_3)) {
         view = MP_VIEW_CONFIG;
-        if (mp_i2c_view) mp_flush_i2c();
+        if (mp_i2c_view) mode_flush_i2c_if_dirty();
         mp_i2c_view = false;
     }
     else if (match_no_mod(mod_key, key, HID_4)) {  // shared i2c follower view
@@ -381,8 +362,8 @@ void process_meadowphysics_keys(uint8_t key, uint8_t mod_key,
         // flash (the config rides along in flash_write). Mirrors preset_w's
         // alt-<enter>, giving MP the same one-key save as Kria/Earthsea.
         scene_state.mp = mp_eng.cfg;
-        mp_flush_bank();  // shared scale bank, if edited
-        mp_flush_i2c();   // shared follower bank, if edited
+        mp_flush_bank();            // shared scale bank, if edited
+        mode_flush_i2c_if_dirty();  // shared follower bank, if edited
         flash_write(preset_select, &scene_state, &scene_text);
         flash_update_last_saved_scene(preset_select);
         mode_confirm_show("SAVED");
@@ -395,7 +376,7 @@ void process_meadowphysics_keys(uint8_t key, uint8_t mod_key,
             for (uint8_t i = mp_owned_channels(); i < 4; i++) tele_tr(i, 0);
     }
     else if (match_no_mod(mod_key, key, HID_X)) {
-        mp_clock_set_external(&mp_clk, !mp_clk.external);
+        grid_clock_set_external(&mp_clk, !mp_clk.external);
     }
     else if (match_no_mod(mod_key, key, HID_UNDERSCORE)) {  // '-' : slower
         set_period(mp_clk.period + MP_TEMPO_STEP);
@@ -434,11 +415,6 @@ static const char* const mp_rule_name[8] = { "NONE", "INC", "DEC",  "MAX",
 static const char* const mp_target_name[4] = { "-", "COUNT", "SPEED", "BOTH" };
 
 // write a decimal number at (line, x)
-static void mp_num(uint8_t ln, uint8_t x, int val, uint8_t fg) {
-    char s[8];
-    itoa(val, s, 10);
-    font_string_region_clip(&line[ln], s, x, 0, fg, 0);
-}
 
 // OLED status view. A persistent header (L0-L3) plus a view-specific detail
 // panel (L4-L7) selected by the keyboard 1/2/3 views. Net-new (Ansible has no
@@ -447,10 +423,7 @@ uint8_t screen_refresh_meadowphysics(void) {
     if (!dirty) return 0;
     dirty = false;
 
-    if (kria_i2c_oled_active()) {  // MIDI-follower editor owns the screen
-        kria_i2c_oled_render();
-        return 0b11111111;
-    }
+    if (mode_i2c_oled_render_active()) return 0b11111111;
 
     static const char* const grid_sub[3] = { "POS", "SPD", "RUL" };
     for (uint8_t i = 0; i < 8; i++) region_fill(&line[i], 0);
@@ -482,14 +455,14 @@ uint8_t screen_refresh_meadowphysics(void) {
     font_string_region_clip(&line[2], "CLOCK", 0, 0, MP_S_LABEL, 0);
     font_string_region_clip(&line[2], mp_clk.external ? "EXT" : "INT", 42, 0,
                             MP_S_VALUE, 0);
-    mp_num(2, 78, mp_clk.period, MP_S_VALUE);
+    mode_draw_num(2, 78, mp_clk.period, MP_S_VALUE);
     font_string_region_clip(&line[2], "MS", 108, 0, MP_S_LABEL, 0);
 
     font_string_region_clip(&line[3], "GRID", 0, 0, MP_S_LABEL, 0);
     font_string_region_clip(&line[3], grid_sub[mp_grid.edit_mode], 42, 0,
                             MP_S_VALUE, 0);
     font_string_region_clip(&line[3], "SCL", 78, 0, MP_S_LABEL, 0);
-    mp_num(3, 108, mp_eng.cfg.scale, MP_S_VALUE);
+    mode_draw_num(3, 108, mp_eng.cfg.scale, MP_S_VALUE);
 
     // --- detail panel (L4-L7), per keyboard-selected view ---
     if (view == MP_VIEW_CLOCK) {
@@ -499,11 +472,11 @@ uint8_t screen_refresh_meadowphysics(void) {
                                 mp_clk.external ? "EXT TR1" : "INTERNAL", 48, 0,
                                 MP_S_VALUE, 0);
         font_string_region_clip(&line[6], "PERIOD", 0, 0, MP_S_LABEL, 0);
-        mp_num(6, 48, mp_clk.period, MP_S_VALUE);
+        mode_draw_num(6, 48, mp_clk.period, MP_S_VALUE);
         font_string_region_clip(&line[6], "MS", 78, 0, MP_S_LABEL, 0);
         // one step = two clock edges, so steps/min = 30000 / period
         font_string_region_clip(&line[7], "STEP/M", 0, 0, MP_S_LABEL, 0);
-        mp_num(7, 48, 30000 / mp_clk.period, MP_S_VALUE);
+        mode_draw_num(7, 48, 30000 / mp_clk.period, MP_S_VALUE);
     }
     else if (view == MP_VIEW_CONFIG) {
         font_string_region_clip(&line[4], "CONFIG", 0, 0, MP_S_TITLE, 0);
@@ -511,7 +484,7 @@ uint8_t screen_refresh_meadowphysics(void) {
         font_string_region_clip(&line[5], mp_voice_name[mp_eng.cfg.voice_mode],
                                 48, 0, MP_S_VALUE, 0);
         font_string_region_clip(&line[6], "SCALE", 0, 0, MP_S_LABEL, 0);
-        mp_num(6, 48, mp_eng.cfg.scale, MP_S_VALUE);  // slot number
+        mode_draw_num(6, 48, mp_eng.cfg.scale, MP_S_VALUE);  // slot number
         font_string_region_clip(&line[6],
                                 mp_eng.cfg.scale < MP_SCALE_NAMED
                                     ? mp_scale_name[mp_eng.cfg.scale]
@@ -523,21 +496,21 @@ uint8_t screen_refresh_meadowphysics(void) {
     else {  // MP_VIEW_POSITIONS: detail for the selected row
         uint8_t er = mp_grid.edit_row;
         font_string_region_clip(&line[4], "ROW", 0, 0, MP_S_LABEL, 0);
-        mp_num(4, 30, er, MP_S_TITLE);
+        mode_draw_num(4, 30, er, MP_S_TITLE);
         font_string_region_clip(&line[5], "CNT", 0, 0, MP_S_LABEL, 0);
-        mp_num(5, 30, mp_eng.cfg.count[er], MP_S_VALUE);
+        mode_draw_num(5, 30, mp_eng.cfg.count[er], MP_S_VALUE);
         font_string_region_clip(&line[5], "RNG", 66, 0, MP_S_LABEL, 0);
-        mp_num(5, 96, mp_eng.cfg.min[er], MP_S_VALUE);
+        mode_draw_num(5, 96, mp_eng.cfg.min[er], MP_S_VALUE);
         font_string_region_clip(&line[5], "-", 108, 0, MP_S_LABEL, 0);
-        mp_num(5, 114, mp_eng.cfg.max[er], MP_S_VALUE);
+        mode_draw_num(5, 114, mp_eng.cfg.max[er], MP_S_VALUE);
         font_string_region_clip(&line[6], "SPD", 0, 0, MP_S_LABEL, 0);
-        mp_num(6, 30, mp_eng.cfg.speed[er], MP_S_VALUE);
+        mode_draw_num(6, 30, mp_eng.cfg.speed[er], MP_S_VALUE);
         font_string_region_clip(&line[6], "RULE", 66, 0, MP_S_LABEL, 0);
         font_string_region_clip(&line[6],
                                 mp_rule_name[mp_eng.cfg.rules[er] & 7], 102, 0,
                                 MP_S_VALUE, 0);
         font_string_region_clip(&line[7], "DST R", 0, 0, MP_S_LABEL, 0);
-        mp_num(7, 36, mp_eng.cfg.rule_dests[er], MP_S_VALUE);
+        mode_draw_num(7, 36, mp_eng.cfg.rule_dests[er], MP_S_VALUE);
         font_string_region_clip(
             &line[7], mp_target_name[mp_eng.cfg.rule_dest_targets[er] & 3], 66,
             0, MP_S_VALUE, 0);

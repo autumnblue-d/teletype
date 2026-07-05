@@ -11,8 +11,9 @@
 #include "teletype.h"
 #include "teletype_io.h"
 
-// kria engine + binding + clock + grid (src/)
-#include "kria_binding.h"  // kria_note_to_cv
+// kria engine + clock + grid (src/)
+#include "grid_led.h"  // GRID_L0/1/2 ramp + grid_led_finalize
+#include "helpers.h"   // note_to_cv (shared ET semitone mapping)
 #include "kria_clock.h"
 #include "kria_engine.h"
 #include "kria_grid.h"
@@ -38,7 +39,7 @@
 // ---- instances / state ----
 
 static kria_engine_t eng;
-static kria_clock_t clk;
+static grid_clock_t clk;
 static kria_grid_state_t kgrid;
 
 static softTimer_t kriaClockTimer = { .next = NULL, .prev = NULL };
@@ -74,18 +75,6 @@ static uint8_t km_view = KM_VIEW_SEQ;
 static uint8_t km_rough = 0;
 static uint8_t km_fine = 0;
 
-// Flush the shared i2c follower bank to flash if it was edited. Returns true
-// if it wrote.
-static bool km_flush_i2c(void) {
-    if (kria_i2c_take_dirty()) {
-        kria_i2c_fstate_t t[KRIA_I2C_FOLLOWERS];
-        kria_i2c_save(t);
-        flash_update_kria_i2c(t);
-        return true;
-    }
-    return false;
-}
-
 // Persist the Kria song bank (+ shared scale bank) and i2c follower bank if
 // dirty. The single save path -- used by mode exit, the S key, and a scene
 // save (via mode_persist_flush_all_dirty). Returns true if anything was
@@ -98,7 +87,7 @@ bool kria_flush_if_dirty(void) {
         cfg_dirty = false;
         wrote = true;
     }
-    if (km_flush_i2c()) wrote = true;
+    if (mode_flush_i2c_if_dirty()) wrote = true;
     return wrote;
 }
 
@@ -125,7 +114,7 @@ static void km_tr(void* c, uint8_t ch, uint8_t on) {
 }
 static void km_cv(void* c, uint8_t ch, int16_t sem) {
     (void)c;
-    int16_t cv = kria_note_to_cv(sem);
+    int16_t cv = note_to_cv(sem);
     if (ch < KRIA_NUM_TRACKS) {
         kria_i2c_set_voice(ch, sem, eng.rt.dur_unscaled[ch]);
         kria_i2c_cv(ch, cv);
@@ -233,12 +222,13 @@ static void km_init_once(void) {
     if (initialized) return;
     flash_get_scale_bank(kria_scale_bank);
     kria_engine_init(&eng, &KM_OUT, &km_rnd, NULL, kria_scale_bank);
-    kria_clock_init(&clk);
+    grid_clock_init(&clk, KR_CLOCK_PERIOD_MIN, KR_CLOCK_PERIOD_MAX,
+                    KR_CLOCK_PERIOD_DEFAULT);
     kria_grid_state_init(&kgrid);
     kgrid.scale_bank = kria_scale_bank;
     km_load_flash();
     // (i2c follower bank is global and loaded at boot in main.c)
-    kria_clock_set_period(&clk, eng.cfg.clock_period ? eng.cfg.clock_period
+    grid_clock_set_period(&clk, eng.cfg.clock_period ? eng.cfg.clock_period
                                                      : KR_CLOCK_PERIOD_DEFAULT);
     timer_add(&kriaBlinkTimer, 100, &km_altblink_cb, NULL);
     initialized = true;
@@ -292,7 +282,7 @@ void kria_toggle_run(void) {
 void kria_clock_tick(void) {
     if (!kria_running) return;
     uint8_t phase;
-    if (kria_clock_internal_fire(&clk, &phase)) run_clock(phase);
+    if (grid_clock_internal_fire(&clk, &phase)) run_clock(phase);
 }
 
 void kria_service_note_off(uint8_t track) {
@@ -326,7 +316,7 @@ void kria_service_repeat(uint8_t track) {
 bool kria_external_clock(uint8_t level) {
     if (!kria_running || !clk.external) return false;
     uint8_t phase;
-    if (kria_clock_external_edge(&clk, level, &phase)) run_clock(phase);
+    if (grid_clock_external_edge(&clk, level, &phase)) run_clock(phase);
     return true;
 }
 
@@ -343,15 +333,11 @@ bool kria_owns_grid(void) {
 
 // ---- Time / Config grid views (Ansible Key 1 / Key 2 equivalents) ----
 
-#define KM_LD 4   // dim
-#define KM_LB 12  // bright
+#define KM_LD GRID_L0  // dim
+#define KM_LB GRID_L2  // bright
 
 static void km_view_finalize(uint8_t* led) {
-    uint8_t v = monome_is_vari();
-    for (int i = 0; i < 128; i++) {
-        if (led[i] > 15) led[i] = 15;
-        if (!v && led[i]) led[i] = 15;  // non-varibright: force lit cells full
-    }
+    grid_led_finalize(led, monome_is_vari());
 }
 
 // tempo <-> rough/fine (Ansible: period = 20 + rough*16 + fine).
@@ -510,11 +496,7 @@ void kria_grid_key(uint8_t x, uint8_t y, uint8_t z) {
     else if (active && km_view == KM_VIEW_CONFIG)
         km_config_key(x, y, z);
     else if (active && km_view == KM_VIEW_I2C) {
-        kria_i2c_view_key(x, y, z);
-        if (z) {
-            int8_t req = kria_i2c_view_take_oled_req();
-            if (req >= 0) kria_i2c_oled_enter((uint8_t)req);
-        }
+        mode_i2c_view_grid_key(x, y, z);
     }
     else {
         kria_grid_process_key(&eng, &kgrid, x, y, z);
@@ -537,7 +519,7 @@ void kria_grid_render(void) {
 // ---- keyboard ----
 
 static void km_set_period(uint16_t p) {
-    kria_clock_set_period(&clk, p);
+    grid_clock_set_period(&clk, p);
     eng.cfg.clock_period = clk.period;
     cfg_dirty = true;
     if (timer_enabled) kriaClockTimer.ticks = clk.period;
@@ -547,23 +529,13 @@ static void km_set_period(uint16_t p) {
 void process_kria_keys(uint8_t key, uint8_t mod_key, bool is_held_key) {
     if (is_held_key) return;
 
-    if (kria_i2c_oled_active()) {  // MIDI-follower editor has the keyboard
-        if (kria_i2c_oled_key(key, mod_key, is_held_key)) {
-            if (!kria_i2c_oled_active()) km_flush_i2c();  // exited via <enter>
-            dirty = true;
-            return;
-        }
-        // not an editor key: leave the editor and process normally below, so
-        // 1/2/3/4 (and other keys) switch views instead of getting stuck.
-        kria_i2c_oled_exit();
-        km_flush_i2c();
-        dirty = true;
-    }
+    // MIDI-follower editor: consumes the key (return) or exits + falls through.
+    if (mode_i2c_oled_handle_key(key, mod_key, is_held_key, &dirty)) return;
 
     if (match_no_mod(mod_key, key, HID_SPACEBAR)) { kria_toggle_run(); }
     else if (match_no_mod(mod_key, key, HID_R)) { kria_engine_reset(&eng); }
     else if (match_no_mod(mod_key, key, HID_X)) {
-        kria_clock_set_external(&clk, !clk.external);
+        grid_clock_set_external(&clk, !clk.external);
     }
     else if (match_no_mod(mod_key, key, HID_UNDERSCORE)) {  // '-' slower
         km_set_period(clk.period + KM_TEMPO_STEP);
@@ -609,11 +581,6 @@ static const char* const km_page_name[9] = { "TRIG",  "NOTE",  "OCT",
                                              "GLIDE", "SCALE", "PATT" };
 static const char* const km_view_name[4] = { "SEQ", "TIME", "CONFIG", "I2C" };
 
-static void km_num(uint8_t ln, uint8_t x, int val, uint8_t fg) {
-    char s[8];
-    itoa(val, s, 10);
-    font_string_region_clip(&line[ln], s, x, 0, fg, 0);
-}
 
 // ---- native ops (KR.* retargeted from external-Ansible i2c to the engine)
 // ---- All ensure the engine is constructed so ops work even before entering
@@ -781,7 +748,8 @@ int16_t kria_op_ii(int16_t follower, int16_t set, int16_t val) {
     if (follower < 0 || follower >= KRIA_I2C_FOLLOWERS) return 0;
     if (set) {
         kria_i2c_set_active((uint8_t)follower, val ? 1 : 0);
-        km_flush_i2c();  // persist immediately (global follower bank)
+        mode_flush_i2c_if_dirty();  // persist immediately (global follower
+                                    // bank)
         dirty = true;
     }
     return kria_i2c_follower((uint8_t)follower)->active;
@@ -791,10 +759,7 @@ uint8_t screen_refresh_kria(void) {
     if (!dirty) return 0;
     dirty = false;
 
-    if (kria_i2c_oled_active()) {  // MIDI-follower editor owns the screen
-        kria_i2c_oled_render();
-        return 0b11111111;
-    }
+    if (mode_i2c_oled_render_active()) return 0b11111111;
 
     for (uint8_t i = 0; i < 8; i++) region_fill(&line[i], 0);
 
@@ -807,18 +772,18 @@ uint8_t screen_refresh_kria(void) {
                             KM_S_VALUE, 0);
 
     font_string_region_clip(&line[1], "PATT", 0, 0, KM_S_LABEL, 0);
-    km_num(1, 42, eng.cfg.pattern, KM_S_VALUE);
+    mode_draw_num(1, 42, eng.cfg.pattern, KM_S_VALUE);
     font_string_region_clip(&line[1], eng.cfg.meta ? "META" : "", 84, 0,
                             KM_S_VALUE, 0);
 
     font_string_region_clip(&line[2], "CLOCK", 0, 0, KM_S_LABEL, 0);
     font_string_region_clip(&line[2], clk.external ? "EXT" : "INT", 42, 0,
                             KM_S_VALUE, 0);
-    km_num(2, 78, clk.period, KM_S_VALUE);
+    mode_draw_num(2, 78, clk.period, KM_S_VALUE);
     font_string_region_clip(&line[2], "MS", 108, 0, KM_S_LABEL, 0);
 
     font_string_region_clip(&line[3], "TRACK", 0, 0, KM_S_LABEL, 0);
-    km_num(3, 42, kgrid.track, KM_S_VALUE);
+    mode_draw_num(3, 42, kgrid.track, KM_S_VALUE);
     font_string_region_clip(&line[3], "PAGE", 66, 0, KM_S_LABEL, 0);
     font_string_region_clip(&line[3],
                             kgrid.mode < 9 ? km_page_name[kgrid.mode] : "?",

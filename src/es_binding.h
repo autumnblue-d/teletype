@@ -6,9 +6,9 @@
 // shared i2c follower layer (kria_i2c, the same global follower bank Kria
 // and MP drive; ES voice n = follower track n).
 //
-// Voice n -> CV n (pitch, ET via kria_note_to_cv -- same tuning/calibration
-// as the N op) + TR n (gate). Pitch is written before the gate rises, like
-// Ansible's set_cv_note/dac_update_now/set_tr sequence.
+// Voice n -> CV n (pitch, ET via note_to_cv() in helpers.h -- same tuning /
+// calibration as the N op) + TR n (gate). Pitch is written before the gate
+// rises, like Ansible's set_cv_note/dac_update_now/set_tr sequence.
 //
 // The fixed-edge `duration` on note_on is NOT handled here -- the mode shell
 // wraps this vtable, schedules the note-off timer, and calls

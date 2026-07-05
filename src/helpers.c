@@ -2,8 +2,18 @@
 
 #include <string.h>
 
+#include "music.h"  // ET (equal-temperament semitone -> 14-bit)
 #include "table.h"
 #include "util.h"
+
+int16_t note_to_cv(int16_t note) {
+    if (note < 0) {
+        if (note < -127) note = -127;
+        return -(int16_t)ET[-note];
+    }
+    if (note > 127) note = 127;
+    return (int16_t)ET[note];
+}
 
 int16_t normalise_value(int16_t min, int16_t max, int16_t wrap, int16_t value) {
     if (value >= min && value <= max) return value;

@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "greatest/greatest.h"
+#include "helpers.h"  // note_to_cv
 #include "kria_binding.h"
 #include "kria_clock.h"
 #include "kria_engine.h"
@@ -294,14 +295,14 @@ TEST repeat_retriggers_on_set_bits(void) {
 // ---- binding tests ----
 
 TEST note_to_cv_matches_et(void) {
-    ASSERT_EQ(0, kria_note_to_cv(0));
-    ASSERT_EQ((int16_t)ET[12], kria_note_to_cv(12));
-    ASSERT_EQ((int16_t)ET[60], kria_note_to_cv(60));
+    ASSERT_EQ(0, note_to_cv(0));
+    ASSERT_EQ((int16_t)ET[12], note_to_cv(12));
+    ASSERT_EQ((int16_t)ET[60], note_to_cv(60));
     // negative semitones map below 0V
-    ASSERT_EQ(-(int16_t)ET[12], kria_note_to_cv(-12));
+    ASSERT_EQ(-(int16_t)ET[12], note_to_cv(-12));
     // clamped to +/-127
-    ASSERT_EQ((int16_t)ET[127], kria_note_to_cv(200));
-    ASSERT_EQ(-(int16_t)ET[127], kria_note_to_cv(-200));
+    ASSERT_EQ((int16_t)ET[127], note_to_cv(200));
+    ASSERT_EQ(-(int16_t)ET[127], note_to_cv(-200));
     PASS();
 }
 
@@ -317,39 +318,39 @@ TEST binding_output_vtable_is_wired(void) {
 // ---- clock tests ----
 
 TEST clock_internal_toggles_phase(void) {
-    kria_clock_t c;
+    grid_clock_t c;
     uint8_t ph = 99;
-    kria_clock_init(&c);
-    ASSERT_EQ(1, kria_clock_internal_fire(&c, &ph));
+    grid_clock_init(&c, KR_CLOCK_PERIOD_MIN, KR_CLOCK_PERIOD_MAX, KR_CLOCK_PERIOD_DEFAULT);
+    ASSERT_EQ(1, grid_clock_internal_fire(&c, &ph));
     ASSERT_EQ(1, ph);
-    ASSERT_EQ(1, kria_clock_internal_fire(&c, &ph));
+    ASSERT_EQ(1, grid_clock_internal_fire(&c, &ph));
     ASSERT_EQ(0, ph);
     // external edge ignored while internal
-    ASSERT_EQ(0, kria_clock_external_edge(&c, 1, &ph));
+    ASSERT_EQ(0, grid_clock_external_edge(&c, 1, &ph));
     PASS();
 }
 
 TEST clock_external_follows_level(void) {
-    kria_clock_t c;
+    grid_clock_t c;
     uint8_t ph = 99;
-    kria_clock_init(&c);
-    kria_clock_set_external(&c, true);
-    ASSERT_EQ(0, kria_clock_internal_fire(&c, &ph));  // suppressed
-    ASSERT_EQ(1, kria_clock_external_edge(&c, 1, &ph));
+    grid_clock_init(&c, KR_CLOCK_PERIOD_MIN, KR_CLOCK_PERIOD_MAX, KR_CLOCK_PERIOD_DEFAULT);
+    grid_clock_set_external(&c, true);
+    ASSERT_EQ(0, grid_clock_internal_fire(&c, &ph));  // suppressed
+    ASSERT_EQ(1, grid_clock_external_edge(&c, 1, &ph));
     ASSERT_EQ(1, ph);
-    ASSERT_EQ(1, kria_clock_external_edge(&c, 0, &ph));
+    ASSERT_EQ(1, grid_clock_external_edge(&c, 0, &ph));
     ASSERT_EQ(0, ph);
     PASS();
 }
 
 TEST clock_period_is_clamped(void) {
-    kria_clock_t c;
-    kria_clock_init(&c);
-    kria_clock_set_period(&c, 5);
+    grid_clock_t c;
+    grid_clock_init(&c, KR_CLOCK_PERIOD_MIN, KR_CLOCK_PERIOD_MAX, KR_CLOCK_PERIOD_DEFAULT);
+    grid_clock_set_period(&c, 5);
     ASSERT_EQ(KR_CLOCK_PERIOD_MIN, c.period);
-    kria_clock_set_period(&c, 5000);
+    grid_clock_set_period(&c, 5000);
     ASSERT_EQ(KR_CLOCK_PERIOD_MAX, c.period);
-    kria_clock_set_period(&c, 120);
+    grid_clock_set_period(&c, 120);
     ASSERT_EQ(120, c.period);
     PASS();
 }

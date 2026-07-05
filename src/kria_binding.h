@@ -11,12 +11,8 @@
 
 #include "kria_engine.h"
 
-// Convert an engine semitone index (as passed to out.cv) into a raw 14-bit CV
-// value using Teletype's equal-temperament table (ET) -- identical to the N
-// op's note_number_to_volts() and to Meadowphysics's mp_note_to_cv(), so Kria
-// pitch tracks the same tuning/calibration. Per-channel calibration is applied
-// later inside tele_cv(). Clamped to +/-127.
-int16_t kria_note_to_cv(int16_t semitones);
+// Semitone -> CV conversion is shared: see note_to_cv() in helpers.h (used by
+// the N op and all three grid-app bindings for identical tuning/calibration).
 
 // The output vtable routing engine events to TT hardware (tele_tr / tele_cv /
 // tele_cv_slew). Pass to kria_engine_init(); ctx is unused. Gates are held

@@ -15,7 +15,7 @@
 #include "es_binding.h"
 #include "es_engine.h"
 #include "es_grid.h"
-#include "kria_binding.h"   // kria_note_to_cv (ES.CV)
+#include "helpers.h"        // note_to_cv (ES.CV, shared ET mapping)
 #include "kria_i2c.h"       // shared follower bank + ii view
 #include "kria_i2c_oled.h"  // MIDI-follower OLED editor
 
@@ -62,18 +62,6 @@ static uint8_t em_view = EM_VIEW_ES;
 
 static bool es_engaged(void) {
     return active || eng.rt.mode == es_playing;
-}
-
-// Flush the shared i2c follower bank to flash if it was edited. Returns true
-// if it wrote.
-static bool em_flush_i2c(void) {
-    if (kria_i2c_take_dirty()) {
-        kria_i2c_fstate_t t[KRIA_I2C_FOLLOWERS];
-        kria_i2c_save(t);
-        flash_update_kria_i2c(t);
-        return true;
-    }
-    return false;
 }
 
 // ---- output vtable (binding + fixed-edge note-off timer) ----
@@ -183,7 +171,7 @@ bool earthsea_flush_if_dirty(void) {
         cfg_dirty = false;
         wrote = true;
     }
-    if (em_flush_i2c()) wrote = true;
+    if (mode_flush_i2c_if_dirty()) wrote = true;
     return wrote;
 }
 
@@ -285,13 +273,7 @@ bool es_owns_grid(void) {
 
 void es_grid_key(uint8_t x, uint8_t y, uint8_t z) {
     if (!es_owns_grid()) return;
-    if (active && em_view == EM_VIEW_I2C) {
-        kria_i2c_view_key(x, y, z);
-        if (z) {
-            int8_t req = kria_i2c_view_take_oled_req();
-            if (req >= 0) kria_i2c_oled_enter((uint8_t)req);
-        }
-    }
+    if (active && em_view == EM_VIEW_I2C) { mode_i2c_view_grid_key(x, y, z); }
     else {
         uint32_t now = get_ticks();
         writing = true;
@@ -359,16 +341,8 @@ static void em_toggle_external(void) {
 void process_earthsea_keys(uint8_t key, uint8_t mod_key, bool is_held_key) {
     if (is_held_key) return;
 
-    if (kria_i2c_oled_active()) {  // MIDI-follower editor has the keyboard
-        if (kria_i2c_oled_key(key, mod_key, is_held_key)) {
-            if (!kria_i2c_oled_active()) em_flush_i2c();
-            dirty = true;
-            return;
-        }
-        kria_i2c_oled_exit();
-        em_flush_i2c();
-        dirty = true;
-    }
+    // MIDI-follower editor: consumes the key (return) or exits + falls through.
+    if (mode_i2c_oled_handle_key(key, mod_key, is_held_key, &dirty)) return;
 
     if (match_no_mod(mod_key, key, HID_SPACEBAR)) { em_start_stop(); }
     else if (match_no_mod(mod_key, key, HID_A)) {  // arm / disarm
@@ -511,7 +485,7 @@ void es_op_mode(int16_t d) {
 int16_t es_op_cv(int16_t voice) {
     em_init_once();
     if (voice < 0 || voice >= ES_NUM_VOICES) return 0;
-    return kria_note_to_cv(em_last_semi[voice]);
+    return note_to_cv(em_last_semi[voice]);
 }
 
 // ---- OLED ----
@@ -520,20 +494,12 @@ int16_t es_op_cv(int16_t voice) {
 #define EM_S_VALUE 12
 #define EM_S_TITLE 15
 
-static void em_num(uint8_t ln, uint8_t x, int val, uint8_t fg) {
-    char s[8];
-    itoa(val, s, 10);
-    font_string_region_clip(&line[ln], s, x, 0, fg, 0);
-}
 
 uint8_t screen_refresh_earthsea(void) {
     if (!dirty) return 0;
     dirty = false;
 
-    if (kria_i2c_oled_active()) {  // MIDI-follower editor owns the screen
-        kria_i2c_oled_render();
-        return 0b11111111;
-    }
+    if (mode_i2c_oled_render_active()) return 0b11111111;
 
     for (uint8_t i = 0; i < 8; i++) region_fill(&line[i], 0);
 
@@ -549,8 +515,8 @@ uint8_t screen_refresh_earthsea(void) {
                             EM_S_VALUE, 0);
 
     font_string_region_clip(&line[1], "PATT", 0, 0, EM_S_LABEL, 0);
-    em_num(1, 42, eng.cfg.p_select, EM_S_VALUE);
-    em_num(1, 66, p->length, EM_S_LABEL);
+    mode_draw_num(1, 42, eng.cfg.p_select, EM_S_VALUE);
+    mode_draw_num(1, 66, p->length, EM_S_LABEL);
     font_string_region_clip(&line[1], p->loop ? "LOOP" : "", 96, 0, EM_S_VALUE,
                             0);
 
@@ -561,7 +527,7 @@ uint8_t screen_refresh_earthsea(void) {
         font_string_region_clip(&line[2], "DRONE", 42, 0, EM_S_VALUE, 0);
     else {
         font_string_region_clip(&line[2], "FIXED", 42, 0, EM_S_VALUE, 0);
-        em_num(2, 84, p->edge_time, EM_S_VALUE);
+        mode_draw_num(2, 84, p->edge_time, EM_S_VALUE);
     }
 
     font_string_region_clip(&line[3], "CLOCK", 0, 0, EM_S_LABEL, 0);

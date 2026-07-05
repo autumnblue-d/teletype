@@ -6,6 +6,7 @@
 
 #include <string.h>
 
+#include "grid_led.h"  // GRID_L0/2 ramp + grid_led_finalize
 #include "ii.h"
 #include "music.h"        // ET
 #include "teletype_io.h"  // tele_ii_tx
@@ -811,8 +812,8 @@ void kria_i2c_save(kria_i2c_fstate_t* st) {
 
 // ---- shared i2c view (Ansible ii pages: toggle + per-follower config) ----
 
-#define KM_LB 12  // bright / on
-#define KM_LD 4   // dim / off
+#define KM_LB GRID_L2  // bright / on
+#define KM_LD GRID_L0  // dim / off
 
 static int8_t view_sel = -1;  // follower being configured (-1 = toggle page)
 static uint8_t view_mod = 0;  // (5,7) modifier held (enter config on tap)
@@ -871,10 +872,7 @@ void kria_i2c_view_render(uint8_t* led, uint8_t vari) {
         }
     }
 
-    for (i = 0; i < 128; i++) {
-        if (led[i] > 15) led[i] = 15;
-        if (!vari && led[i]) led[i] = 15;
-    }
+    grid_led_finalize(led, vari);
 }
 
 void kria_i2c_view_key(uint8_t x, uint8_t y, uint8_t z) {

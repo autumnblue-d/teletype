@@ -7,6 +7,8 @@
 
 #include <string.h>
 
+#include "grid_led.h"  // grid_led_finalize
+
 // ---- held-key bitmap ------------------------------------------------------
 
 static void held_set(es_grid_state_t* g, uint8_t idx, uint8_t z) {
@@ -413,8 +415,5 @@ void es_grid_refresh(es_engine_t* e, es_grid_state_t* g, uint8_t* led,
     else if (show_patterns) { render_patterns(e, led); }
     else { render_main(e, g, led); }
 
-    for (uint8_t i = 0; i < ES_KEYMAP_SIZE; i++) {
-        if (led[i] > 15) led[i] = 15;
-        if (!vari && led[i]) led[i] = 15;
-    }
+    grid_led_finalize(led, vari);
 }

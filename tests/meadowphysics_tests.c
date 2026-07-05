@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "greatest/greatest.h"
+#include "helpers.h"  // note_to_cv
 #include "meadowphysics_binding.h"
 #include "meadowphysics_clock.h"
 #include "meadowphysics_engine.h"
@@ -342,13 +343,13 @@ TEST calc_scale_accumulates(void) {
 
 // Pitch binding converts a scale degree to a CV value via ET (TT tuning).
 TEST binding_note_to_cv(void) {
-    ASSERT_EQ(0, mp_note_to_cv(0));
-    ASSERT_EQ((int16_t)ET[12], mp_note_to_cv(12));    // one octave
-    ASSERT_EQ((int16_t)ET[7], mp_note_to_cv(7));      // a fifth
-    ASSERT_EQ(-(int16_t)ET[12], mp_note_to_cv(-12));  // an octave down
+    ASSERT_EQ(0, note_to_cv(0));
+    ASSERT_EQ((int16_t)ET[12], note_to_cv(12));    // one octave
+    ASSERT_EQ((int16_t)ET[7], note_to_cv(7));      // a fifth
+    ASSERT_EQ(-(int16_t)ET[12], note_to_cv(-12));  // an octave down
     // clamped to +/-127
-    ASSERT_EQ((int16_t)ET[127], mp_note_to_cv(200));
-    ASSERT_EQ(-(int16_t)ET[127], mp_note_to_cv(-200));
+    ASSERT_EQ((int16_t)ET[127], note_to_cv(200));
+    ASSERT_EQ(-(int16_t)ET[127], note_to_cv(-200));
     PASS();
 }
 
@@ -381,15 +382,15 @@ TEST range_supports_16_steps(void) {
 
 // Internal clock toggles phase each timer fire (Ansible's edge-per-fire model).
 TEST clock_internal_toggles_phase(void) {
-    mp_clock_t c;
-    mp_clock_init(&c);
+    grid_clock_t c;
+    grid_clock_init(&c, MP_CLOCK_PERIOD_MIN, MP_CLOCK_PERIOD_MAX, MP_CLOCK_PERIOD_DEFAULT);
     ASSERT(!c.external);
     uint8_t p = 99;
-    ASSERT_EQ(1, mp_clock_internal_fire(&c, &p));
+    ASSERT_EQ(1, grid_clock_internal_fire(&c, &p));
     ASSERT_EQ(1, p);  // 0 -> 1 (on-edge)
-    ASSERT_EQ(1, mp_clock_internal_fire(&c, &p));
+    ASSERT_EQ(1, grid_clock_internal_fire(&c, &p));
     ASSERT_EQ(0, p);  // 1 -> 0 (off-edge)
-    ASSERT_EQ(1, mp_clock_internal_fire(&c, &p));
+    ASSERT_EQ(1, grid_clock_internal_fire(&c, &p));
     ASSERT_EQ(1, p);
     PASS();
 }
@@ -397,22 +398,22 @@ TEST clock_internal_toggles_phase(void) {
 // Only the active source advances: internal timer is suppressed in external
 // mode, and Tr edges are ignored in internal mode.
 TEST clock_source_arbitration(void) {
-    mp_clock_t c;
-    mp_clock_init(&c);
+    grid_clock_t c;
+    grid_clock_init(&c, MP_CLOCK_PERIOD_MIN, MP_CLOCK_PERIOD_MAX, MP_CLOCK_PERIOD_DEFAULT);
     uint8_t p = 99;
 
     // internal mode: Tr edges do nothing
-    ASSERT_EQ(0, mp_clock_external_edge(&c, 1, &p));
+    ASSERT_EQ(0, grid_clock_external_edge(&c, 1, &p));
     ASSERT_EQ(99, p);
 
-    mp_clock_set_external(&c, true);
+    grid_clock_set_external(&c, true);
     // external mode: internal timer does nothing
-    ASSERT_EQ(0, mp_clock_internal_fire(&c, &p));
+    ASSERT_EQ(0, grid_clock_internal_fire(&c, &p));
     ASSERT_EQ(99, p);
     // ...and Tr edges drive phase from the gate level
-    ASSERT_EQ(1, mp_clock_external_edge(&c, 1, &p));  // gate high -> phase 1
+    ASSERT_EQ(1, grid_clock_external_edge(&c, 1, &p));  // gate high -> phase 1
     ASSERT_EQ(1, p);
-    ASSERT_EQ(1, mp_clock_external_edge(&c, 0, &p));  // gate low -> phase 0
+    ASSERT_EQ(1, grid_clock_external_edge(&c, 0, &p));  // gate low -> phase 0
     ASSERT_EQ(0, p);
     PASS();
 }
@@ -425,13 +426,13 @@ TEST clock_period_model(void) {
     // 20 + 15*16 + 15 = 275 -> clamped to 265
     ASSERT_EQ(MP_CLOCK_PERIOD_MAX, mp_clock_period_from_rough_fine(15, 15));
 
-    mp_clock_t c;
-    mp_clock_init(&c);
-    mp_clock_set_period(&c, 5);  // below min
+    grid_clock_t c;
+    grid_clock_init(&c, MP_CLOCK_PERIOD_MIN, MP_CLOCK_PERIOD_MAX, MP_CLOCK_PERIOD_DEFAULT);
+    grid_clock_set_period(&c, 5);  // below min
     ASSERT_EQ(MP_CLOCK_PERIOD_MIN, c.period);
-    mp_clock_set_period(&c, 9000);  // above max
+    grid_clock_set_period(&c, 9000);  // above max
     ASSERT_EQ(MP_CLOCK_PERIOD_MAX, c.period);
-    mp_clock_set_period(&c, 100);
+    grid_clock_set_period(&c, 100);
     ASSERT_EQ(100, c.period);
     PASS();
 }

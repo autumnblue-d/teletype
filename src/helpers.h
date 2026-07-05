@@ -14,6 +14,13 @@
 #endif
 
 int16_t normalise_value(int16_t min, int16_t max, int16_t wrap, int16_t value);
+
+// Convert a note/semitone index to a raw 14-bit CV value via Teletype's
+// equal-temperament table (ET). Clamped to +/-127; negatives map below 0V.
+// Single source of truth for the N op (note_number_to_volts) and the
+// Kria/MP/ES output bindings, so all pitch tracks the same tuning/calibration.
+int16_t note_to_cv(int16_t note);
+
 const char *to_voltage(int16_t);
 int16_t bit_reverse(int16_t unreversed, int8_t bits_to_reverse);
 int16_t rev_bitstring_to_int(const char *token);

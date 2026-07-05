@@ -5,7 +5,7 @@
 // Deviations (no hardware to tune against; all documented):
 //  - primary 16x8 view only (no 256 second view).
 //  - pattern change happens on press (Ansible: on fast-press release); the
-//    long-press copy is via kria_grid_key_hold().
+//    long-press pattern-copy gesture is not ported.
 //  - the mRpt modLoop "vertical range" gesture and the meta-slot loop gesture
 //    fall back to the standard loop-range gesture / no-op (marked TODO).
 
@@ -13,10 +13,12 @@
 
 #include <string.h>
 
-// Brightness levels (Ansible L0/L1/L2).
-#define L0 4
-#define L1 8
-#define L2 12
+#include "grid_led.h"  // GRID_L0/1/2 ramp + grid_led_finalize
+
+// Brightness levels (Ansible L0/L1/L2) -- shared ramp, local aliases.
+#define L0 GRID_L0
+#define L1 GRID_L1
+#define L2 GRID_L2
 
 // Row base offsets.
 #define R0 0
@@ -560,7 +562,6 @@ static void draw_bottom_row(kria_engine_t* e, kria_grid_state_t* g,
 
 void kria_grid_refresh(kria_engine_t* e, kria_grid_state_t* g, uint8_t* led,
                        uint8_t vari) {
-    int i;
     memset(led, 0, 128);
     draw_bottom_row(e, g, led);
 
@@ -579,10 +580,7 @@ void kria_grid_refresh(kria_engine_t* e, kria_grid_state_t* g, uint8_t* led,
         }
     }
 
-    for (i = 0; i < 128; i++) {
-        if (led[i] > 15) led[i] = 15;
-        if (!vari && led[i]) led[i] = 15;
-    }
+    grid_led_finalize(led, vari);
 }
 
 // ---- key handling ----
@@ -907,27 +905,5 @@ void kria_grid_process_key(kria_engine_t* e, kria_grid_state_t* g, uint8_t x,
             break;
 
         default: break;
-    }
-}
-
-void kria_grid_key_hold(kria_engine_t* e, kria_grid_state_t* g, uint8_t x,
-                        uint8_t y) {
-    if (x >= 16 || y >= 8) return;
-    if (g->mode == KR_MODE_PATTERN && y == 0 && x < KRIA_NUM_PATTERNS) {
-        // copy the current pattern into slot x and switch to it
-        e->cfg.p[x] = e->cfg.p[e->cfg.pattern];
-        kria_engine_change_pattern(e, x);
-        if (!g->meta_lock) g->edit_pattern = x;
-    }
-    else if (g->mode == KR_P_RPT) {
-        uint8_t ep = edit_pat(e, g);
-        kria_track_t* t = &e->cfg.p[ep].t[g->track];
-        if (y == 0) {
-            if (t->rpt[x] > 1) t->rpt[x]--;
-        }
-        else if (y >= 6) {
-            t->rpt[x] = 1;
-            t->rptBits[x] = 1;
-        }
     }
 }

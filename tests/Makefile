@@ -17,7 +17,7 @@ tests: main.o \
 	kria_tests.o ../src/kria_engine.o \
 	../src/kria_binding.o ../src/kria_clock.o ../src/kria_grid.o \
 	es_tests.o ../src/es_engine.o ../src/es_binding.o ../src/es_grid.o \
-	../src/kria_i2c.o \
+	../src/grid_clock.o ../src/grid_binding.o ../src/kria_i2c.o \
 	../src/teletype.o ../src/command.o ../src/helpers.o ../src/drum_helpers.o \
 	../src/grids_data.o ../src/grids_helpers.o ../src/dejavu.o ../src/beta.o \
 	../src/every.o ../src/match_token.o ../src/scanner.o \

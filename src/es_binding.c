@@ -4,13 +4,13 @@
 
 #include <stddef.h>  // NULL
 
-#include "kria_binding.h"  // kria_note_to_cv (shared ET semitone mapping)
-#include "kria_i2c.h"      // shared i2c follower fan-out
-#include "teletype_io.h"   // tele_tr, tele_cv
+#include "helpers.h"      // note_to_cv (shared ET semitone mapping)
+#include "kria_i2c.h"     // shared i2c follower fan-out
+#include "teletype_io.h"  // tele_tr, tele_cv
 
 void es_binding_note_on(uint8_t voice, int16_t semitones, uint16_t duration) {
     if (voice >= ES_NUM_VOICES) return;
-    int16_t cv = kria_note_to_cv(semitones);
+    int16_t cv = note_to_cv(semitones);
     kria_i2c_set_voice(voice, semitones, duration);
     kria_i2c_cv(voice, cv);
     tele_cv(voice, cv, 0);
