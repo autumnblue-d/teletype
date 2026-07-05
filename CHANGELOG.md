@@ -2,6 +2,19 @@
 
 ## v5.0.x:
 
+- **NEW**: native Kria mode: run monome Kria's step sequencer directly on Teletype without an external Ansible, with a full grid UI, i2c follower output (Just Friends, TELEXo, ER-301, Disting EX, W/syn, Crow), and new op `KR.RUN` to start/stop the on-board sequencer
+- **NEW**: native Meadowphysics mode: run Meadowphysics' cascading counter sequencer on-board; it keeps playing in the background while you edit scripts or use other modes; new op `MP.RUN`
+- **NEW**: native Earthsea mode: on-board port of Whimsical Raps' Earthsea firmware for Just Friends, with its own grid UI, i2c followers, and `ES.*` ops
+- **NEW**: global editable scale bank shared by the native Kria/Meadowphysics/Earthsea modes, with a grid interval editor in each mode's Config view
+- **NEW**: `KR.II` op: enable/disable i2c follower output for the native Kria/Meadowphysics engines
+- **NEW**: Marbles-style deja vu random ops: `DV`, `DV.DV`, `DV.L`, `DV.R`
+- **NEW**: Marbles-style beta-distribution shaping ops: `BETA`, `DV.B`
+- **NEW**: Grids topographic drum ops: `GR.P`, `GR.L`, `GR.A`
+- **NEW**: USB MIDI Out ops (`MO.*`): channel/port select, note/CC/pitch bend/program change, clock/start/stop/continue
+- **NEW**: USB MIDI In and Out both support A/B port selection
+- **IMP**: USB host hub support
+- **IMP**: unified save UX across native Kria/Meadowphysics/Earthsea modes (shared confirmation, `S` key, scene-flush behavior)
+- **IMP**: per-voice-mode output ownership frees CV/TR outputs not used by the active native mode's voice mode, so scripts can use them
 - **FIX**: fix risk of crash/corruption in help mode reverse search
 
 ## v5.0.0

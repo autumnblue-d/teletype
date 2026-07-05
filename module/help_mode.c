@@ -16,12 +16,12 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Help text ///////////////////////////////////////////////////////////////////
 
-#define HELP_PAGES 19
+#define HELP_PAGES 21
 
 // clang-format off
 
 #define HELP1_LENGTH 71
-const char* help1[HELP1_LENGTH] = { "1/19 HELP",
+const char* help1[HELP1_LENGTH] = { "1/21 HELP",
                                     "[ ] NAVIGATE HELP PAGES",
                                     "UP/DOWN TO SCROLL",
                                     "CTRL-F  SEARCH FORWARD",
@@ -94,7 +94,7 @@ const char* help1[HELP1_LENGTH] = { "1/19 HELP",
                                     "SHIFT-2|SHOW/HIDE TURTLE" };
 
 #define HELP2_LENGTH 25
-const char* help2[HELP2_LENGTH] = { "2/19 VARIABLES",
+const char* help2[HELP2_LENGTH] = { "2/21 VARIABLES",
                                     " ",
                                     "X, Y, Z|GENERAL PURPOSE",
                                     "T|USE FOR TIME",
@@ -121,7 +121,7 @@ const char* help2[HELP2_LENGTH] = { "2/19 VARIABLES",
                                     "    GET/PRINT VALUE" };
 
 #define HELP3_LENGTH 78
-const char* help3[HELP3_LENGTH] = { "3/19 PARAMETERS",
+const char* help3[HELP3_LENGTH] = { "3/21 PARAMETERS",
                                     " ",
                                     "TR A-D|SET TR VALUE (0,1)",
                                     "TR.TIME A-D|TR PULSE TIME",
@@ -201,7 +201,7 @@ const char* help3[HELP3_LENGTH] = { "3/19 PARAMETERS",
                                     "   RESET FADER X CALIBRATION" };
 
 #define HELP4_LENGTH 124
-const char* help4[HELP4_LENGTH] = { "4/19 DATA AND TABLES",
+const char* help4[HELP4_LENGTH] = { "4/21 DATA AND TABLES",
                                     " ",
                                     "ALL PARAMS HAVE 16B RANGE",
                                     "-32768 TO 32767",
@@ -328,7 +328,7 @@ const char* help4[HELP4_LENGTH] = { "4/19 DATA AND TABLES",
                                     };
 
 #define HELP5_LENGTH 130
-const char* help5[HELP5_LENGTH] = { "5/19 OPERATORS",
+const char* help5[HELP5_LENGTH] = { "5/21 OPERATORS",
                                     " ",
                                     "RAND A|RANDOM 0 - A",
                                     "RRAND A B|RANDOM A - B",
@@ -460,7 +460,7 @@ const char* help5[HELP5_LENGTH] = { "5/19 OPERATORS",
                                     "TR.PULSE X|PULSE TR X" };
 
 #define HELP6_LENGTH 48
-const char* help6[HELP6_LENGTH] = { "6/19 PRE :",
+const char* help6[HELP6_LENGTH] = { "6/21 PRE :",
                                     " ",
                                     "EACH PRE NEEDS A : FOLLOWED",
                                     "BY A COMMAND TO OPERATE ON",
@@ -510,7 +510,7 @@ const char* help6[HELP6_LENGTH] = { "6/19 PRE :",
                                     "BREAK|STOP EXECUTION" };
 
 #define HELP7_LENGTH 43
-const char* help7[HELP7_LENGTH] = { "7/19 PATTERNS",
+const char* help7[HELP7_LENGTH] = { "7/21 PATTERNS",
                                     " ",
                                     "// DIRECT ACCESS",
                                     "P A|GET VAL AT INDEX A",
@@ -555,7 +555,7 @@ const char* help7[HELP7_LENGTH] = { "7/19 PATTERNS",
                                     "P.MAP:|APPLY FUNC" };
 
 #define HELP8_LENGTH 141
-const char* help8[HELP8_LENGTH] = { "8/19 GRID",
+const char* help8[HELP8_LENGTH] = { "8/21 GRID",
                                     " ",
                                     "G.RST|RESET EVERYTHING",
                                     "G.CLR|CLEAR ALL LEDS",
@@ -697,7 +697,7 @@ const char* help8[HELP8_LENGTH] = { "8/19 GRID",
                                     "G.XYP.X id|GET X VALUE",
                                     "G.XYP.Y id|GET Y VALUE" };
 #define HELP9_LENGTH 17
-const char* help9[HELP9_LENGTH] = { "9/19 TURTLE",
+const char* help9[HELP9_LENGTH] = { "9/21 TURTLE",
                                     " ",
                                     "// CRAWLS TRACKER DATA",
                                     "@|GET/SET DATA",
@@ -716,7 +716,7 @@ const char* help9[HELP9_LENGTH] = { "9/19 TURTLE",
                                     "@SHOW 1/0|DISPLAY < ON TRACKER" };
 
 #define HELP10_LENGTH 75
-const char* help10[HELP10_LENGTH] = { "10/19 MIDI IN",
+const char* help10[HELP10_LENGTH] = { "10/21 MIDI IN",
                                       " ",
                                       "MI.$",
                                       "MI.$ x",
@@ -793,7 +793,7 @@ const char* help10[HELP10_LENGTH] = { "10/19 MIDI IN",
                                       "    RESET CLOCK COUNTER" };
 
 #define HELP11_LENGTH 39
-const char* help11[HELP11_LENGTH] = { "11/19 GENERIC I2C",
+const char* help11[HELP11_LENGTH] = { "11/21 GENERIC I2C",
                                       " ",
                                       "IIA",
                                       "    GET I2C ADDRESS",
@@ -834,7 +834,7 @@ const char* help11[HELP11_LENGTH] = { "11/19 GENERIC I2C",
                                       "    BYTE QUERY BYTE PARAMS" };
 
 #define HELP12_LENGTH 36
-const char* help12[HELP12_LENGTH] = { "12/19 TELEX INPUT",
+const char* help12[HELP12_LENGTH] = { "12/21 TELEX INPUT",
                                       " ",
                                       "TI.PARAM X|(TI.PRM)",
                                       "    GET KNOB VALUE",
@@ -872,7 +872,7 @@ const char* help12[HELP12_LENGTH] = { "12/19 TELEX INPUT",
                                       "    RESET CALIB FOR DEVICE D" };
 
 #define HELP13_LENGTH 164
-const char* help13[HELP13_LENGTH] = { "13/19 TELEX OUTPUT",
+const char* help13[HELP13_LENGTH] = { "13/21 TELEX OUTPUT",
                                       " ",
                                       "TO.TR X Y",
                                       "    SET TR VALUE (0/1)",
@@ -1037,8 +1037,8 @@ const char* help13[HELP13_LENGTH] = { "13/19 TELEX OUTPUT",
                                       "TO.CV.RESET X",
                                       "    RESET CV CALIB" };
 
-#define HELP14_LENGTH 140
-const char* help14[HELP14_LENGTH] = { "14/19 ANSIBLE",
+#define HELP14_LENGTH 146
+const char* help14[HELP14_LENGTH] = { "14/21 ANSIBLE",
                                       " ",
                                       "ANS.G.LED X Y",
                                       "    READ GRID LED STATE",
@@ -1057,6 +1057,9 @@ const char* help14[HELP14_LENGTH] = { "14/19 ANSIBLE",
                                       "    RING N, DELTA D",
                                       "ANS.APP / ANS.APP X",
                                       "    GET/SET ACTIVE APP",
+                                      "KR.RUN X",
+                                      "    START/STOP NATIVE",
+                                      "    KRIA SEQUENCER",
                                       "KR.PRE / KR.PRE X",
                                       "    RETURN/LOAD CURRENT PRESET",
                                       "KR.PERIOD / KR.PERIOD X",
@@ -1088,7 +1091,7 @@ const char* help14[HELP14_LENGTH] = { "14/19 ANSIBLE",
                                       "KR.MUTE X / KR.MUTE X Y",
                                       "    GET/SET MUTE STATE",
                                       "    FOR CHANNEL X",
-                                      "KR.TRMUTE X",
+                                      "KR.TMUTE X",
                                       "    TOGGLE MUTE STATE",
                                       "    FOR CHANNEL X",
                                       "KR.CLK X",
@@ -1103,6 +1106,9 @@ const char* help14[HELP14_LENGTH] = { "14/19 ANSIBLE",
                                       "    GET CHANNEL X DURATION",
                                       "KR.PG / KR.PG X",
                                       "    GET/SET ACTIVE PAGE",
+                                      "KR.II F / KR.II F X",
+                                      "    GET/SET I2C FOLLOWER F",
+                                      "    ENABLE STATE (0/1)",
                                       "ME.PRE / ME.PRE X",
                                       "    RETURN/LOAD CURRENT PRESET",
                                       "ME.SCALE / ME.SCALE X",
@@ -1180,7 +1186,7 @@ const char* help14[HELP14_LENGTH] = { "14/19 ANSIBLE",
                                       "    (E.G. N 6, V -1)" };
 
 #define HELP15_LENGTH 85
-const char* help15[HELP15_LENGTH] = { "15/19 JUST FRIENDS & W/",
+const char* help15[HELP15_LENGTH] = { "15/21 JUST FRIENDS & W/",
                                       " ",
                                       "JF.ADDR X",
                                       "    SETS JF II ADDRESS",
@@ -1267,7 +1273,7 @@ const char* help15[HELP15_LENGTH] = { "15/19 JUST FRIENDS & W/",
                                       "    SET LOOP STATE ON/OFF" };
 
 #define HELP16_LENGTH 197
-const char* help16[HELP16_LENGTH] = { "16/19 DISTING EX",
+const char* help16[HELP16_LENGTH] = { "16/21 DISTING EX",
                                       "EX",
                                       "    GET CURRENT UNIT",
                                       "EX X",
@@ -1466,7 +1472,7 @@ const char* help16[HELP16_LENGTH] = { "16/19 DISTING EX",
                                       "    SAVE RIGHT PRESET"};
 
 #define HELP17_LENGTH 198
-const char* help17[HELP17_LENGTH] = { "17/19 I2C2MIDI",
+const char* help17[HELP17_LENGTH] = { "17/21 I2C2MIDI",
                                       " ",
                                       "I2M.CH x",
                                       "I2M.# x",
@@ -1665,8 +1671,8 @@ const char* help17[HELP17_LENGTH] = { "17/19 I2C2MIDI",
                                       "    SEND NOTE OFF TO ALL",
                                       "    RESET NOTE PARAMETERS" };
 
-#define HELP18_LENGTH 47
-const char* help18[HELP18_LENGTH] = { "18/19 MEADOWPHYSICS",
+#define HELP18_LENGTH 49
+const char* help18[HELP18_LENGTH] = { "18/21 MEADOWPHYSICS",
                                       " ",
                                       "CASCADING COUNTER",
                                       "SEQUENCER (ANSIBLE",
@@ -1706,8 +1712,10 @@ const char* help18[HELP18_LENGTH] = { "18/19 MEADOWPHYSICS",
                                       "  TR1-4, CV1-4=10V",
                                       " ",
                                       "OPS:",
+                                      "MP.RUN x    1=RUN 0=STOP",
                                       "MP.RESET x  0=ALL",
                                       "MP.STOP x   1-8=ROW",
+                                      "MP.PRESET x (COMPAT NO-OP)",
                                       " ",
                                       "PLAYS IN OTHER",
                                       "MODES; OWNS CV/TR.",
@@ -1715,7 +1723,7 @@ const char* help18[HELP18_LENGTH] = { "18/19 MEADOWPHYSICS",
                                       "SCENE." };
 
 #define HELP19_LENGTH 31
-const char* help19[HELP19_LENGTH] = { "19/19 MIDI OUT",
+const char* help19[HELP19_LENGTH] = { "19/21 MIDI OUT",
                                       " ",
                                       "MO.CH",
                                       "    GET CURRENT OUT CHANNEL",
@@ -1747,6 +1755,144 @@ const char* help19[HELP19_LENGTH] = { "19/19 MIDI OUT",
                                       "MO.CONT",
                                       "    SEND MIDI CONTINUE" };
 
+#define HELP20_LENGTH 67
+const char* help20[HELP20_LENGTH] = { "20/21 KRIA",
+                                      " ",
+                                      "NATIVE 4-TRACK STEP",
+                                      "SEQ (ANSIBLE KRIA",
+                                      "PORT). DRIVES OWN",
+                                      "CV/TR, I2C FOLLOWERS.",
+                                      " ",
+                                      "ALT-K|ENTER MODE",
+                                      " ",
+                                      "KEYS:",
+                                      "SPACE|RUN/STOP",
+                                      "R|RESET",
+                                      "X|INT/EXT CLOCK (TR2)",
+                                      "- =|TEMPO",
+                                      "S|SAVE",
+                                      "1-4|SEQ/TIME/CONFIG/I2C",
+                                      " ",
+                                      "GRID (16x8), ROW 7:",
+                                      "TAP 0-3|SELECT TRACK",
+                                      "HOLD 10+TAP 0-3|MUTE",
+                                      "COL5|TRIG/RPT PAGE",
+                                      "COL6|NOTE/ALT-NOTE PAGE",
+                                      "COL7|OCT/GLIDE PAGE",
+                                      "COL8|DUR PAGE",
+                                      "COL14|SCALE PAGE",
+                                      "COL15|PATTERN PAGE",
+                                      "HOLD COL10|LOOP EDIT",
+                                      "HOLD COL11|STEP CLOCK DIV",
+                                      "HOLD COL12|STEP PROB",
+                                      " ",
+                                      "TRIG: ROW=TRACK,",
+                                      "  TAP TOGGLES STEP",
+                                      "NOTE: ROW=DEGREE",
+                                      "  (TOP ROW=HIGHEST)",
+                                      "OCT: R0=RANGE,",
+                                      "  R1-6=STEP OCTAVE",
+                                      "DUR: R0=MULTIPLIER,",
+                                      "  R1-7=STEP DURATION",
+                                      "RPT: R0=INC, R6=DEC",
+                                      "  R1-5=REPEAT PATTERN",
+                                      "GLIDE: ROW=AMOUNT",
+                                      "SCALE: R0-3=FOLLOW/DIR",
+                                      "  R5-7=BANK SLOT",
+                                      "  COL8-15=EDIT DEGREES",
+                                      "PATTERN: R0=SWITCH",
+                                      "  HOLD COL15=CUE MODE",
+                                      "  R2-5=META CHAIN",
+                                      "  R6=META STEP COUNT",
+                                      " ",
+                                      "OUTPUTS:",
+                                      "TRACK n = CV n+1",
+                                      "  + TR n+1. MUTED",
+                                      "  TRACKS FREE THEIR",
+                                      "  CV/TR FOR SCRIPTS.",
+                                      " ",
+                                      "OPS:",
+                                      "KR.RUN x|START/STOP",
+                                      "KR.PAT / KR.PAT x",
+                                      "    GET/SET PATTERN",
+                                      "KR.MUTE x y|SET MUTE",
+                                      "KR.CLK x|ADVANCE CLOCK",
+                                      "KR.II f x|I2C FOLLOWER EN",
+                                      " ",
+                                      "PLAYS IN OTHER",
+                                      "MODES; OWNS CV/TR.",
+                                      "STATE SAVES PER",
+                                      "SCENE." };
+
+#define HELP21_LENGTH 67
+const char* help21[HELP21_LENGTH] = { "21/21 EARTHSEA",
+                                      " ",
+                                      "NATIVE PORT OF",
+                                      "ANSIBLE EARTHSEA:",
+                                      "POLY GRID KEYBOARD +",
+                                      "PHRASE LOOPER. UP TO",
+                                      "4 VOICES, I2C FOLLOWERS.",
+                                      " ",
+                                      "ALT-E|ENTER MODE",
+                                      " ",
+                                      "KEYS:",
+                                      "SPACE|PLAY/STOP",
+                                      "A|ARM/STOP RECORDING",
+                                      "X|TOGGLE EXT CLOCK",
+                                      "[ ]|PREV/NEXT PATTERN",
+                                      "S|SAVE",
+                                      "1|EARTHSEA GRID",
+                                      "4|I2C FOLLOWER VIEW",
+                                      " ",
+                                      "GRID (16x8), COL 0:",
+                                      "Y0|START/STOP",
+                                      "Y1|HOLD:PEEK PATTERNS",
+                                      "    TAP:LOCK/CLOSE",
+                                      "Y2|HOLD:ARM RECORDING",
+                                      "Y3|TOGGLE LOOP",
+                                      "Y4|TOGGLE ARP",
+                                      "Y5|HOLD:EDGE OVERLAY",
+                                      "Y6|HOLD:RUNES OVERLAY",
+                                      "Y7|HOLD:VOICES OVERLAY",
+                                      " ",
+                                      "COLS 1-15: FOURTHS-",
+                                      "LAYOUT KEYBOARD.",
+                                      "COL15,ROW0=REST KEY.",
+                                      "ROW0 ALSO SCRUBS",
+                                      "PLAYBACK WHILE PLAYING.",
+                                      " ",
+                                      "RUNES (HOLD Y6):",
+                                      "  LINEARIZE / REVERSE /",
+                                      "  FORWARD / DOUBLE /",
+                                      "  HALF SPEED ZONES",
+                                      "EDGE (HOLD Y5):",
+                                      "  PATTERN / FIXED /",
+                                      "  DRONE ZONES",
+                                      "VOICES (HOLD Y7):",
+                                      "  TOGGLE LIVE VOICES,",
+                                      "  PER-PATTERN VOICES,",
+                                      "  GLOBAL OCTAVE",
+                                      "PATTERNS (HOLD Y1):",
+                                      "  PICK 1 OF 16,",
+                                      "  OPTIONAL SCALE VIEW",
+                                      " ",
+                                      "OUTPUTS:",
+                                      "VOICE n = CV n",
+                                      "  + TR n (GATE). ONLY",
+                                      "  CLAIMS JACKS WHILE",
+                                      "  ENGAGED.",
+                                      " ",
+                                      "OPS:",
+                                      "ES.RUN x|ENGAGE/DISENGAGE",
+                                      "ES.PATTERN x|SELECT 0-15",
+                                      "ES.RESET x|START AT POS",
+                                      "ES.STOP|STOP PLAYBACK",
+                                      "ES.TRANS x|TRANSPOSE ROOT",
+                                      "ES.MODE x|SET EDGE MODE",
+                                      " ",
+                                      "PLAYS IN OTHER MODES;",
+                                      "STATE SAVES PER SCENE." };
+
 // clang-format on
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1755,12 +1901,14 @@ const char* help19[HELP19_LENGTH] = { "19/19 MIDI OUT",
 const char** help_pages[HELP_PAGES] = { help1,  help2,  help3,  help4,  help5,
                                         help6,  help7,  help8,  help9,  help10,
                                         help11, help12, help13, help14, help15,
-                                        help16, help17, help18, help19 };
+                                        help16, help17, help18, help19, help20,
+                                        help21 };
 const uint8_t help_length[HELP_PAGES] = {
     HELP1_LENGTH,  HELP2_LENGTH,  HELP3_LENGTH,  HELP4_LENGTH,  HELP5_LENGTH,
     HELP6_LENGTH,  HELP7_LENGTH,  HELP8_LENGTH,  HELP9_LENGTH,  HELP10_LENGTH,
     HELP11_LENGTH, HELP12_LENGTH, HELP13_LENGTH, HELP14_LENGTH, HELP15_LENGTH,
-    HELP16_LENGTH, HELP17_LENGTH, HELP18_LENGTH, HELP19_LENGTH
+    HELP16_LENGTH, HELP17_LENGTH, HELP18_LENGTH, HELP19_LENGTH, HELP20_LENGTH,
+    HELP21_LENGTH
 };
 
 static uint8_t page_no;

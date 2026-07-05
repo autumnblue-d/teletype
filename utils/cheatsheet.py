@@ -63,6 +63,7 @@ OPS_SECTIONS = {
         ("turtle",        "Turtle",          False,  True),
         ("grid",          "Grid",             True, False),
         ("midi_in",       "MIDI In",         False, False),
+        ("midi_out",      "MIDI Out",        False, False),
         ("calibration",   "Calibration",     False, False)
     ],
     "i2c": [
