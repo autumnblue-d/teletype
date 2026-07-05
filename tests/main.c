@@ -73,8 +73,13 @@ int16_t kria_op_scale(int16_t set, int16_t val) {
 int16_t kria_op_period(int16_t set, int16_t val) {
     return 0;
 }
+// Models per-track mute state so op-level tests can round-trip KR.MUTE and
+// catch track/value argument-order regressions (see process_tests.c).
+static int16_t test_kria_mute[8];
 int16_t kria_op_mute(int16_t track, int16_t set, int16_t val) {
-    return 0;
+    if (track < 0 || track >= 8) return 0;
+    if (set) { test_kria_mute[track] = val; }
+    return test_kria_mute[track];
 }
 void kria_op_tmute(int16_t track) {}
 void kria_op_clock(int16_t track) {}

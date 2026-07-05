@@ -432,6 +432,19 @@ TEST test_MO() {
     PASS();
 }
 
+// Regression: KR.MUTE x y must set track x to state y (the track/value args
+// were swapped in op_KR_MUTE_set). Round-trip via the getter using the
+// per-track mute model in the test harness (main.c kria_op_mute stub).
+TEST test_KR_MUTE() {
+    char* muted[2] = { "KR.MUTE 2 1", "KR.MUTE 2" };
+    CHECK_CALL(process_helper(2, muted, 1));  // set track 2 muted -> read 1
+
+    char* unmuted[2] = { "KR.MUTE 2 0", "KR.MUTE 2" };
+    CHECK_CALL(process_helper(2, unmuted, 0));  // unmute track 2 -> read 0
+
+    PASS();
+}
+
 SUITE(process_suite) {
     RUN_TEST(test_numbers);
     RUN_TEST(test_ADD);
@@ -449,4 +462,5 @@ SUITE(process_suite) {
     RUN_TEST(test_P_ROT_1);
     RUN_TEST(test_P_ROT_3);
     RUN_TEST(test_MO);
+    RUN_TEST(test_KR_MUTE);
 }

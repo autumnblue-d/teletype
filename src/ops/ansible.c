@@ -476,8 +476,8 @@ static void op_KR_CV_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
 static void op_KR_MUTE_set(const void *NOTUSED(data),
                            scene_state_t *NOTUSED(ss),
                            exec_state_t *NOTUSED(es), command_state_t *cs) {
-    int16_t val = cs_pop(cs);
     int16_t track = cs_pop(cs);
+    int16_t val = cs_pop(cs);
     kria_op_mute(track, 1, val);
 }
 
