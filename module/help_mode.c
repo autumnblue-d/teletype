@@ -200,7 +200,7 @@ const char* help3[HELP3_LENGTH] = { "3/21 PARAMETERS",
                                     "FB.C.R X",
                                     "   RESET FADER X CALIBRATION" };
 
-#define HELP4_LENGTH 124
+#define HELP4_LENGTH 127
 const char* help4[HELP4_LENGTH] = { "4/21 DATA AND TABLES",
                                     " ",
                                     "ALL PARAMS HAVE 16B RANGE",
@@ -324,7 +324,10 @@ const char* help4[HELP4_LENGTH] = { "4/21 DATA AND TABLES",
                                     "   BETA-SHAPED 0-MAX",
                                     "BETA SHAPER - BETA",
                                     "BETA X (0-16383)",
-                                    "   BELL-SHAPED 0-16383"
+                                    "   BELL-SHAPED 0-16383",
+                                    "BETA SHAPER VAR - BETA.K",
+                                    "BETA.K A B X",
+                                    "   8=FLAT >8 BELL <8 EDGE"
                                     };
 
 #define HELP5_LENGTH 130

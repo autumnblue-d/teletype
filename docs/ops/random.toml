@@ -85,9 +85,30 @@ distribution of Mutable Instruments Marbles' X section (a fixed `beta(3, 3)`
 curve). Values are pulled toward the middle of the range while the tails still
 reach the extremes, so `BETA RAND 16383` produces centre-weighted randomness.
 
-The shape is fixed — Marbles' bias and spread controls need 45 lookup tables
-(~68 KB) and do not fit in the module's flash. `DV.B` applies this same shaping
-to the déjà vu sequence.
+The shape is fixed — Marbles' table-driven bias and spread controls need 45
+lookup tables (~68 KB) and do not fit in the module's flash. `DV.B` applies this
+same shaping to the déjà vu sequence; `BETA.K` offers an adjustable-shape
+alternative.
+"""
+
+["BETA.K"]
+prototype = "BETA.K a b x"
+short = "shape a uniform value `x` (`0`–`16383`) through a variable beta-like distribution set by `a` and `b`, returning `0`–`16383`"
+description = """
+`BETA.K` is the adjustable-shape companion to `BETA`. It warps a uniform input
+`x` (`0`–`16383`) through a table-free beta-distribution surrogate whose shape is
+set by `a` and `b`, given in eighths (so `8` means `1.0`):
+
+- `a = b = 8` — flat (uniform, no shaping).
+- `a = b > 8` — bell: mass concentrates toward the middle (larger = tighter).
+- `a = b < 8` — bimodal: mass is pushed out toward both rails.
+- `a ≠ b` — skewed: the two sides are shaped independently, biasing the result
+  low or high.
+
+When `a` equals `b` the distribution is exactly symmetric and centred. This
+approximates Marbles' spread/bias controls without the 45 lookup tables the
+faithful shaper would need; it is computed at read time (one power function, no
+table) at a small accuracy cost that is inaudible for randomness.
 """
 
 [DRUNK]

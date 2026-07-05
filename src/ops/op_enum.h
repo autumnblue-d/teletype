@@ -245,6 +245,7 @@ typedef enum {
     E_OP_DV_R,
     E_OP_DV_B,
     E_OP_BETA,
+    E_OP_BETA_K,
     E_OP_BPM,
     E_OP_BIT_OR,
     E_OP_BIT_AND,

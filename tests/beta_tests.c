@@ -51,10 +51,71 @@ TEST test_beta_concentrates() {
     PASS();
 }
 
+// beta_shape_icdf is the variable-shape surrogate (BETA.K). Same structural
+// approach: it uses a ~1% pow approximation, so tolerances are loose.
+
+// range + monotonicity across a sweep of shapes
+TEST test_beta_shape_range_monotonic() {
+    float shapes[] = { 0.25f, 0.5f, 1.0f, 2.0f, 4.0f };
+    for (int s = 0; s < 5; s++) {
+        float a = shapes[s];
+        for (int t = 0; t < 5; t++) {
+            float b = shapes[t];
+            float prev = beta_shape_icdf(0.0f, a, b);
+            for (int i = 0; i <= 200; i++) {
+                float v = beta_shape_icdf((float)i / 200.0f, a, b);
+                ASSERT(v >= 0.0f);
+                ASSERT(v <= 1.0f);
+                ASSERT(v >= prev - 1e-4f);  // non-decreasing
+                prev = v;
+            }
+        }
+    }
+    PASS();
+}
+
+// a == b is symmetric and centred (the fix vs a raw Kumaraswamy K(a,a))
+TEST test_beta_shape_symmetric() {
+    float shapes[] = { 0.5f, 1.0f, 3.0f };
+    for (int s = 0; s < 3; s++) {
+        float a = shapes[s];
+        ASSERT(fabsf(beta_shape_icdf(0.5f, a, a) - 0.5f) < 1e-3f);
+        for (int i = 1; i < 10; i++) {
+            float u = (float)i / 10.0f;
+            ASSERT(fabsf(beta_shape_icdf(u, a, a) -
+                         (1.0f - beta_shape_icdf(1.0f - u, a, a))) < 2e-3f);
+        }
+    }
+    PASS();
+}
+
+// shape: a=b=1 is the identity; a,b>1 concentrate mid; a,b<1 push to the rails
+TEST test_beta_shape_family() {
+    ASSERT(fabsf(beta_shape_icdf(0.25f, 1.0f, 1.0f) - 0.25f) < 2e-3f);  // flat
+    ASSERT(beta_shape_icdf(0.25f, 3.0f, 3.0f) > 0.25f);   // bell pulls up
+    ASSERT(beta_shape_icdf(0.75f, 3.0f, 3.0f) < 0.75f);
+    ASSERT(beta_shape_icdf(0.25f, 0.5f, 0.5f) < 0.25f);   // bimodal pushes out
+    ASSERT(beta_shape_icdf(0.75f, 0.5f, 0.5f) > 0.75f);
+    PASS();
+}
+
+// endpoints are exact regardless of shape
+TEST test_beta_shape_endpoints() {
+    ASSERT(beta_shape_icdf(0.0f, 3.0f, 0.5f) == 0.0f);
+    ASSERT(beta_shape_icdf(1.0f, 3.0f, 0.5f) == 1.0f);
+    ASSERT(beta_shape_icdf(-0.5f, 2.0f, 2.0f) == 0.0f);  // clamps below 0
+    ASSERT(beta_shape_icdf(2.0f, 2.0f, 2.0f) == 1.0f);   // clamps above 1
+    PASS();
+}
+
 SUITE(beta_suite) {
     log_init();
     RUN_TEST(test_beta_range);
     RUN_TEST(test_beta_monotonic);
     RUN_TEST(test_beta_symmetric_center);
     RUN_TEST(test_beta_concentrates);
+    RUN_TEST(test_beta_shape_range_monotonic);
+    RUN_TEST(test_beta_shape_symmetric);
+    RUN_TEST(test_beta_shape_family);
+    RUN_TEST(test_beta_shape_endpoints);
 }

@@ -1,5 +1,45 @@
 #include "beta.h"
 
+#include <stdint.h>
+
+// Self-contained powf (this AVR32 toolchain links no libm - powf/expf/logf are
+// all undefined, and pulling in newlib libm overflows program flash). We build
+// pow(x,y) = 2^(y * log2(x)) from IEEE-754 bit-manipulation approximations of
+// log2/exp2 (after Paul Mineiro's fastapprox, BSD-2). ~1-2% error, which is
+// inconsequential for a random-distribution shaper. x >= 0.
+static float tt_log2f(float x) {
+    union {
+        float f;
+        uint32_t i;
+    } vx = { x };
+    union {
+        uint32_t i;
+        float f;
+    } mx = { (vx.i & 0x007FFFFFu) | 0x3F000000u };
+    float y = (float)vx.i * 1.1920928955078125e-7f;
+    return y - 124.22551499f - 1.498030302f * mx.f -
+           1.72587999f / (0.3520887068f + mx.f);
+}
+
+static float tt_pow2f(float p) {
+    float offset = (p < 0.0f) ? 1.0f : 0.0f;
+    float clipp = (p < -126.0f) ? -126.0f : p;
+    int w = (int)clipp;
+    float z = clipp - (float)w + offset;
+    union {
+        uint32_t i;
+        float f;
+    } v = { (uint32_t)((1 << 23) *
+                       (clipp + 121.2740575f + 27.7280233f / (4.84252568f - z) -
+                        1.49012907f * z)) };
+    return v.f;
+}
+
+static float tt_powf(float x, float y) {
+    if (x <= 0.0f) { return 0.0f; }  // log2 undefined; pow(0, y>0) == 0
+    return tt_pow2f(y * tt_log2f(x));
+}
+
 // Marbles fast beta-distribution shaper (Emilie Gillet, MIT), ported verbatim
 // from random/distributions.h::FastBetaDistributionSample. Warps a uniform
 // [0,1) value through a fixed beta(3,3) inverse-CDF - a symmetric bell with
@@ -130,4 +170,29 @@ float beta_fast(float uniform) {
     // crosses into the second (tail) curve of the table.
     else if (uniform > 0.99996948f) { uniform = 0.99996948f; }
     return tt_interpolate(dist_icdf_4_3, uniform, BETA_ICDF_TABLE_SIZE);
+}
+
+// Table-free variable-shape beta surrogate. See beta.h. u in [0,1] -> [0,1].
+float beta_shape_icdf(float uniform, float a, float b) {
+    // Exact at the endpoints (icdf(0)=0, icdf(1)=1); this also keeps the ~1%
+    // pow approximation away from the fold region where it could overshoot.
+    if (uniform <= 0.0f) { return 0.0f; }
+    if (uniform >= 1.0f) { return 1.0f; }
+    if (a < 0.001f) { a = 0.001f; }
+    if (b < 0.001f) { b = 0.001f; }
+    // Two power half-warps that meet at the midpoint. Each half maps to [0,0.5]
+    // / [0.5,1], so a==b is EXACTLY symmetric and centred (a raw Kumaraswamy
+    // K(a,a) is not - its median is offset). Exponent 1/a<1 (a>1) flattens the
+    // half near the centre -> mass concentrates mid (bell); 1/a>1 (a<1) steepens
+    // it -> mass to the rails (bimodal); a!=b skews. One tt_powf() per call.
+    float v;
+    if (uniform <= 0.5f) {
+        v = 0.5f * tt_powf(2.0f * uniform, 1.0f / a);
+    }
+    else {
+        v = 1.0f - 0.5f * tt_powf(2.0f * (1.0f - uniform), 1.0f / b);
+    }
+    if (v < 0.0f) { v = 0.0f; }
+    else if (v > 1.0f) { v = 1.0f; }
+    return v;
 }

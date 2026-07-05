@@ -172,6 +172,8 @@ static void op_DV_B_get(const void *data, scene_state_t *ss, exec_state_t *es,
                         command_state_t *cs);
 static void op_BETA_get(const void *data, scene_state_t *ss, exec_state_t *es,
                         command_state_t *cs);
+static void op_BETA_K_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                          command_state_t *cs);
 static void op_BPM_get(const void *data, scene_state_t *ss, exec_state_t *es,
                        command_state_t *cs);
 static void op_BIT_OR_get(const void *data, scene_state_t *ss, exec_state_t *es,
@@ -286,6 +288,7 @@ const tele_op_t op_DV_L   = MAKE_GET_SET_OP(DV.L, op_DV_L_get, op_DV_L_set, 0, t
 const tele_op_t op_DV_R   = MAKE_GET_OP(DV.R   , op_DV_R_get    , 0, false);
 const tele_op_t op_DV_B   = MAKE_GET_OP(DV.B   , op_DV_B_get    , 1, true);
 const tele_op_t op_BETA   = MAKE_GET_OP(BETA   , op_BETA_get    , 1, true);
+const tele_op_t op_BETA_K = MAKE_GET_OP(BETA.K , op_BETA_K_get  , 3, true);
 const tele_op_t op_BPM   = MAKE_GET_OP(BPM     , op_BPM_get     , 1, true);
 const tele_op_t op_BIT_OR  = MAKE_GET_OP(|, op_BIT_OR_get  , 2, true);
 const tele_op_t op_BIT_AND = MAKE_GET_OP(&, op_BIT_AND_get, 2, true);
@@ -1266,6 +1269,22 @@ static void op_BETA_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
     if (x < 0) x = 0;
     if (x > 16383) x = 16383;
     float v = beta_fast((float)x / 16383.0f);
+    cs_push(cs, (int16_t)(v * 16383.0f + 0.5f));
+}
+
+// BETA.K a b x: table-free variable-shape beta surrogate. Shape params a, b are
+// in eighths (arg 8 -> 1.0): a=b=8 uniform, a=b>8 bell (mass mid), a=b<8 bimodal
+// (mass at rails), a!=b skewed. a==b is symmetric and centred. Treat x
+// (0..16383) as the uniform, return the warped value mapped back to 0..16383.
+static void op_BETA_K_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
+                          exec_state_t *NOTUSED(es), command_state_t *cs) {
+    int16_t a = cs_pop(cs);
+    int16_t b = cs_pop(cs);
+    int16_t x = cs_pop(cs);
+    if (x < 0) x = 0;
+    if (x > 16383) x = 16383;
+    float v = beta_shape_icdf((float)x / 16383.0f, (float)a / 8.0f,
+                              (float)b / 8.0f);
     cs_push(cs, (int16_t)(v * 16383.0f + 0.5f));
 }
 

@@ -99,6 +99,7 @@ const tele_op_t *tele_ops[E_OP__LENGTH] = {
     &op_VN, &op_HZ, &op_N_S, &op_N_C, &op_N_CS, &op_N_B, &op_N_BX, &op_V,
     &op_VV, &op_ER, &op_NR, &op_DR_T, &op_DR_P, &op_DR_V, &op_GR_P, &op_GR_L,
     &op_GR_A, &op_DV, &op_DV_DV, &op_DV_L, &op_DV_R, &op_DV_B, &op_BETA,
+    &op_BETA_K,
     &op_BPM, &op_BIT_OR, &op_BIT_AND, &op_BIT_NOT, &op_BIT_XOR, &op_BSET,
     &op_BGET, &op_BCLR, &op_BTOG, &op_BREV, &op_XOR, &op_CHAOS, &op_CHAOS_R,
     &op_CHAOS_ALG, &op_SYM_PLUS, &op_SYM_DASH, &op_SYM_STAR,
