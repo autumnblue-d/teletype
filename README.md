@@ -39,6 +39,28 @@ docker
   -v"$(pwd)/teletype":/target  # mount the ./teletype directory at /target inside the container
 ```
 
+### On Apple Silicon (arm64) Macs
+
+The `dewb/monome-build` image is `linux/amd64` only, so it runs under
+emulation. Two things differ from the instructions above:
+
+- Add `--platform linux/amd64` to every `docker run`, otherwise the container
+  silently exits without doing anything.
+- The image's entrypoint is `bash -c`, so a non-interactive command must be
+  passed as a **single string** (don't wrap it in `bash -c '...'`).
+
+```bash
+# one-shot build
+docker run --rm --platform linux/amd64 -v"$(pwd)":/target dewb/monome-build 'cd module && make'
+
+# interactive shell
+docker run --rm -it --platform linux/amd64 -v"$(pwd)":/target dewb/monome-build bash
+```
+
+[Colima](https://github.com/abiosoft/colima) works as a CLI-only Docker
+runtime (`brew install colima docker`, then `colima start`); its bundled QEMU
+provides the amd64 emulation.
+
 **Make sure that the `libavr32` submodule is correctly checked out**
 
 ```bash
@@ -87,6 +109,11 @@ If you want to add a new `OP` or `MOD`, please create the relevant `tele_op_t` o
 - `simulator/Makefile`: add a reference to any added .c files in /src, replacing ".c" with ".o", in the OBJS list.
 
 There is a test that checks to see if the above have all been entered correctly. (See above to run tests.)
+
+To surface the new `OP`/`MOD` to users, also update:
+
+- `module/help_mode.c`: add the op to the relevant on-module help page, and bump that page's `HELPn_LENGTH`.
+- `docs/ops/*.toml`: add an entry (with a `prototype` and `short` description) so the op appears in the generated manual instead of its "Missing documentation" list.
 
 ## Code Formatting
 
