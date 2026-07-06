@@ -356,9 +356,13 @@ static bool mp_scale_editor_active(void) {
 static void mp_preset_grid_key(uint8_t x, uint8_t y, uint8_t z) {
     if (!z || y >= 8) return;  // act on press, 8 rows only
     if (x == 0) {
-        if (mp_tap_ticks && mp_tap_slot == y) {  // double-tap: load the slot
+        if (mp_tap_ticks && mp_tap_slot == y) {  // double-tap: load + close
             mp_tap_ticks = 0;
             mp_load_and_confirm(y);
+            // close the browser and hand the grid back to the running sequence
+            // (the POSITIONS view, as if the user pressed 1)
+            mp_preset_view = false;
+            view = MP_VIEW_POSITIONS;
         }
         else {  // single tap: select it, arm the double-tap window
             mp_sel_slot = y;
