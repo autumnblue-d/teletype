@@ -8,7 +8,7 @@
 - **NEW**: global editable scale bank shared by the native Kria/Meadowphysics/Earthsea modes, with a grid interval editor in each mode's Config view
 - **NEW**: `KR.II` op: enable/disable i2c follower output for the native Kria/Meadowphysics engines
 - **NEW**: Marbles-style deja vu random ops: `DV`, `DV.DV`, `DV.L`, `DV.R`
-- **NEW**: Marbles-style beta-distribution shaping ops: `BETA`, `DV.B`
+- **NEW**: Marbles-style beta-distribution shaping ops: `BETA`, `BETA.K`, `DV.B`, `DV.K`
 - **NEW**: Grids topographic drum ops: `GR.P`, `GR.L`, `GR.A`
 - **NEW**: USB MIDI Out ops (`MO.*`): channel/port select, note/CC/pitch bend/program change, clock/start/stop/continue
 - **NEW**: USB MIDI In and Out both support A/B port selection
