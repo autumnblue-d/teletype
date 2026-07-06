@@ -10,10 +10,11 @@
 //
 // Scope vs Ansible: this renders/edits the primary 16x8 view. The 256-grid
 // second view (rows 8-15) and the OLED preset/clock/config/tuning screens are
-// out of scope here (shell/keyboard concern). Long-press gestures (pattern
-// copy, rpt reset) are not ported. Persisted edit-behavior flags
-// (note_sync/loop_sync/div_sync/note_div_sync) live in the grid state with
-// Ansible defaults for now.
+// out of scope here (shell/keyboard concern). The mPattern long-press copy
+// gesture IS ported (see hold_pending / kria_grid_pattern_hold_fire); the mRpt
+// long-press reset is not (its parent row was repurposed for decrement).
+// Persisted edit-behavior flags (note_sync/loop_sync/div_sync/note_div_sync)
+// live in the grid state with Ansible defaults for now.
 
 #include <stdint.h>
 
@@ -47,6 +48,13 @@ typedef struct {
     int8_t loop_last;
     uint8_t loop_edit;  // track row for the mTr per-track loop gesture
 
+    // mPattern long-press gesture (Ansible grid_keytimer_kria): a plain
+    // pattern-select press is deferred -- a quick release switches; holding past
+    // the shell's threshold copies the playing pattern into the slot, then
+    // switches. Set on press, cleared on switch / fire / page change.
+    uint8_t hold_pending;
+    uint8_t hold_x;  // pattern slot pressed while a hold is pending
+
     // blink flags, toggled by the shell's 100 ms timers
     uint8_t alt_blink;
     uint8_t meta_lock_blink;
@@ -75,5 +83,11 @@ void kria_grid_process_key(kria_engine_t* e, kria_grid_state_t* g, uint8_t x,
 // to full brightness so dim ramps don't vanish.
 void kria_grid_refresh(kria_engine_t* e, kria_grid_state_t* g, uint8_t* led,
                        uint8_t vari);
+
+// Fire the deferred mPattern long-press: if a hold is pending, copy the playing
+// pattern into the held slot and switch to it. Returns 1 if it fired, 0 if no
+// hold was pending (already released/switched or page changed). The shell calls
+// this via an AppCustom event once its hold threshold elapses.
+uint8_t kria_grid_pattern_hold_fire(kria_engine_t* e, kria_grid_state_t* g);
 
 #endif

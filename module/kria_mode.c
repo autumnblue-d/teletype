@@ -61,6 +61,11 @@ static bool timer_enabled = false;
 static bool dirty = true;
 static bool cfg_dirty = false;  // song edited, not yet flushed to flash
 
+// mPattern long-press: blink-timer ticks a slot has been held (100 ms each).
+// At the threshold we post KR_APPEVT_PATTERN_COPY (~Ansible GRID_KEY_HOLD_TIME).
+#define KR_PATTERN_HOLD_TICKS 4
+static uint8_t hold_ticks = 0;
+
 static uint64_t last_tick_time = 0;
 static uint32_t clock_delta = KR_CLOCK_PERIOD_DEFAULT;
 
@@ -163,6 +168,18 @@ static void km_altblink_cb(void* o) {
     kgrid.meta_lock_blink ^= 1;
     if ((active || kria_running)) scene_state.grid.grid_dirty = 1;
     if (mode_confirm_tick()) dirty = true;  // erase the SAVED banner
+    // mPattern long-press: once a slot has been held past the threshold, post
+    // the copy event (the memcpy itself runs in the event loop, not here).
+    if (kgrid.hold_pending) {
+        if (++hold_ticks >= KR_PATTERN_HOLD_TICKS) {
+            hold_ticks = 0;
+            event_t ev = { .type = kEventAppCustom,
+                           .data = KR_APPEVT_PATTERN_COPY };
+            event_post(&ev);
+        }
+    }
+    else
+        hold_ticks = 0;
 }
 
 // Schedule the note-off (and, on the initial clock fire, the first repeat) for
@@ -248,6 +265,8 @@ void kria_mode_exit(void) {
     kria_flush_if_dirty();  // song + scale + i2c follower bank
     kria_i2c_oled_exit();   // don't leave the MIDI editor open across mode exit
     km_view = KM_VIEW_SEQ;  // next entry starts on the sequencer
+    kgrid.hold_pending = 0;  // drop any in-flight pattern long-press
+    hold_ticks = 0;
     active = false;
 }
 
@@ -313,6 +332,14 @@ void kria_service_repeat(uint8_t track) {
         timer_add(&repeatTimer[track], rt, &km_rpt_cb, &km_idx[track]);
     }
     dirty = true;
+}
+
+void kria_service_pattern_copy(void) {
+    // cfg_dirty was already set by the initiating press (kria_grid_key).
+    if (kria_grid_pattern_hold_fire(&eng, &kgrid)) {
+        dirty = true;
+        if (kria_owns_grid()) scene_state.grid.grid_dirty = 1;
+    }
 }
 
 bool kria_external_clock(uint8_t level) {

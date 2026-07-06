@@ -596,6 +596,10 @@ void handler_AppCustom(int32_t data) {
         if (kria_owns_grid()) scene_state.grid.grid_dirty = 1;
         return;
     }
+    if (data == KR_APPEVT_PATTERN_COPY) {
+        kria_service_pattern_copy();
+        return;
+    }
     if (data >= KR_APPEVT_NOTEOFF_BASE &&
         data < KR_APPEVT_NOTEOFF_BASE + KRIA_NUM_TRACKS) {
         kria_service_note_off((uint8_t)(data - KR_APPEVT_NOTEOFF_BASE));

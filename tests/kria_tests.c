@@ -427,6 +427,65 @@ TEST grid_loop_gesture_sets_range(void) {
     PASS();
 }
 
+// mPattern long-press (act-on-release): a quick press/release just switches
+// pattern; the copy gesture must not fire.
+TEST grid_pattern_quick_release_switches(void) {
+    kria_grid_state_t G;
+    kria_engine_set_defaults(&E.cfg);
+    kria_engine_init(&E, &OUT, test_rnd, &RND, NULL);
+    kria_grid_state_init(&G);
+    G.mode = KR_MODE_PATTERN;  // cue/meta default 0 -> plain-select path
+
+    kria_grid_process_key(&E, &G, 3, 0, 1);  // press slot 3: deferred
+    ASSERT_EQ(0, E.cfg.pattern);             // not switched on press
+    ASSERT_EQ(1, G.hold_pending);
+    kria_grid_process_key(&E, &G, 3, 0, 0);  // quick release: switch
+    ASSERT_EQ(3, E.cfg.pattern);
+    ASSERT_EQ(0, G.hold_pending);
+    PASS();
+}
+
+// Holding a slot past the threshold copies the playing pattern into it, then
+// switches; the eventual physical release is then a no-op.
+TEST grid_pattern_hold_copies_and_switches(void) {
+    kria_grid_state_t G;
+    kria_engine_set_defaults(&E.cfg);
+    E.cfg.p[0].t[0].tr[5] = 1;  // make the playing pattern distinctive
+    kria_engine_init(&E, &OUT, test_rnd, &RND, NULL);
+    kria_grid_state_init(&G);
+    G.mode = KR_MODE_PATTERN;
+
+    kria_grid_process_key(&E, &G, 2, 0, 1);  // press slot 2 (hold pending)
+    ASSERT_EQ(0, E.cfg.pattern);
+    ASSERT_EQ(0, E.cfg.p[2].t[0].tr[5]);                // not yet copied
+    ASSERT_EQ(1, kria_grid_pattern_hold_fire(&E, &G));  // threshold elapsed
+    ASSERT_EQ(2, E.cfg.pattern);                        // switched to the slot
+    ASSERT_EQ(1, E.cfg.p[2].t[0].tr[5]);                // playing pattern copied
+    ASSERT_EQ(0, G.hold_pending);
+    kria_grid_process_key(&E, &G, 2, 0, 0);  // release after fire: no-op
+    ASSERT_EQ(2, E.cfg.pattern);
+    ASSERT_EQ(0, kria_grid_pattern_hold_fire(&E, &G));  // nothing pending
+    PASS();
+}
+
+// Leaving the pattern page (a bottom-row press) abandons a pending hold so it
+// cannot fire later on the wrong page.
+TEST grid_pattern_hold_abandoned_on_page_change(void) {
+    kria_grid_state_t G;
+    kria_engine_set_defaults(&E.cfg);
+    kria_engine_init(&E, &OUT, test_rnd, &RND, NULL);
+    kria_grid_state_init(&G);
+    G.mode = KR_MODE_PATTERN;
+
+    kria_grid_process_key(&E, &G, 4, 0, 1);  // press slot 4 (hold pending)
+    ASSERT_EQ(1, G.hold_pending);
+    kria_grid_process_key(&E, &G, 8, 7, 1);  // bottom row x8 -> mDur page
+    ASSERT_EQ(0, G.hold_pending);
+    ASSERT_EQ(0, kria_grid_pattern_hold_fire(&E, &G));  // won't fire
+    ASSERT_EQ(0, E.cfg.pattern);
+    PASS();
+}
+
 TEST grid_render_smoke(void) {
     kria_grid_state_t G;
     uint8_t led[128];
@@ -484,5 +543,8 @@ SUITE(kria_suite) {
     RUN_TEST(grid_bottom_row_selects_mode_and_track);
     RUN_TEST(grid_tr_page_toggles_step);
     RUN_TEST(grid_loop_gesture_sets_range);
+    RUN_TEST(grid_pattern_quick_release_switches);
+    RUN_TEST(grid_pattern_hold_copies_and_switches);
+    RUN_TEST(grid_pattern_hold_abandoned_on_page_change);
     RUN_TEST(grid_render_smoke);
 }

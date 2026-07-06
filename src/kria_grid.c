@@ -4,8 +4,10 @@
 //
 // Deviations (no hardware to tune against; all documented):
 //  - primary 16x8 view only (no 256 second view).
-//  - pattern change happens on press (Ansible: on fast-press release); the
-//    long-press pattern-copy gesture is not ported.
+//  - plain pattern select acts on release (Ansible fast-press release), so the
+//    long-press pattern-copy gesture is ported: hold a slot to copy the playing
+//    pattern into it, then switch (kria_grid_pattern_hold_fire, shell-timed).
+//    The mRpt long-press reset is not ported (its row is now the decrement row).
 //  - the mRpt modLoop "vertical range" gesture and the meta-slot loop gesture
 //    fall back to the standard loop-range gesture / no-op (marked TODO).
 
@@ -589,6 +591,7 @@ static void key_bottom_row(kria_engine_t* e, kria_grid_state_t* g, uint8_t x,
                            uint8_t z) {
     uint8_t mode = g->mode;
     if (z) {
+        g->hold_pending = 0;  // abandon any pending pattern hold on page change
         if (x < 4) {
             if (g->mod_mode == KR_MOD_LOOP)
                 e->rt.mutes[x] = !e->rt.mutes[x];
@@ -861,24 +864,35 @@ void kria_grid_process_key(kria_engine_t* e, kria_grid_state_t* g, uint8_t x,
             break;
 
         case KR_MODE_PATTERN:
-            if (z) {
-                if (y == 0) {
+            if (y == 0) {
+                // Plain pattern select (no cue, no meta) is deferred so the
+                // long-press copy gesture can share the button: a quick release
+                // switches; holding fires kria_grid_pattern_hold_fire (shell-
+                // timed). The cue/meta row-0 actions stay press-driven.
+                if (!g->cue && !e->cfg.meta) {
+                    if (z) {
+                        g->hold_pending = 1;
+                        g->hold_x = x;
+                    }
+                    else if (g->hold_pending && g->hold_x == x) {
+                        kria_engine_change_pattern(e, x);
+                        if (!g->meta_lock) g->edit_pattern = x;
+                        g->hold_pending = 0;
+                    }
+                }
+                else if (z) {
                     if (g->cue && e->cfg.meta) {
                         g->meta_lock = !g->meta_lock;
                         if (g->meta_lock) g->edit_pattern = e->cfg.pattern;
                     }
-                    else if (!e->cfg.meta) {
-                        if (g->cue)
-                            e->rt.cue_pat_next = x + 1;
-                        else {
-                            kria_engine_change_pattern(e, x);
-                            if (!g->meta_lock) g->edit_pattern = x;
-                        }
-                    }
-                    else
+                    else if (g->cue)  // cue && !meta
+                        e->rt.cue_pat_next = x + 1;
+                    else  // meta && !cue
                         e->cfg.meta_pat[g->meta_edit] = x;
                 }
-                else if (y == 1) {
+            }
+            else if (z) {
+                if (y == 1) {
                     if (mm == KR_MOD_TIME)
                         e->cfg.cue_div = x;
                     else
@@ -906,4 +920,20 @@ void kria_grid_process_key(kria_engine_t* e, kria_grid_state_t* g, uint8_t x,
 
         default: break;
     }
+}
+
+uint8_t kria_grid_pattern_hold_fire(kria_engine_t* e, kria_grid_state_t* g) {
+    if (!g->hold_pending) return 0;
+    uint8_t slot = g->hold_x;
+    g->hold_pending = 0;
+    if (slot >= KRIA_NUM_PATTERNS) return 0;
+    // Copy the playing pattern into the held slot, then switch to it (Ansible
+    // grid_keytimer_kria mPattern). Skip the self-copy when the slot is already
+    // current -- a plain overlapping memcpy would be undefined.
+    if (slot != e->cfg.pattern)
+        memcpy(&e->cfg.p[slot], &e->cfg.p[e->cfg.pattern],
+               sizeof(e->cfg.p[slot]));
+    kria_engine_change_pattern(e, slot);
+    if (!g->meta_lock) g->edit_pattern = slot;
+    return 1;
 }

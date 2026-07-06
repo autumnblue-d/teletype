@@ -16,6 +16,7 @@
 // handler_AppCustom event codes: our ISR timers post these, main.c dispatches
 // them. Single values plus per-track ranges [BASE, BASE+KRIA_NUM_TRACKS).
 #define KR_APPEVT_CLOCK 2          // internal clock tick
+#define KR_APPEVT_PATTERN_COPY 4   // mPattern long-press hold elapsed -> copy
 #define KR_APPEVT_NOTEOFF_BASE 10  // + track -> note-off
 #define KR_APPEVT_REPEAT_BASE 20   // + track -> repeat retrigger
 
@@ -39,6 +40,10 @@ uint8_t screen_refresh_kria(void);
 void kria_clock_tick(void);
 void kria_service_note_off(uint8_t track);
 void kria_service_repeat(uint8_t track);
+
+// mPattern long-press hold elapsed (KR_APPEVT_PATTERN_COPY): copy the playing
+// pattern into the held slot and switch to it.
+void kria_service_pattern_copy(void);
 
 // External-clock edge from handler_Trigger for KR_EXT_CLOCK_INPUT; `level` is
 // the pin state. Returns true if Kria consumed the edge.
