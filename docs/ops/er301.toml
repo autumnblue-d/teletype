@@ -1,10 +1,10 @@
 ["SC.TR"]
 prototype = "SC.TR x y"
-short = "Set trigger output for the ER-301 virtual output x to y (0-1)"
+short = "Set trigger output for the ER-301 virtual output `x` to `y` (0-1)"
 
 ["SC.TR.POL"]
 prototype = "SC.TR.POL x y"
-short = "Set polarity of trigger for the ER-301 virtual output x to y (0-1)"
+short = "Set polarity of trigger for the ER-301 virtual output `x` to `y` (0-1)"
 
 ["SC.TR.TIME"]
 prototype = "SC.TR.TIME x y"
@@ -21,11 +21,11 @@ short = "Pulse the ER-301 virtual trigger output `x`"
 
 ["SC.CV"]
 prototype = "SC.CV x y"
-short = "CV target value for the ER-301 virtual output `x` to value `y`"
+short = "Set the CV target value of ER-301 virtual output `x` to `y`"
 
 ["SC.CV.OFF"]
 prototype = "SC.CV.OFF x y"
-short = "CV offset added to the ER-301 virtual output `x`"
+short = "Set the CV offset `y` added to ER-301 virtual output `x`"
 
 ["SC.CV.SET"]
 prototype = "SC.CV.SET x"

@@ -11,7 +11,7 @@ prototype = "W/T.REV"
 short = "Reverse the direction of playback"
 
 ["W/T.SPEED"]
-prototype = "W/T.SPEED speed deno"
+prototype = "W/T.SPEED speed denom"
 short = "Set speed as a rate, or ratio. Negative values are reverse (s16V)"
 
 ["W/T.FREQ"]

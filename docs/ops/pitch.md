@@ -1,3 +1,3 @@
 ## Pitch
 
-Mathematical calcuations and tables helpful for musical pitch.
+Mathematical calculations and tables helpful for musical pitch.

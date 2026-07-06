@@ -1,6 +1,6 @@
 ["MA.SELECT"]
 prototype = "MA.SELECT x"
-short = "select the default matrixarchate module, default `1`"
+short = "select the default Matrixarchate module, default `1`"
 
 ["MA.STEP"]
 prototype = "MA.STEP"
@@ -27,8 +27,8 @@ prototype = "MA.OFF x y"
 short = "disconnect row `x` and column `y` in the current program"
 
 ["MA.POFF"]
-prototype = "MA.POFF x y pgm"
-short = "connect row `x` and column `y` in program `pgm`"
+prototype = "MA.POFF pgm x y"
+short = "disconnect row `x` and column `y` in program `pgm`"
 
 ["MA.SET"]
 prototype = "MA.SET x y state"

@@ -45,10 +45,10 @@ description = """
 Marbles. It maintains a short loop of random values; each read advances the
 loop one step and returns the current value scaled to `0`–`max`.
 
-`DV.DV` sets the *déjà vu amount*, the balance between repetition and novelty:
-`0` locks the loop into an exact repeat, `8192` plays fresh random values, and
-`16383` keeps the loop's values but shuffles their order. `DV.L` sets the loop
-length (`1`–`16`) and `DV.R` re-locks a brand-new loop.
+`DV.DV` sets the *déjà vu amount* (`0`–`100`), the balance between novelty and
+repetition: `0` plays fresh random values, `50` locks the loop into an exact
+repeat, and `100` keeps the loop's values but shuffles their order. `DV.L` sets
+the loop length (`1`–`16`) and `DV.R` re-locks a brand-new loop.
 
 By default `DV` values are uniformly distributed. `DV.B` instead shapes each
 value through the same bell-with-fat-tails distribution as Marbles' X output
@@ -124,12 +124,12 @@ short = """changes by `-1`, `0`, or `1` upon each read saving its state,
 setting will give it a new value for the next read"""
 description="""
 Changes by `-1`, `0`, or `1` upon each read, saving its state. Setting `DRUNK`
-will give it a new value for the next read, and drunkedness will continue on
+will give it a new value for the next read, and drunkenness will continue on
 from there with subsequent reads.
 
 Setting `DRUNK.MIN` and `DRUNK.MAX` controls the lower and upper bounds
 (inclusive) that `DRUNK` can reach. `DRUNK.WRAP` controls whether the value can
-wrap around when it reaches it's bounds.
+wrap around when it reaches its bounds.
 """
 
 ["DRUNK.MIN"]
@@ -145,7 +145,7 @@ short = "set the upper bound for `DRUNK`, default `255`"
 ["DRUNK.WRAP"]
 prototype = "DRUNK.WRAP"
 prototype_set = "DRUNK.WRAP x"
-short = "should `DRUNK` wrap around when it reaches it's bounds, default `0`"
+short = "should `DRUNK` wrap around when it reaches its bounds, default `0`"
 
 ["SEED"]
 prototype = "SEED"

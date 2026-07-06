@@ -44,12 +44,12 @@ short = "get the bottom fence line or set it to x"
 ["@SPEED"]
 prototype = "@SPEED"
 prototype_set = "@SPEED x"
-short = "get the speed of the turtle's @STEP in cells per step or set it to x"
+short = "get the speed of the turtle's `@STEP` in cells per step or set it to x"
 
 ["@DIR"]
 prototype = "@DIR"
 prototype_set = "@DIR x"
-short = "get the direction of the turtle's @STEP in degrees or set it to x"
+short = "get the direction of the turtle's `@STEP` in degrees or set it to x"
 
 ["@STEP"]
 prototype = "@STEP"

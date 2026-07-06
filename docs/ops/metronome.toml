@@ -16,4 +16,3 @@ short = "get/set metronome activation to `x` (`0/1`), default `1` (enabled)"
 ["M.RESET"]
 prototype = "M.RESET"
 short = "hard reset metronome count without triggering"
- 

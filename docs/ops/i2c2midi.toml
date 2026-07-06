@@ -38,7 +38,7 @@ prototype = "I2M.S# ch"
 prototype_set = "I2M.S# ch x"  
 short = "Get current transposition / Set transposition of MIDI notes to `x` semitones (-127..127) for channel `ch` (0..32)"
 description = """
-Get current transposition / Set transposition of MIDI notes to `x` semitones (-127..127) for channel `ch` (0..32). Use `ch = 0` to set for all channels."  
+Get current transposition / Set transposition of MIDI notes to `x` semitones (-127..127) for channel `ch` (0..32). Use `ch = 0` to set for all channels.
 """
 
 ["I2M.MIN"]  
@@ -205,7 +205,7 @@ prototype = "I2M.CC.SLEW x"
 prototype_set = "I2M.CC.SLEW x y"  
 short = "Get current slew time for controller `x` / Set slew time for controller `x` (0..127) to `y` ms (0..32767)"   
 description = """
-Get current slew time for controller `x` / Set slew time for controller `x` (0..127) to `y` ms (0..32767). i2c2midi will ramp from the controller's last value to a new value within the given time `x`, sending MIDI CCs at a maximum rate of 30 ms. If the slewing is still ongoing when a new value is set, the slewing uses its current position as the last value. Is 8 CC controller values can be slewed simoultaneously before the oldest currently slewing value is overwritten by the newest. Default is `y = 0`.  
+Get current slew time for controller `x` / Set slew time for controller `x` (0..127) to `y` ms (0..32767). i2c2midi will ramp from the controller's last value to a new value within the given time `y`, sending MIDI CCs at a maximum rate of 30 ms. If the slewing is still ongoing when a new value is set, the slewing uses its current position as the last value. Up to 8 CC controller values can be slewed simultaneously before the oldest currently slewing value is overwritten by the newest. Default is `y = 0`.  
 """
 
 ["I2M.CC.SLEW#"]  
@@ -215,14 +215,14 @@ short = "Get current slew time for controller `x` / Set slew time for controller
 
 ["I2M.NRPN"]  
 prototype = "I2M.NRPN x y z"  
-short = "Send MIDI NRPN message (high-res CC) for parameter MSB `x` and LSB `y` with value `y` (0..16383)"  
+short = "Send MIDI NRPN message (high-res CC) for parameter MSB `x` and LSB `y` with value `z` (0..16383)"  
 description = """
-Send MIDI NRPN message (high-res CC) for parameter MSB `x` and LSB `y` with value `y` (0..16383).  
+Send MIDI NRPN message (high-res CC) for parameter MSB `x` and LSB `y` with value `z` (0..16383).  
 """
 
 ["I2M.NRPN#"]  
 prototype = "I2M.NRPN# ch x y z"  
-short = "Send MIDI NRPN message (high-res CC) for parameter MSB `x` and LSB `y` with value `y` (0..16383) on channel `ch` (1..32)"  
+short = "Send MIDI NRPN message (high-res CC) for parameter MSB `x` and LSB `y` with value `z` (0..16383) on channel `ch` (1..32)"  
 
 ["I2M.NRPN.OFF"]  
 prototype = "I2M.NRPN.OFF x y"  
@@ -252,14 +252,14 @@ short = "Get current slew time / Set slew time for NRPN messages to `z` ms (0..3
 
 ["I2M.NRPN.SET"]  
 prototype = "I2M.NRPN.SET x y z"  
-short = "Send MIDI NRPN message for parameter MSB `x` and LSB `y` with value `y` (0..16383), bypassing any slew settings"  
+short = "Send MIDI NRPN message for parameter MSB `x` and LSB `y` with value `z` (0..16383), bypassing any slew settings"  
 description = """
-Send MIDI NRPN message for parameter MSB `x` and LSB `y` with value `y` (0..16383), bypassing any slew settings.  
+Send MIDI NRPN message for parameter MSB `x` and LSB `y` with value `z` (0..16383), bypassing any slew settings.  
 """
 
 ["I2M.NRPN.SET#"]  
 prototype = "I2M.NRPN.SET# ch x y z"  
-short = "Send MIDI NRPN message for parameter MSB `x` and LSB `y` with value `y` (0..16383) on channel `ch` (1..32), bypassing any slew settings"  
+short = "Send MIDI NRPN message for parameter MSB `x` and LSB `y` with value `z` (0..16383) on channel `ch` (1..32), bypassing any slew settings"  
 
 ["I2M.PRG"]  
 prototype = "I2M.PRG x"  
@@ -275,7 +275,7 @@ short = "Send MIDI After Touch message with value `x` (0..127)"
 
 ["I2M.CLK"]  
 prototype = "I2M.CLK"  
-short = "Send MIDI Clock message, this still needs improvement ..."  
+short = "Send MIDI Clock message"  
 
 ["I2M.START"]  
 prototype = "I2M.START"  
@@ -321,7 +321,7 @@ Remove note `y` (-127..127) from chord `x` (0..8). If the chord contains note `y
 prototype = "I2M.C.INS x y z"  
 short = "Add note `z` (-127..127) to chord `x` (0..8) at index `y` (0..7), with `z` relative to the root note; use `x = 0` to insert into all chords"  
 description = """
-Add note `z` (-127..127) to chord `x` (0..8) at index `y` (0..7), with `z` relative to the root note. Already defined notes at index `y` and higher are pushed to the right. Use `x = 0` to insert the note to all chords.
+Add note `z` (-127..127) to chord `x` (0..8) at index `y` (0..7), with `z` relative to the root note. Already defined notes at index `y` and higher are pushed to the right. Use `x = 0` to insert the note into all chords.
 """
 
 ["I2M.C.DEL"]  
@@ -342,7 +342,7 @@ Set note at index `y` (0..7) in chord `x` (0..8) to note `z` (-127..127), replac
 prototype = "I2M.C.B x y"  
 short = "Clear and define chord `x` (0..8) using reverse binary notation (`R...`)"  
 description = """
-Clear and define chord `x` (0..8) using reverse binary notation (`R...`). Use `1` or `0` in order to include or exclude notes from the chord. E.g. use `x = R10001001` for `0,4,7` (major triad) or `x = R1000000100000001` for `0,7,15`. `y` can be a maximum of 16 digit long. Use `x = 0` to clear and define all chords.
+Clear and define chord `x` (0..8) using reverse binary notation (`R...`). Use `1` or `0` in order to include or exclude notes from the chord. E.g. use `x = R10001001` for `0,4,7` (major triad) or `x = R1000000100000001` for `0,7,15`. `y` can be a maximum of 16 digits long. Use `x = 0` to clear and define all chords.
 """
 
 ["I2M.C.CLR"]  
@@ -364,14 +364,14 @@ Get current length / Set length of chord `x` (0..8) to `y` (1..8). The length of
 prototype = "I2M.C.SC x y"  
 short = "Set scale for chord `x` (0..8) based on chord `y` (0..8), use `x = 0` to set for all chords, use `y = 0` to remove scale"    
 description = """
-Set scale for chord `x` (0..8) based on chord `y` (0..8). Setting a scale for a chord comes in handy when using chord transformations that introduce new notes, like `I2M.C.TRP`, `I2M.C.DIS` or `I2M.C.REF`. Use `y = 0` to remove the scale. Use `x = 0` to set reversal for all chords.
+Set scale for chord `x` (0..8) based on chord `y` (0..8). Setting a scale for a chord comes in handy when using chord transformations that introduce new notes, like `I2M.C.TRP`, `I2M.C.DIS` or `I2M.C.REF`. Use `y = 0` to remove the scale. Use `x = 0` to set scale for all chords.
 """
 
 ["I2M.C.REV"]  
 prototype = "I2M.C.REV x y"  
-short = "Set reversal of notes in chord `x` (0..8) to `y`. `y = 0` or an even number means not reversed, y = 1 or an uneven number  means reversed. Use `x = 0` to set for all chords."  
+short = "Set reversal of notes in chord `x` (0..8) to `y`. `y = 0` or an even number means not reversed, y = 1 or an odd number means reversed. Use `x = 0` to set for all chords."  
 description = """
-Set reverse of notes in chord `x` (0..8) to `y`. `y = 0` or an even number means not reversed, `y = 1` or an uneven number  means reversed. E.g. `y = 1` for chord `0,3,7` will lead to `7,3,0`. Default is `y = 0`. Use `x = 0` to reverse all chords.
+Set reverse of notes in chord `x` (0..8) to `y`. `y = 0` or an even number means not reversed, `y = 1` or an odd number means reversed. E.g. `y = 1` for chord `0,3,7` will lead to `7,3,0`. Default is `y = 0`. Use `x = 0` to reverse all chords.
 """
 
 ["I2M.C.ROT"]  
@@ -385,7 +385,7 @@ Set rotation of notes in chord `x` (0..8) to `y` steps (-127..127). E.g. `y = 1`
 prototype = "I2M.C.TRP x y"  
 short = "Set transposition of chord `x` (0..8) to `y` (-127..127), use `x = 0` to set for all chords"  
 description = """
-Set transposition of chord `x` (0..8) to `y` (-127..127). Transposition adds `y` to the note number of each note in the chord.Default is `y = 0`. Use `x = 0` to set transposition for all chords. This transformation introduces new notes to the chord – try it in combination with setting a scale.
+Set transposition of chord `x` (0..8) to `y` (-127..127). Transposition adds `y` to the note number of each note in the chord. Default is `y = 0`. Use `x = 0` to set transposition for all chords. This transformation introduces new notes to the chord – try it in combination with setting a scale.
 """
 
 ["I2M.C.DIS"]  
@@ -399,7 +399,7 @@ Set distortion of chord `x` (0..8) to width `y` (-127..127) with anchor point `z
 prototype = "I2M.C.REF x y z"  
 short = "Set reflection of chord `x` (0..8) to `y` iterations (-127..127) with anchor point `z` (0..16), use `x = 0` to set for all chords"  
 description = """
-Set reflection of chord `x` (0..8) to `y` (-127..127) with anchor point `z` (0..16). The anchor point defines at which axis the chord gets reflected. Default is `y = 0`. Use `x = 0` to set distortion for all chords. This transformation introduces new notes to the chord – try it in combination with setting a scale.
+Set reflection of chord `x` (0..8) to `y` (-127..127) with anchor point `z` (0..16). The anchor point defines at which axis the chord gets reflected. Default is `y = 0`. Use `x = 0` to set reflection for all chords. This transformation introduces new notes to the chord – try it in combination with setting a scale.
 """
 
 ["I2M.C.INV"]  
@@ -411,9 +411,9 @@ Set inversion of chord `x` (0..8) to `y` (-32..32). Default is `y = 0`. Use `x =
 
 ["I2M.C.STR"]  
 prototype = "I2M.C.STR x y"  
-short = "Set strumming of chord `x` (0..8) to `x` ms (0..32767), use `x = 0` to set for all chords"   
+short = "Set strumming of chord `x` (0..8) to `y` ms (0..32767), use `x = 0` to set for all chords"   
 description = """
-Set strumming of chord `x` (0..8) to `x` ms (0..32767). Strumming plays the notes of a chord arpeggiated, with an interval of `y` ms in between notes. Default is `y = 0`. Use `x = 0` to set strumming for all chords.
+Set strumming of chord `x` (0..8) to `y` ms (0..32767). Strumming plays the notes of a chord arpeggiated, with an interval of `y` ms in between notes. Default is `y = 0`. Use `x = 0` to set strumming for all chords.
 """
 
 ["I2M.C.VCUR"]  
@@ -427,7 +427,7 @@ Set velocity curve for chord `w` (0..8) with curve type `x` (0..5), start value 
 ["I2M.C.TCUR"]  
 prototype = "I2M.C.TCUR w x y z"  
 aliases = ["I2M.C.T~"]
-short = "Set time curve to strumming for chord `w` (0..8) with curve type `x` (0..5), start value `y`% (0..32767) and end value `z`% (0..32767), use `w = 0` to set for all chords, use `x = 0` to turn off"   
+short = "Set time curve for chord `w` (0..8) with curve type `x` (0..5), start value `y`% (0..32767) and end value `z`% (0..32767), use `w = 0` to set for all chords, use `x = 0` to turn off"   
 description = """
 Set time curve for chord `w` (0..8) with curve type `x` (0..5), start value `y`% (0..32767) and end value `z`% (0..32767). This will affect the time interval between the notes in the order they are defined in the chord. Start and end percentages refer to the current strumming setting of the chord, set via `I2M.C.STR`. Use `x = 0` to turn time curve off. The following curves are available: 0) Off 1) Linear 2) Exponential 3) Triangle 4) Square 5) Random. Use `w = 0` to set time curve for all chords. Try a square curve with similar values to create swing. Try a random curve with subtle values for a humanizing effect.
 """
@@ -471,14 +471,14 @@ Set the length of the buffer to `x` ms (0..32767). Default is `x = 1000`.
 prototype = "I2M.B.START x"  
 short = "Add an offset of `x` ms (0..32767) to the start of the buffer"
 description = """
-Add an offset of `x` ms (0..32767) to the start of the buffer. The offset time is non-distructively added to the start of the looping buffer. E.g. if the buffer length is set to `1000` ms and start offset is set to `200` ms, the buffer will loop the section `200` - `1000` ms, resulting in a looping buffer length of `800` ms. Default is `x = 0`.
+Add an offset of `x` ms (0..32767) to the start of the buffer. The offset time is non-destructively added to the start of the looping buffer. E.g. if the buffer length is set to `1000` ms and start offset is set to `200` ms, the buffer will loop the section `200` - `1000` ms, resulting in a looping buffer length of `800` ms. Default is `x = 0`.
 """
 
 ["I2M.B.END"]  
 prototype = "I2M.B.END x"  
 short = "Add a negative offset of `x` ms (0..32767) to the end of the buffer"
 description = """
-Add a negative offset of `x` ms (0..32767) to the end of the buffer. The offset time is non-distructively substracted from the end of the looping buffer. E.g. if the buffer length is set to `1000` ms, start offset is set to `200` ms, and end offset is set to `300` ms, the buffer will loop the section `200` - `700` ms, resulting in a looping buffer length of `500` ms. Default is `x = 0`.
+Add a negative offset of `x` ms (0..32767) to the end of the buffer. The offset time is non-destructively subtracted from the end of the looping buffer. E.g. if the buffer length is set to `1000` ms, start offset is set to `200` ms, and end offset is set to `300` ms, the buffer will loop the section `200` - `700` ms, resulting in a looping buffer length of `500` ms. Default is `x = 0`.
 """
 
 ["I2M.B.DIR"]    
@@ -499,7 +499,7 @@ Set the playing speed `x` (1..32767) of the buffer. `x = 100` is equivalent to '
 prototype = "I2M.B.FB x"  
 short = "Set the feedback length `x` (0..255) of the buffer"
 description = """
-Set the feedback length `x` (0..255) of the buffer. By default, each recorded note is getting decreased in velocity with each buffer iteration. The feedback value determines, how many buffer iterations a recorded note will 'survive' in the buffer, before the decreasing velocity will reach zero (meaning the note is remove from the buffer). Set `x = 0` to turn off the automatic decrease in velocity, keeping notes in the buffer indefinitely. Use this setting in combination with `I2M.B.VSHIFT` or `I2M.B.CLR`. Default is `x = 8`.
+Set the feedback length `x` (0..255) of the buffer. By default, each recorded note is getting decreased in velocity with each buffer iteration. The feedback value determines, how many buffer iterations a recorded note will 'survive' in the buffer, before the decreasing velocity will reach zero (meaning the note is removed from the buffer). Set `x = 0` to turn off the automatic decrease in velocity, keeping notes in the buffer indefinitely. Use this setting in combination with `I2M.B.VSHIFT` or `I2M.B.CLR`. Default is `x = 8`.
 """
 
 ["I2M.B.NSHIFT"]  
@@ -550,9 +550,9 @@ short = "Clear the buffer, erasing all recorded notes in the buffer"
 
 ["I2M.B.MODE"]    
 prototype = "I2M.B.MODE x"  
-short = "Set the buffer mode to `x` (0..1). 1) Digital 2) Tape"
+short = "Set the buffer mode to `x` (0..1). 0) Digital 1) Tape"
 description = """
-Set the buffer mode to `x` (0..1). The buffer can work in two different modes: 1) Digital 2) Tape. In Digital mode, the buffer speed ( set via `I2M.B.SPE`) works independent of note number and note duration: If the buffer speed changes, the note number and note duration of a recorded note stays unaffected. In Tape mode on the other hand, the buffer speed affects the note number and note duration of recorded notes in the buffer, mimicking the behaviour of real tape. If the buffer speed gets doubled, the note number is pitched up by one octave and the note duration gets divided in half. Similarly, if the buffer speed gets divided in half, the note number is pitched down an octave and the note duration gets doubled, etc. Default is `x = 0`.
+Set the buffer mode to `x` (0..1). The buffer can work in two different modes: 0) Digital 1) Tape. In Digital mode, the buffer speed ( set via `I2M.B.SPE`) works independent of note number and note duration: If the buffer speed changes, the note number and note duration of a recorded note stays unaffected. In Tape mode on the other hand, the buffer speed affects the note number and note duration of recorded notes in the buffer, mimicking the behaviour of real tape. If the buffer speed gets doubled, the note number is pitched up by one octave and the note duration gets divided in half. Similarly, if the buffer speed gets divided in half, the note number is pitched down an octave and the note duration gets doubled, etc. Default is `x = 0`.
 """
 
 ["I2M.Q.CH"]  

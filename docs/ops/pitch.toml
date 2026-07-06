@@ -16,7 +16,7 @@ Examples:
 
 ```
 CV 1 N 60        => set CV 1 to middle C, i.e. 5V
-CV 1 N RAND 24   => set CV 1 to a random note from the lowest 2 octaves
+CV 1 N RAND 24   => random note from the lowest 2 octaves
 ```
 """
 
@@ -84,18 +84,18 @@ prototype_set = "N.B r s"
 short = "get degree `d` of scale/set scale root to `r`, scale to `s`, `s` is either bit mask (`s` >= 1) or scale preset (`s` < 1)"
 description = """
 Converts a degree in a user-defined equal temperament scale to a value usable by the CV outputs. Default values of `r` and  `s` are 0 and R101011010101, corresponding to C-major.
-To make it easier to generate bit-masks in code, LSB (bit 0) represent the first note in the octave. To avoid having to mirror scales in our heads when entering them by hand, we use `R...` (reverse binary) instead of `B...` (binary ).
+To make it easier to generate bit-masks in code, LSB (bit 0) represents the first note in the octave. To avoid having to mirror scales in our heads when entering them by hand, we use `R...` (reverse binary) instead of `B...` (binary).
 
-The bit-masks uses the 12 lower bits.
+The bit-mask uses the 12 lower bits.
 
-Note that N.B is using scale at index 0 as used by N.BX ,so N.B and N.BX 0 are equivalent.
+Note that N.B uses the scale at index 0 of N.BX, so N.B and N.BX 0 are equivalent.
 
 Examples:
 ```
 CV 1 N.B 1            ==>  set CV 1 to 1st degree of default scale
                            (C, value corresponding to N 0)
 N.B 0 R101011010101   ==>  set scale to C-major (default)
-CV 1 N.B 1            ==>  set CV 1 get 1st degree of scale
+CV 1 N.B 1            ==>  set CV 1 to 1st degree of scale
                            (C, value corresponding to N 0)
 N.B 2 R101011010101   ==>  set scale to D-major
 CV 1 N.B 3            ==>  set CV 1 to 3rd degree of scale
@@ -112,21 +112,21 @@ Values of `s` less than 1 sets the bit mask to a preset scale:
 -2:  Phrygian
 -3:  Lydian
 -4:  Mixolydian
--5:  Aeolean (natural minor)
+-5:  Aeolian (natural minor)
 -6:  Locrian
 -7:  Melodic minor
 -8:  Harmonic minor
 -9:  Major pentatonic
 -10: Minor pentatonic
--11  Whole note (1st Messiaen mode)
--12  Octatonic (half-whole, 2nd Messiaen mode)
--13  Octatonic (whole-half)
--14  3rd Messiaen mode
--15  4th Messiaen mode
--16  5th Messiaen mode
--17  6th Messiaen mode
--18  7th Messiaen mode
--19  Augmented
+-11: Whole tone (1st Messiaen mode)
+-12: Octatonic (half-whole, 2nd Messiaen mode)
+-13: Octatonic (whole-half)
+-14: 3rd Messiaen mode
+-15: 4th Messiaen mode
+-16: 5th Messiaen mode
+-17: 6th Messiaen mode
+-18: 7th Messiaen mode
+-19: Augmented
 ```
 """
 

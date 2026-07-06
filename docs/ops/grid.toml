@@ -101,7 +101,7 @@ prototype_set = "G.LED x y level"
 short = "get/set LED"
 description = """
 Set the LED level or get the current level at the specified coordinates.
-Possible level range is 0..15 (on non varibright grids anything below 8 is
+Possible level range is 0..15 (on non-varibright grids anything below 8 is
 'off', 8 or above is 'on'). 
 
 Grid controls get rendered first, and LEDs are rendered last. This means you can
@@ -152,14 +152,14 @@ prototype = "G.BTN id x y w h type level script"
 short = "initialize button"
 description = """
 Initializes and enables a button with the specified id. 256 buttons are
-available (ids are 0-based so the possible id range is 0..255. The button will
+available (ids are 0-based so the possible id range is 0..255). The button will
 be assigned to the current group (set with `G.GRP`). Buttons can be 
 reinitialized at any point.
 
 `x` and `y` specify the coordinates of the top left corner, and `w` and `h`
 specify width and height respectively. `type` determines whether the button is
 latching (1) or momentary (0). `level` sets the "off" brightness level, possible
-rand is -3..15 (the brightness level for pressed buttons is fixed at 13).
+range is -3..15 (the brightness level for pressed buttons is fixed at 13).
 
 `script` specifies the script to be executed when the button is pressed or
 released (the latter only for momentary buttons). Use 9 for Metro and 10 for
@@ -171,7 +171,7 @@ prototype = "G.GBT group id x y w h type level script"
 short = "initialize button in group"
 description = """
 Initialize and enable a button. Same as `G.BTN` but you can also choose which
-group to assign the button too.
+group to assign the button to.
 """
 
 ["G.BTX"]
@@ -179,7 +179,7 @@ prototype = "G.BTX id x y w h type level script columns rows"
 short = "initialize multiple buttons"
 description = """
 Initialize and enable a block of buttons in the current group with the specified
-number of columns and rows . Ids are incremented sequentially by columns and
+number of columns and rows. Ids are incremented sequentially by columns and
 then by rows.
 """
 
@@ -188,7 +188,7 @@ prototype = "G.GBX group id x y w h type level script columns rows"
 short = "initialize multiple buttons in group"
 description = """
 Initialize and enable a block of buttons. Same as `G.BTX` but you can also
-choose which group to assign the buttons too. 
+choose which group to assign the buttons to.
 """
 
 ["G.BTN.EN"]
@@ -432,11 +432,11 @@ Use 9 for Metro and 10 for Init. Use 0 if you don't need a script assigned.
 """
   
 ["G.GFD"]
-prototype = "G.GFD grp id x y w h type level script"
+prototype = "G.GFD group id x y w h type level script"
 short = "initialize fader in group"
 description = """
 Initialize and enable a fader. Same as `G.FDR` but you can also choose which
-group to assign the fader too.
+group to assign the fader to.
 """
 
 ["G.FDX"]
@@ -453,7 +453,7 @@ prototype = "G.GFX group id x y w h type level script columns rows"
 short = "initialize multiple faders in group"
 description = """
 Initialize and enable a block of faders. Same as `G.FDX` but you can also
-choose which group to assign the faders too. 
+choose which group to assign the faders to.
 """
 
 ["G.FDR.EN"]
@@ -546,7 +546,7 @@ prototype_set = "G.FDRY y"
 short = "get/set y of last pressed fader"
 description = """
 Get or set `y` coordinate of the last pressed fader's top left corner. This is
-the same as `G.BTN.Y G.BTNI`.
+the same as `G.FDR.Y G.FDRI`.
 """
 
 ["G.FDRN"]
@@ -574,7 +574,7 @@ short = "get/set level of last pressed fader"
 description = """
 Get or set the brightness level (for coarse faders), or the maximum value level
 (for fine faders) of the last pressed fader. This is the same as
-`G.FDR.L G.BTNI`. For more details on levels see `G.FDR`.
+`G.FDR.L G.FDRI`. For more details on levels see `G.FDR`.
 """
 
 ["G.FDR.PR"]

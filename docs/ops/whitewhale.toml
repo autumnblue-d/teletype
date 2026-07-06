@@ -17,7 +17,7 @@ Cut immediately to position (0-15) in the currently playing pattern.
 prototype = "WW.SYNC x"
 short = "Cut to position (0-15) and hard-sync the clock (if clocked internally)"
 description = """
-Cut to position (0-15) in the currently playing pattern. If White Whale is being clocked internaly, 
+Cut to position (0-15) in the currently playing pattern. If White Whale is being clocked internally,
 this also hard-syncs the clock.
 """
 
@@ -37,7 +37,7 @@ short = "Set the loop end position (0-15)"
 description = """
 Set the loop end position (0-15). This does not impact the current playback position. If the 
 playback position is outside of the defined loop it will continue to step until it enters the 
-loop. If the end position is before the end position, the loop will wrap around the ends of the 
+loop. If the end position is before the start position, the loop will wrap around the ends of the
 grid.
 """
 

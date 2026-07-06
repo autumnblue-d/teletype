@@ -227,7 +227,7 @@ short = "reset channel `x` (`0` = all)"
 ["CY.POS"]
 prototype = "CY.POS x"
 prototype_set = "CY.POS x y"
-short = "get / set position of channel `x` (`x = 0` to set all), position between `0-255`"
+short = "get/set position of channel `x` (`x = 0` to set all), position between `0-255`"
 
 ["CY.REV"]
 prototype = "CY.REV x"
@@ -255,7 +255,7 @@ short = "set base arp style [0-7]"
 
 ["ARP.GT"]
 prototype = "ARP.GT v g"
-short = "set voice gate length [0-127], scaled/synced to course divisions of voice clock"
+short = "set voice gate length [0-127], scaled/synced to coarse divisions of voice clock"
 
 ["ARP.SLEW"]
 prototype = "ARP.SLEW v t"
@@ -287,4 +287,4 @@ short = "reset voice clock/pattern on next base clock tick"
 
 ["ARP.SHIFT"]
 prototype = "ARP.SHIFT v o"
-short = "shift voice cv by standard tt pitch value (e.g. N 6, V -1, etc)"
+short = "shift voice CV by standard Teletype pitch value (e.g. `N 6`, `V -1`, etc)"

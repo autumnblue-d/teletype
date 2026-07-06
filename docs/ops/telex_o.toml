@@ -32,19 +32,19 @@ short = "mutes or un-mutes `TR` output `x`; `y` is 1 (mute) or 0 (un-mute)"
 
 ["TO.TR.TIME"]
 prototype = "TO.TR.TIME x y"
-short = "sets the time for `TR.PULSE` on output `n`; `y` in milliseconds"
+short = "sets the time for `TR.PULSE` on output `x`; `y` in milliseconds"
 
 ["TO.TR.TIME.S"]
 prototype = "TO.TR.TIME.S x y"
-short = "sets the time for `TR.PULSE` on output `n`; `y` in seconds"
+short = "sets the time for `TR.PULSE` on output `x`; `y` in seconds"
 
 ["TO.TR.TIME.M"]
 prototype = "TO.TR.TIME.M x y"
-short = "sets the time for `TR.PULSE` on output `n`; `y` in minutes"
+short = "sets the time for `TR.PULSE` on output `x`; `y` in minutes"
 
 ["TO.TR.WIDTH"]
 prototype = "TO.TR.WIDTH x y"
-short = "sets the time for `TR.PULSE` on output `n` based on the width of its current metronomic value; `y` in percentage (0-100)"
+short = "sets the time for `TR.PULSE` on output `x` based on the width of its current metronomic value; `y` in percentage (0-100)"
 description = """
 The actual time value for the trigger pulse when set by the `WIDTH` command is relative to the current value for `TO.TR.M`. Changes to `TO.TR.M` will change the duration of `TR.PULSE` when using the `WIDTH` mode to set its value. Values for `y` are set in percentage (0-100).
 
@@ -66,7 +66,7 @@ The length of a `TR.PULSE` is now 250ms. Note that you don't need to use the wid
 
 ["TO.TR.POL"]
 prototype = "TO.TR.POL x y"
-short = "sets the polarity for `TR` output `n`"
+short = "sets the polarity for `TR` output `x`"
 
 ["TO.TR.M.ACT"]
 prototype = "TO.TR.M.ACT x y"
@@ -112,7 +112,7 @@ TO.TR.M.ACT 1 1
 
 The metronome is now disabled after pulsing five times. If you call `ACT` again, it will emit five more pulses.
 
-To reset, either set your `COUNT` to zero (`TO.TR.M.COUNT 1 0`) or call init on the output (`TO.TR.INIT 1 1`).
+To reset, either set your `COUNT` to zero (`TO.TR.M.COUNT 1 0`) or call init on the output (`TO.TR.INIT 1`).
 """
 
 ["TO.TR.M.MUL"]
@@ -164,8 +164,8 @@ This command causes the TXo at device `d` to synchronize all of its independent 
 """
 
 ["TO.CV"]
-prototype = "TO.CV x"
-short = "CV target output `x`; `y` values are bipolar (-16384 to +16383) and map to -10 to +10"
+prototype = "TO.CV x y"
+short = "targets CV output `x` to `y`; `y` values are bipolar (-16384 to +16383) and map to -10 to +10"
 
 ["TO.CV.SLEW"]
 prototype = "TO.CV.SLEW x y"
@@ -189,7 +189,7 @@ short = "set the CV offset for output `x`; `y` values are added at the final sta
 
 ["TO.CV.QT"]
 prototype = "TO.CV.QT x y"
-short = "CV target output `x`; `y` is quantized to output's current `CV.SCALE`"
+short = "targets CV output `x` to `y`; `y` is quantized to output's current `CV.SCALE`"
 
 ["TO.CV.QT.SET"]
 prototype = "TO.CV.QT.SET x y"
@@ -221,7 +221,7 @@ description = """
 10. Kurzweil "Just with natural b7th", is Sauveur Just with 7/4
 11. Kurzweil "Empirical Bali/Java Harmonic Pelog"
 12. Kurzweil "Empirical Bali/Java Slendro, Siam 7"
-13. Kurzweil "Empirical Tibetian Ceremonial"
+13. Kurzweil "Empirical Tibetan Ceremonial"
 14. Harry Partch's 43-tone pure scale
 15. Partch's Indian Chromatic, Exposition of Monophony, 1933. 
 16. Partch Greek scales from "Two Studies on Ancient Greek Scales" on black/white 
@@ -241,7 +241,7 @@ TO.ENV.DEC.S 1 2
 TO.ENV.ACT 1 1
 ```
 
-When triggered (`TO.ENV.TRIG 1`), the envelope will rise to 5V over a half a second and then decay back to zero over two seconds. The curve used is `2`, which covers 0V-5V. 
+When triggered (`TO.ENV.TRIG 1`), the envelope will rise to 5V over half a second and then decay back to zero over two seconds. The curve used is `2`, which covers 0V-5V. 
 
 If a curve is too small for the range being covered, values above the range will be limited to the range's ceiling. In the above example, voltages above 5V will all return as 5V. 
 
@@ -254,16 +254,16 @@ description = """
 
 To calibrate your TXo outputs, follow these steps. Before you start, let your expander warm up for a few minutes. It won't take long - but you want to make sure that it is calibrated at a more representative temperature.
 
-Then, first adjust your offset (CV.OFF) until the output is at zero volts (0). For example:
+Then, first adjust your offset (TO.CV.OFF) until the output is at zero volts (0). For example:
 
 ```
-CV.OFF 1 8
+TO.CV.OFF 1 8
 ```
 
 Once that output measures at zero volts, you want to lock it in as the calibration by calling the following operator:
 
 ```
-CV.CALIB 1
+TO.CV.CALIB 1
 ```
 
 You will find that the offset is now zero, but the output is at the value that you targeted during your prior adjustment. To reset to normal (and forget this calibration offset), use the `TO.CV.RESET` command.
@@ -282,14 +282,14 @@ Targets oscillation for CV output `x` to `y` with the portamento rate determined
 `y` is 1V/oct translated from the standard range (1-16384).
 A value of `0` disables oscillation; `CV` amplitude is used as the peak for oscillation and needs to be `> 0` for it to be perceivable.
 
-Setting an `OSC` frequency greater than zero for a `CV` output will start that output oscillating. It will swing its voltage between to the current `CV` value and its polar opposite. For example:
+Setting an `OSC` frequency greater than zero for a `CV` output will start that output oscillating. It will swing its voltage between the current `CV` value and its polar opposite. For example:
 
 ```
 TO.CV 1 V 5
 TO.OSC 1 N 69
 ```
 
-This will emit the audio-rate note A (at 440Hz) swinging from '+5V' to '-5V'. The `CV` value acts as an amplitude control. For example:
+This will emit the audio-rate note A (at 440Hz) swinging from `+5V` to `-5V`. The `CV` value acts as an amplitude control. For example:
 
 ```
 TO.CV.SLEW.M 1 1
@@ -298,7 +298,7 @@ TO.CV 1 V 10
 
 This will cause the oscillations to gradually increase in amplitude from `5V` to `10V` over a period of one minute.
 
-**IMPORANT:** if you do not set a `CV` value, the oscillator will not emit a signal.
+**IMPORTANT:** if you do not set a `CV` value, the oscillator will not emit a signal.
 
 If you want to go back to regular `CV` behavior, you need to set the oscillation frequency to zero. E.g. `TO.OSC 1 0`. You can also initialize the `CV` output with `TO.CV.INIT 1`, which resets all of its settings back to start-up default.
 
@@ -326,7 +326,7 @@ prototype = "TO.OSC.QT.SET x y"
 short = "set oscillation for CV output `x` to `y`, quantized to the current scale (ignores slew)"
 description = """
 Set oscillation for CV output `x` to the 1V/oct value `y` (ignores `CV.OSC.SLEW`.) 
-`y` is 1v/oct translated from the standard range (1-16384) and quantized to current `OSC.SCALE`.
+`y` is 1V/oct translated from the standard range (1-16384) and quantized to current `OSC.SCALE`.
 A value of `0` disables oscillation; `CV` amplitude is used as the peak for oscillation and needs to be `> 0` for it to be perceivable.
 """
 
@@ -422,7 +422,7 @@ description = """
 10. Kurzweil "Just with natural b7th", is Sauveur Just with 7/4
 11. Kurzweil "Empirical Bali/Java Harmonic Pelog"
 12. Kurzweil "Empirical Bali/Java Slendro, Siam 7"
-13. Kurzweil "Empirical Tibetian Ceremonial"
+13. Kurzweil "Empirical Tibetan Ceremonial"
 14. Harry Partch's 43-tone pure scale
 15. Partch's Indian Chromatic, Exposition of Monophony, 1933. 
 16. Partch Greek scales from "Two Studies on Ancient Greek Scales" on black/white 
@@ -502,7 +502,7 @@ TO.OSC.LFO 1 500
 prototype = "TO.ENV.ACT x y"
 short = "activates/deactivates the AD envelope generator for the CV output `x`; `y` turns the envelope generator off (0 - default) or on (1);  `CV` amplitude is used as the peak for the envelope and needs to be `> 0` for the envelope to be perceivable"
 description = """
-This setting activates (1) or deactivates (0) the envelope generator on `CV` output `y`. The envelope generator is dependent on the current voltage setting for the output. Upon activation, the targeted output will go to zero. Then, when triggered (`TO.ENV.TRIG`), it will ramp the voltage from zero to the currently set peak voltage (`TO.CV`) over the attack time (`TO.ENV.ATT`) and then decay back to zero over the decay time (`TO.ENV.DEC`). For example:
+This setting activates (1) or deactivates (0) the envelope generator on `CV` output `x`. The envelope generator is dependent on the current voltage setting for the output. Upon activation, the targeted output will go to zero. Then, when triggered (`TO.ENV.TRIG`), it will ramp the voltage from zero to the currently set peak voltage (`TO.CV`) over the attack time (`TO.ENV.ATT`) and then decay back to zero over the decay time (`TO.ENV.DEC`). For example:
 
 ```
 TO.CV.SET 1 V 8
@@ -555,7 +555,7 @@ short = "set the envelope decay time to `y` for `CV` output `x`; `y` in minutes"
 
 ["TO.ENV.EOR"]
 prototype = "TO.ENV.EOR x n"
-short = "at the end of rise of `CV` output `x`, fires a `PULSE` to the trigget output `n`"
+short = "at the end of rise of `CV` output `x`, fires a `PULSE` to the trigger output `n`"
 description = """
 Fires a `PULSE` at the End of Rise to the unit-local trigger output `n` for the envelope on `CV` output `x`; 
 `n` refers to trigger output 1-4 on the same TXo as CV output `x`.
@@ -573,10 +573,10 @@ This will cause the first output on TXo #2 (`TO.TR 5`) to pulse after the envelo
 
 ["TO.ENV.EOC"]
 prototype = "TO.ENV.EOC x n"
-short = "at the end of cycle of `CV` output `x`, fires a `PULSE` to the trigget output `n`"
+short = "at the end of cycle of `CV` output `x`, fires a `PULSE` to the trigger output `n`"
 description = """
 Fires a `PULSE` at the End of Cycle to the unit-local trigger output `n` for the envelope on `CV` output `x`.
-`n` refers to trigger output 1-4 on the same TXo as CV output 'y'.
+`n` refers to trigger output 1-4 on the same TXo as CV output `x`.
 
 The most important thing to know with this operator is that you can only cause the EOC trigger to fire on the same device as the TXo with the envelope. For this command, the outputs are numbered LOCALLY to the unit with the envelope.
 

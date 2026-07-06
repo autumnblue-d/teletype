@@ -1,6 +1,6 @@
 ["CROW.SEL"]
 prototype = "CROW.SEL x"
-short = "Sets target crow unit (`1` (default), to `4`)."
+short = "Set the target crow unit (`1` (default) to `4`)."
 
 ["CROWN"]
 prototype = "CROWN: ..."
@@ -60,7 +60,7 @@ short = "Creates an envelope on output `x`, rising in `y` ms, falling in `z` ms,
 
 ["CROW.LFO"]
 prototype = "CROW.LFO x y z t"
-short = "Starts an envelope on output `x` at rate `y` where `0 = 1Hz` with 1v/octave scaling. `z` sets amplitude and `t` sets skew for assymetrical triangle waves."
+short = "Starts an envelope on output `x` at rate `y` where `0 = 1Hz` with 1v/octave scaling. `z` sets amplitude and `t` sets skew for asymmetrical triangle waves."
 
 ["CROW.IN"]
 prototype = "CROW.IN x"

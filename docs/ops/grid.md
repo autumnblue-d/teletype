@@ -1,7 +1,7 @@
 ## Grid
-Grid operators allow creating scenes that can interact with grid connected to
-teletype (important: grid must be powered externally, do not connect it directly
-to teletype!). You can light up individual LEDs, draw shapes and create controls
+Grid operators allow creating scenes that can interact with a grid connected to
+Teletype (important: grid must be powered externally, do not connect it directly
+to Teletype!). You can light up individual LEDs, draw shapes and create controls
 (such as buttons and faders) that can be used to trigger and control scripts.
 You can take advantage of grid operators even without an actual grid by using
 the built in Grid Visualizer.

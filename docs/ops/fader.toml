@@ -1,12 +1,16 @@
 ["FADER"]
 prototype = "FADER x"
 aliases = ["FB"]
-short = "Reads the value of the `FADER` slider `x`; default return range is from 0 to 16383. Up to four Faderbanks can be addressed; `x` value between 1 and 16 correspond to Faderbank 1, `x` between 17 and 32 to Faderbank 2, etc..."
+short = "read `FADER` slider `x`; default return range 0–16383"
+description = """
+Up to four Faderbanks can be addressed: `x` between 1 and 16 corresponds to
+Faderbank 1, `x` between 17 and 32 to Faderbank 2, etc.
+"""
 
 ["FADER.SCALE"]
 prototype = "FADER.SCALE x y z"
 aliases = ["FB.S"]
-short = "Set static scaling of the `FADER x` to between `min` and `max`."
+short = "Scale `FADER x` output to the range `y`..`z`."
 
 ["FADER.CAL.MIN"]
 prototype = "FADER.CAL.MIN x"
@@ -21,7 +25,7 @@ description = """
 ["FADER.CAL.MAX"]
 prototype = "FADER.CAL.MAX x"
 aliases = ["FB.C.MAX"]
-short = "Reads `FADER x` maximum position and assigns the maximum point"
+short = "Reads `FADER x` maximum position and assigns the maximum value"
 description = """
     1. Slide FADER x all the way up to the top
     2. Execute `FADER.CAL.MAX x` from the live terminal

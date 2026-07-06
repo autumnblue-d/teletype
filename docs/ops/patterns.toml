@@ -37,7 +37,7 @@ short = "get/set pattern length of the working pattern, non-destructive to data"
 ["PN.L"]
 prototype = "PN.L x"
 prototype_set = "PN.L x y"
-short = "get/set pattern length of pattern x. non-destructive to data"
+short = "get/set pattern length of pattern `x`, non-destructive to data"
 
 ["P.WRAP"]
 prototype = "P.WRAP"
@@ -50,7 +50,7 @@ If wrap is enabled (`P.WRAP 1`) a pattern will begin at its start location and a
 
 Examples:
 
-With wrap enabled, a pattern length of 6, a start location of 2 , and an end location of 8.
+With wrap enabled, a pattern length of 6, a start location of 2, and an end location of 8.
 
 `P.WRAP 1; P.L 6; P.START 2; P.END 8`
 
@@ -115,7 +115,7 @@ moves the index of the working pattern to `6`
 
 moves the index of the working pattern to `4`
 
-This applies to `PN.I`, except the pattern number is the first variable and a second variable specifics the index.
+This applies to `PN.I`, except the pattern number is the first variable and a second variable specifies the index.
 """
 
 ["PN.I"]
@@ -205,7 +205,7 @@ short = "find the first maximum value in the pattern between the START and END f
 
 ["P.SHUF"]
 prototype = "P.SHUF"
-short = "shuffle the values in active pattern (between its START and END)"
+short = "shuffle the values in working pattern (between its START and END)"
 
 ["PN.SHUF"]
 prototype = "PN.SHUF x"
@@ -213,23 +213,23 @@ short = "shuffle the values in pattern `x` (between its START and END)"
 
 ["P.ROT"]
 prototype = "P.ROT n"
-short = "rotate the values in the active pattern `n` steps (between its START and END, negative rotates backward)"
+short = "rotate the values in the working pattern `n` steps (between its START and END, negative rotates backward)"
 
 ["PN.ROT"]
 prototype = "PN.ROT x n"
-short = "rotate the values in pattern `x` (between its START and END, negative rotates backward)"
+short = "rotate the values in pattern `x` `n` steps (between its START and END, negative rotates backward)"
 
 ["P.REV"]
 prototype = "P.REV"
-short = "reverse the values in the active pattern (between its START and END)"
+short = "reverse the values in the working pattern (between its START and END)"
 
 ["PN.REV"]
 prototype = "PN.REV x"
-short = "reverse the values in pattern `x`"
+short = "reverse the values in pattern `x` (between its START and END)"
 
 ["P.RND"]
 prototype = "P.RND"
-short = "return a value randomly selected between the start and the end position"
+short = "return a value randomly selected between the start and the end position of the working pattern"
 
 ["PN.RND"]
 prototype = "PN.RND x"
@@ -269,9 +269,9 @@ short = "decrease the value of pattern `x` at index `y` by `z` and wrap it to `a
 
 ["P.MAP"]
 prototype = "P.MAP: ..."
-short = "apply the 'function' to each value in the active pattern, `I` takes each pattern value"
+short = "apply the 'function' to each value in the working pattern, `I` takes each pattern value"
 description = """
-Replace each cell in the active pattern (between the START and END of the pattern) by assigning
+Replace each cell in the working pattern (between the START and END of the pattern) by assigning
 the variable I to the current value of the cell, evaluating the command after the mod, and
 assigning that pattern cell with the result. The 'map' higher-order function from functional
 programming, with the command giving the function of `I` to map over the pattern.
@@ -279,7 +279,7 @@ programming, with the command giving the function of `I` to map over the pattern
 For example:
 
 ```
-P.MAP: * 2 I  => double each cell in the active pattern
+P.MAP: * 2 I  => double each cell in the working pattern
 ```
 """
 

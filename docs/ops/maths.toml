@@ -189,7 +189,7 @@ prototype = "AND3 x y z"
 aliases = ["&&&"]
 short = "logical AND of `x`, `y` and `z`"
 description = """
-Logical AND of `x`, `y` and `z`. Returns `1` if both `x`, `y` and `z` are greater than `0`, otherwise it returns `0`.
+Logical AND of `x`, `y` and `z`. Returns `1` if all of `x`, `y` and `z` are greater than `0`, otherwise it returns `0`.
 """
 
 [AND4]
@@ -197,7 +197,7 @@ prototype = "AND4 x y z a"
 aliases = ["&&&&"]
 short = "logical AND of `x`, `y`, `z` and `a`"
 description = """
-Logical AND of `x`, `y`, `z` and `a`. Returns `1` if both `x`, `y`, `z` and `a` are greater than `0`, otherwise it returns `0`.
+Logical AND of `x`, `y`, `z` and `a`. Returns `1` if all of `x`, `y`, `z` and `a` are greater than `0`, otherwise it returns `0`.
 """
 
 [OR]

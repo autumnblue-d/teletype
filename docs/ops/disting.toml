@@ -1,7 +1,7 @@
 ["EX"]
 prototype = "EX"
 prototype_set = "EX x"
-short = "get or set currently selected unit to `x` (1-4)"
+short = "get or set the currently selected unit to `x` (1-4)"
 description = """
 All Disting EX ops address the currently selected unit (unit 1 is selected by default), 
 unless placed after `EX1`..`EX4` modifiers. Use this op to select a unit or get
@@ -66,7 +66,7 @@ use `EX.PV` op instead as it will scale it properly for you.
 
 ["EX.PV"]
 prototype = "EX.PV x y"
-short = "set parameter `x` using a value determined by scaling `y` from 0..16384 range."
+short = "set parameter `x` using a value determined by scaling `y` from the 0..16384 range"
 description = """
 This op sets the specified parameter by scaling the provided value from 0..16384 range
 to the range used by the parameter. This op is useful when used in conjunction with
@@ -199,7 +199,7 @@ short = "toggle octave down for loop `x`"
 
 ["EX.LP.DOWN?"]
 prototype = "EX.LP.DOWN? x"
-short = "return 1 if loop `x` is transposed octave down, 0 otherwise"
+short = "returns 1 if loop `x` is transposed octave down, 0 otherwise"
 
 ["EX.M.CH"]
 prototype = "EX.M.CH"
@@ -220,11 +220,11 @@ short = "send MIDI Note On message on channel `x` for note `y` (0..127) and velo
 
 ["EX.M.NO"]
 prototype = "EX.M.NO x"
-short = "send MIDI Note off message for note `x` (0..127)"
+short = "send MIDI Note Off message for note `x` (0..127)"
 
 ["EX.M.NO#"]
 prototype = "EX.M.NO# x y"
-short = "send MIDI Note off message on channel `x` for note `y` (0..127)"
+short = "send MIDI Note Off message on channel `x` for note `y` (0..127)"
 
 ["EX.M.CC"]
 prototype = "EX.M.CC x y"
@@ -273,7 +273,7 @@ short = "send Select Bus Note On message for note `x` (0..127) and velocity `y` 
 
 ["EX.SB.NO"]
 prototype = "EX.SB.NO x"
-short = "send Select Bus Note off message for note `x` (0..127)"
+short = "send Select Bus Note Off message for note `x` (0..127)"
 
 ["EX.SB.PB"]
 prototype = "EX.SB.PB x"

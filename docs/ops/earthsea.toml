@@ -1,6 +1,6 @@
 ["ES.PRESET"]
 prototype = "ES.PRESET x"
-short = "i2c only: recall preset `x` (0-7) on an external Ansible"
+short = "I2C only: recall preset `x` (0-7) on an external Ansible"
 description = """
 Recall the preset in location `x` on an external Ansible running Earthsea.
 Unlike the other `ES.*` ops this is NOT retargeted at the native Earthsea
@@ -45,8 +45,8 @@ prototype = "ES.TRANS x"
 short = "Transpose the current pattern and restart playback"
 description = """
 Walk the pattern root `x` steps along the fourths keyboard layout (positive =
-up in pitch), then restart playback. Integer divisions of `x` shift the root
-note up or down a row, `x` modulo 5 shifts left or right up to 4 notes.
+up in pitch), then restart playback. `x` divided by 5 (integer) shifts the root
+up or down a row; `x` modulo 5 shifts left or right up to 4 notes.
 """
 
 ["ES.STOP"]
@@ -58,9 +58,9 @@ Stop pattern playback. `x` is ignored (kept for compatibility).
 
 ["ES.TRIPLE"]
 prototype = "ES.TRIPLE x"
-short = "i2c only: recall triple shape (1-4) on an original Earthsea"
+short = "I2C only: recall triple shape (1-4) on an original Earthsea"
 description = """
-Recall triple shape (1-4). Targets the original Earthsea module over i2c;
+Recall triple shape (1-4). Targets the original Earthsea module over I2C;
 not retargeted at the native mode (Ansible ignores it too).
 """
 

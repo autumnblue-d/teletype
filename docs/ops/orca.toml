@@ -37,7 +37,7 @@ short = "Mute trigger selected by `OR.TRK` (`0` = on, `1` = mute)"
 prototype = "OR.SCALE x"
 short = "Select scale `x` (`1-16`)"
 description = """
-Value of `1-16` will select scale for both CV A and CV B. To select individual scales append their numbers, for instance, `105` will select scale 1 for CV A and scale 5 for CV B, and `1005` will select scale 10 for CV A and scale 5 for CV B.
+A value of `1-16` will select scale for both CV A and CV B. To select individual scales append their numbers, for instance, `105` will select scale 1 for CV A and scale 5 for CV B, and `1005` will select scale 10 for CV A and scale 5 for CV B.
 """
 
 ["OR.BANK"]
@@ -73,12 +73,12 @@ Rotates weights up. To rotate them down set `x` to `4` minus the amount.
 prototype = "OR.CVA x"
 short = "Select tracks for CV A where `x` is a binary number representing the tracks"
 description = """
-Convert a binary number representing selected tracks (so `1001` will select tracks 1 and 4, for instance) and set `x` to that.
+`x` is a binary number representing the selected tracks (so `1001` selects tracks 1 and 4).
 """
 
 ["OR.CVB"]
 prototype = "OR.CVB x"
 short = "Select tracks for CV B where `x` is a binary number representing the tracks"
 description = """
-Convert a binary number representing selected tracks (so `1001` will select tracks 1 and 4, for instance) and set `x` to that.
+`x` is a binary number representing the selected tracks (so `1001` selects tracks 1 and 4).
 """

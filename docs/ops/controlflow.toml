@@ -37,7 +37,7 @@ If `x` is not zero execute command
     IF 1: TR.P 1    => pulse output 1
 
     SCRIPT 2:
-    ELSE: TR.P 2    => never runs regardless of what happens in script 1
+    ELSE: TR.P 2    => never runs regardless of script 1
                        (see example 2)
     ```
 
@@ -60,7 +60,7 @@ short = "if all previous `IF` / `ELIF` fail, and `x` is not zero, execute comman
 
 [ELSE]
 prototype = "ELSE: ..."
-short = "if all previous `IF` / `ELIF` fail, excute command"
+short = "if all previous `IF` / `ELIF` fail, execute command"
 
 [L]
 prototype = "L x y: ..."
@@ -128,7 +128,7 @@ This is the corollary function to `EVERY`, essentially behaving as its exact opp
 prototype = "OTHER: ..."
 short = "runs the command when the previous `EVERY`/`SKIP` did not run its command."
 description = """
-`OTHER` can be used to do somthing alternately with a preceding `EVERY` or `SKIP` command.
+`OTHER` can be used to do something alternately with a preceding `EVERY` or `SKIP` command.
 
 For example, here is a script that alternates between two triggers to make a four-on-the-floor beat with hats between the beats:
 
@@ -148,9 +148,9 @@ SKIP 2: TR.P 3
 prototype = "SYNC x"
 short = "synchronizes _all_ `EVERY` and `SKIP` counters to offset `x`."
 description = """
-Causes all of the `EVERY` and `SYNC` counters to synchronize their offsets, respecting their individual divisor values.
+Causes all of the `EVERY` and `SKIP` counters to synchronize their offsets, respecting their individual divisor values.
 
-Negative numbers will synchronize to to the divisor value, such that `SYNC -1` causes all every counters to be 1 number before their divisor, causing each `EVERY` to be true on its next call, and each `SKIP` to be false.
+Negative numbers will synchronize to the divisor value, such that `SYNC -1` causes all every counters to be 1 number before their divisor, causing each `EVERY` to be true on its next call, and each `SKIP` to be false.
 """
 
 [PROB]

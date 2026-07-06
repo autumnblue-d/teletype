@@ -1,7 +1,7 @@
 ["Q"]
 prototype = "Q"
 prototype_set = "Q x"
-short = "Modify the queue entries"
+short = "get output value from queue / push `x` onto queue"
 description = """
 Gets the output value from the queue, or places `x` into the queue.
 """
@@ -19,7 +19,7 @@ prototype = "Q.AVG"
 prototype_set = "Q.AVG x"
 short = "Return the average of the queue"
 description = """
-Getting the value the average of the values in the queue. Setting `x` sets the
+Get the average of the values in the queue. Setting `x` sets the
 value of each entry in the queue to `x`.
 """
 
@@ -28,7 +28,7 @@ prototype = "Q.CLR"
 prototype_set = "Q.CLR x"
 short = "Clear queue"
 description = """
-Clear queue, set all values to 0, length to 1. If parameter `x` is provided, set first elements to `x`.
+Clear queue, set all values to 0, length to 1. If parameter `x` is provided, set first element to `x`.
 """
 
 ["Q.GRW"]
@@ -72,20 +72,20 @@ Get a random element in queue.
 
 If `x` > 0, set all elements to a random value 0-`x`.
 If `x` < 0, swap two elements `-x` number of times.
-IF `x` == 0, do nothing.
+If `x` == 0, do nothing.
 """
 
 ["Q.SRT"]
 prototype = "Q.SRT"
-prototype_set = "Q.SRT "
+prototype_set = "Q.SRT i"
 short = "Sort all or part of queue"
 description = """
 Sort elements in queue.
-With no arguments, entire queue is sorted in accending order.
+With no arguments, entire queue is sorted in ascending order.
 
-If `x` > 0, sort elements from index `i` to the end of queue.
-If `x` < 0, sort elements from beginning of queue to index `-i`.
-IF `x` == 0, sort all elements.
+If `i` > 0, sort elements from index `i` to the end of queue.
+If `i` < 0, sort elements from beginning of queue to index `-i`.
+If `i` == 0, sort all elements.
 
 Index `i` is 0-indexed.
 """
@@ -102,7 +102,7 @@ prototype = "Q.SH"
 prototype_set = "Q.SH x"
 short = "Shift elements in queue"
 description = """
-Shift elements `x` locations to right. Negative values of `x` shifts to the left. No value provided is equal to `x` = 1. Shifting is wrapped.
+Shift elements `x` locations to right. Negative values of `x` shift to the left. No value provided is equal to `x` = 1. Shifting is wrapped.
 """
 
 ["Q.ADD"]
@@ -150,7 +150,7 @@ Index `i` is 0-indexed.
 ["Q.MOD"]
 prototype = "Q.MOD x"
 prototype_set = "Q.MOD x i"
-short = "Perform module (`%`) on elements in queue"
+short = "Perform modulo (`%`) on elements in queue"
 description = """
 Perform modulo of `x` (value = value % `x`) on all elements in queue. If index `i` is provided, only perform modulo operation on element at index `i`.
 
@@ -163,7 +163,7 @@ prototype = "Q.I i"
 prototype_set = "Q.I i x"
 short = "Get/set value of elements at index"
 description = """
-Get value of element at index `i` or set value of element `i` to value `x`. Indexing works on entire lenght of queue, and is not limited to elements below queue end point.
+Get value of element at index `i` or set value of element `i` to value `x`. Indexing works on entire length of queue, and is not limited to elements below queue end point.
 
 Index `i` is 0-indexed.
 """

@@ -4,7 +4,7 @@ prototype = "DEVICE.FLIP"
 short = "Flip the screen/inputs/outputs"
 description = """
 Flip the screen, the inputs and the outputs. This op is useful if you want to mount your Teletype upside down.
-The new state will be saved to flash. 
+The new state will be saved to flash.
 """
 
 ["IN.CAL.MIN"]
@@ -32,7 +32,7 @@ short = "Resets the input CV calibration"
 
 ["PARAM.CAL.MIN"]
 prototype = "PARAM.CAL.MIN"
-short = "Reads the Parameter Knob minimum position and assigns a zero value"
+short = "Reads the Parameter Knob minimum position and assigns the minimum point"
 description = """
     1. Turn the PARAM knob all the way to the left
     2. Execute PARAM.CAL.MIN from the live terminal
