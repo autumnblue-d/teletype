@@ -554,7 +554,12 @@ int16_t meadowphysics_op_ladder_get(int16_t slot, int16_t degree) {
     mp_init_once();
     if (slot < 0 || slot >= MP_SCALE_SLOTS || degree < 0 || degree >= 8)
         return 0;
-    return mp_scale_bank[slot][degree];
+    // Return the cumulative note offset (sum of rungs 0..degree) -- the actual
+    // semitone the engine plays for this degree -- not the raw per-rung delta.
+    // Mirrors mp_engine_calc_scale. (The setter still writes a single delta.)
+    int16_t note = 0;
+    for (int16_t i = 0; i <= degree; i++) note += mp_scale_bank[slot][i];
+    return note;
 }
 
 void meadowphysics_op_ladder_set(int16_t slot, int16_t degree, int16_t val) {

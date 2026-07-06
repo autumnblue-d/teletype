@@ -36,4 +36,4 @@ short = "active scale-bank slot (`0-15`)"
 
 ["MP.SCL"]
 prototype = "MP.SCL slot degree x"
-short = "get/set a scale ladder rung: `slot` `0-15`, `degree` `0-7` (`0` = base, `1-7` = semitone deltas), value clamped `0-7`"
+short = "scale ladder rung: `slot` `0-15`, `degree` `0-7` (`0` = base). Get returns the cumulative note offset (summed rungs) the engine plays for that degree; set writes the per-rung semitone delta, clamped `0-7`"
