@@ -33,9 +33,6 @@ def inject_latex(value):
     return value
 
 
-# create a multiprocessing pool
-pool = multiprocessing.Pool()
-
 # our jinja2 environment
 env = jinja2.Environment(
     autoescape=False,
@@ -100,7 +97,7 @@ def latex_safe(s):
     return s
 
 
-def cheatsheet_tex(sections):
+def cheatsheet_tex(sections, pool):
     print(f"Using docs directory:     {DOCS_DIR}")
     print(f"Using ops docs directory: {OP_DOCS_DIR}")
     print()
@@ -140,7 +137,12 @@ def main():
 
     category = sys.argv[1]
     p = Path(sys.argv[2]).resolve()
-    p.write_text(cheatsheet_tex(OPS_SECTIONS[category]))
+    # the pool must be created inside the __main__ guard: on macOS (and
+    # Windows) multiprocessing uses "spawn", which re-imports this module in
+    # each worker process, so a module-level Pool() would have each worker
+    # try to spawn its own pool, recursively, and the whole thing hangs.
+    with multiprocessing.Pool() as pool:
+        p.write_text(cheatsheet_tex(OPS_SECTIONS[category], pool))
 
 if __name__ == "__main__":
     main()
