@@ -121,6 +121,10 @@ int16_t meadowphysics_op_ladder_get(int16_t slot, int16_t degree) {
     return 0;
 }
 void meadowphysics_op_ladder_set(int16_t slot, int16_t degree, int16_t val) {}
+int16_t meadowphysics_op_preset_get(void) {
+    return 0;
+}
+void meadowphysics_op_preset_set(int16_t slot) {}
 void kria_op_run(int16_t on) {}
 void kria_op_reset(void) {}
 int16_t kria_op_pattern(int16_t set, int16_t val) {

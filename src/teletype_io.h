@@ -91,6 +91,9 @@ extern void meadowphysics_op_scale_set(int16_t slot);
 extern int16_t meadowphysics_op_ladder_get(int16_t slot, int16_t degree);
 extern void meadowphysics_op_ladder_set(int16_t slot, int16_t degree,
                                         int16_t val);
+// preset bank: get = current slot, set = load slot (0 to MP_SLOTS-1)
+extern int16_t meadowphysics_op_preset_get(void);
+extern void meadowphysics_op_preset_set(int16_t slot);
 
 // kria ops (native engine). For get/set pairs, `set` != 0 writes `val`; all
 // return the current value. track/param are 0-indexed.

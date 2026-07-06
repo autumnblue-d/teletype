@@ -6,12 +6,16 @@
 // Retargeted from external-Ansible i2c to the native Meadowphysics engine (A5).
 // Channel arg: 0 = all rows, 1-8 = a single row.
 
+// MP.PRESET -- get = current preset slot; set = load preset slot (0-7).
 static void op_MP_PRESET_get(const void* NOTUSED(data),
                              scene_state_t* NOTUSED(ss),
                              exec_state_t* NOTUSED(es), command_state_t* cs) {
-    // Native MP has no presets (state is per-scene, decision #3); accept and
-    // ignore the argument so existing scripts don't error.
-    cs_pop(cs);
+    cs_push(cs, meadowphysics_op_preset_get());
+}
+static void op_MP_PRESET_set(const void* NOTUSED(data),
+                             scene_state_t* NOTUSED(ss),
+                             exec_state_t* NOTUSED(es), command_state_t* cs) {
+    meadowphysics_op_preset_set(cs_pop(cs));
 }
 
 static void op_MP_RESET_get(const void* NOTUSED(data),
@@ -104,7 +108,7 @@ static void op_MP_SCL_set(const void* NOTUSED(data), scene_state_t* NOTUSED(ss),
 }
 
 const tele_op_t op_MP_PRESET =
-    MAKE_GET_OP(MP.PRESET, op_MP_PRESET_get, 1, false);
+    MAKE_GET_SET_OP(MP.PRESET, op_MP_PRESET_get, op_MP_PRESET_set, 0, true);
 const tele_op_t op_MP_RESET = MAKE_GET_OP(MP.RESET, op_MP_RESET_get, 1, false);
 const tele_op_t op_MP_STOP = MAKE_GET_OP(MP.STOP, op_MP_STOP_get, 1, false);
 const tele_op_t op_MP_RUN = MAKE_GET_OP(MP.RUN, op_MP_RUN_get, 1, false);

@@ -569,6 +569,19 @@ void meadowphysics_op_ladder_set(int16_t slot, int16_t degree, int16_t val) {
     dirty = true;
 }
 
+int16_t meadowphysics_op_preset_get(void) {
+    mp_init_once();
+    return mp_cur_slot;
+}
+
+void meadowphysics_op_preset_set(int16_t slot) {
+    mp_init_once();
+    if (slot < 0 || slot >= MP_SLOTS) return;
+    mp_load_slot((uint8_t)slot);  // load config + glyph, arm counters
+    flash_update_mp_current((uint8_t)slot);  // reload this slot on next boot
+    dirty = true;
+}
+
 void process_meadowphysics_keys(uint8_t key, uint8_t mod_key,
                                 bool is_held_key) {
     if (is_held_key) return;

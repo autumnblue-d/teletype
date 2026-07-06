@@ -1,6 +1,6 @@
 ["MP.PRESET"]
 prototype = "MP.PRESET x"
-short = "no-op on native Meadowphysics (state is per-scene; kept for compatibility)"
+short = "get/set the active preset slot (0-7); setting loads that slot's pattern + glyph"
 
 ["MP.RESET"]
 prototype = "MP.RESET x"
