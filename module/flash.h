@@ -18,7 +18,7 @@
 // Kria code. See KRIA_PORT_PLAN.md §0.
 // Earthsea (Scenario A): reduced 20 -> 18. Dropping 2 scenes (~12.7 KB) funds
 // the 16-pattern global Earthsea bank (~8.6 KB). See EARTHSEA_PORT_PLAN.md §0.
-#define SCENE_SLOTS 18
+#define SCENE_SLOTS 16
 #define BUTTON_STATE_SIZE (GRID_BUTTON_COUNT >> 3)
 
 typedef struct {

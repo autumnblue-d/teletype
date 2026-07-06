@@ -36,6 +36,11 @@
 #define MP_2V 1  // 2 notes/tick, oldest-stolen
 #define MP_4V 2  // 4 notes/tick, oldest-stolen
 #define MP_8T 3  // 8 gates: rows 0-3 -> TR, rows 4-7 -> CV-as-gate
+// MP_SCRIPT: each row n fires Teletype script n+1 on its rising edge (the
+// binding maps out_tr(n, 1) -> run_script). No CV/voice allocation; MP owns no
+// CV/TR jack, so the triggered scripts drive the outputs themselves.
+#define MP_SCRIPT 4
+#define MP_VOICE_MODE_COUNT 5  // number of selectable voice modes (for cycling)
 
 // Rules applied to a destination row when the source row rolls over.
 #define MP_RULE_NONE 0

@@ -143,7 +143,7 @@ CI verifies formatting on all commits.
 
 ## Important Notes
 
-- **Flash budget is tight:** the AVR32 UC3B0512 program flash sits below a fixed ~145K NVRAM region. As of the déjà vu/beta ports there is only ~2.8 KB of free program flash. Large `const` tables are the real cost (a full Marbles beta port needs ~68 KB of inverse-CDF tables and does not fit — only the single-table fast path does). Measure headroom from `teletype.elf` PT_LOAD LMAs before adding table-heavy features.
+- **Flash budget is tight:** the AVR32 UC3B0512 program flash sits below the reserved NVRAM region (`__flash_nvram_size__` in `module/config.mk`, currently 132K). The NVRAM size is the lever: it must be ≥ `sizeof(nvram_data_t)` (dominated by `scenes[SCENE_SLOTS]` at ~6.5 KB/slot), and lowering it frees program flash. As of the MP-ops work (`SCENE_SLOTS` 18→16, NVRAM 142K→132K) there is ~9.6 KB of free program flash. Changing `SCENE_SLOTS` alters the flash layout, so bump `FIRSTRUN_KEY` (`flash.c`) to force a reseed. Large `const` tables are the real cost (a full Marbles beta port needs ~68 KB of inverse-CDF tables and does not fit — only the single-table fast path does). Measure headroom from `teletype.elf` PT_LOAD LMAs (`.data` LMA end vs `.flash_nvram` start in the map) before adding table-heavy features.
 - **Shared object files:** host tests and the AVR32 firmware build share `src/*.o`. Run `make clean` when switching between them or you'll link the wrong architecture's objects.
 - **Submodules:** libavr32 and unity (test framework) are git submodules. Clone with `--recursive`.
 - **Ragel generation:** If changing `.rl` files, they must be recompiled. The test/simulator Makefiles do this automatically.

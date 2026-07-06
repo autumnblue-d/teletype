@@ -113,6 +113,8 @@ TEST config_validity(void) {
     ASSERT_FALSE(mp_engine_config_valid(&c));
 
     mp_engine_set_defaults(&c);
+    c.voice_mode = MP_SCRIPT;  // the script-trigger mode is a valid voice mode
+    ASSERT(mp_engine_config_valid(&c));
     c.voice_mode = 9;
     ASSERT_FALSE(mp_engine_config_valid(&c));
 
@@ -317,6 +319,26 @@ TEST voice_8t_routing(void) {
     PASS();
 }
 
+// SCRIPT voice mode: all 8 rows route to the tr seam using the full row index
+// (0-7), with no cv_gate remapping -- the binding turns each into run_script.
+TEST voice_script_routing(void) {
+    isolate();
+    E.cfg.voice_mode = MP_SCRIPT;
+    E.cfg.trigger[2] = 1 << 2;  // row 2 triggers itself
+    E.cfg.trigger[5] = 1 << 5;  // row 5 triggers itself
+    mp_engine_push(&E, 2);
+    mp_engine_push(&E, 5);
+
+    mp_engine_clock(&E, 1);
+    ASSERT_EQ(1, ev_count(EV_TR, 2, 1));      // row 2 -> tr ch 2 (not cv_gate)
+    ASSERT_EQ(1, ev_count(EV_TR, 5, 1));      // row 5 -> tr ch 5 (full index)
+    ASSERT_EQ(0, ev_count(EV_CVGATE, 1, 1));  // never the 8T cv_gate remap
+    mp_engine_clock(&E, 0);
+    ASSERT_EQ(1, ev_count(EV_TR, 2, 0));
+    ASSERT_EQ(1, ev_count(EV_TR, 5, 0));
+    PASS();
+}
+
 // 1V voice mode emits a CV note with the current scale degree.
 TEST voice_1v_emits_cv(void) {
     isolate();
@@ -415,6 +437,20 @@ TEST clock_source_arbitration(void) {
     ASSERT_EQ(1, p);
     ASSERT_EQ(1, grid_clock_external_edge(&c, 0, &p));  // gate low -> phase 0
     ASSERT_EQ(0, p);
+    PASS();
+}
+
+// The metro source (like external) suppresses the internal timer, so the metro
+// tick is the sole advance -- the mode shell drives run_clock() directly.
+TEST clock_metro_suppresses_internal(void) {
+    grid_clock_t c;
+    grid_clock_init(&c, MP_CLOCK_PERIOD_MIN, MP_CLOCK_PERIOD_MAX,
+                    MP_CLOCK_PERIOD_DEFAULT);
+    ASSERT(!c.metro);
+    c.metro = true;
+    uint8_t p = 99;
+    ASSERT_EQ(0, grid_clock_internal_fire(&c, &p));  // internal timer off
+    ASSERT_EQ(99, p);
     PASS();
 }
 
@@ -610,6 +646,7 @@ SUITE(meadowphysics_suite) {
     RUN_TEST(rule_rnd_in_range);
     RUN_TEST(rule_stop);
     RUN_TEST(voice_8t_routing);
+    RUN_TEST(voice_script_routing);
     RUN_TEST(voice_1v_emits_cv);
     RUN_TEST(calc_scale_accumulates);
     RUN_TEST(binding_note_to_cv);
@@ -617,6 +654,7 @@ SUITE(meadowphysics_suite) {
     RUN_TEST(range_supports_16_steps);
     RUN_TEST(clock_internal_toggles_phase);
     RUN_TEST(clock_source_arbitration);
+    RUN_TEST(clock_metro_suppresses_internal);
     RUN_TEST(clock_period_model);
     RUN_TEST(grid_positions_press_and_range);
     RUN_TEST(grid_submode_switching);

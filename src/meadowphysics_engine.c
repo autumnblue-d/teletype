@@ -50,6 +50,11 @@ static uint8_t get_note_slot(mp_engine_t* e, uint8_t v) {
 static void mp_note_on(mp_engine_t* e, uint8_t n) {
     uint8_t w;
     switch (e->cfg.voice_mode) {
+        case MP_SCRIPT:
+            // Each of the 8 rows maps 1:1 to a script; pass the full row index
+            // through the tr seam (the binding turns it into run_script).
+            out_tr(e, n, 1);
+            break;
         case MP_8T:
             if (n < 4)
                 out_tr(e, n, 1);
@@ -94,6 +99,9 @@ static void mp_note_on(mp_engine_t* e, uint8_t n) {
 
 static void mp_note_off(mp_engine_t* e, uint8_t n) {
     switch (e->cfg.voice_mode) {
+        case MP_SCRIPT:
+            out_tr(e, n, 0);  // off-edge; binding ignores it (momentary)
+            break;
         case MP_8T:
             if (n < 4)
                 out_tr(e, n, 0);
@@ -335,7 +343,7 @@ void mp_engine_set_defaults(mp_config_t* cfg) {
 // this -- e.g. an uninitialized / stale-layout flash scene -- must be replaced
 // with defaults before use, or out-of-range indices would corrupt memory.
 bool mp_engine_config_valid(const mp_config_t* cfg) {
-    if (cfg->voice_mode > MP_8T) return false;
+    if (cfg->voice_mode > MP_SCRIPT) return false;
     if (cfg->sound > 1) return false;
     if (cfg->scale >= 16) return false;
     for (uint8_t i = 0; i < MP_ROWS; i++) {

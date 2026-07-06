@@ -395,6 +395,12 @@
         "MP.RESET"    => { MATCH_OP(E_OP_MP_RESET); };
         "MP.STOP"     => { MATCH_OP(E_OP_MP_STOP); };
         "MP.RUN"      => { MATCH_OP(E_OP_MP_RUN); };
+        "MP.SYNC"     => { MATCH_OP(E_OP_MP_SYNC); };
+        "MP.CLK"      => { MATCH_OP(E_OP_MP_CLK); };
+        "MP.VOICE"    => { MATCH_OP(E_OP_MP_VOICE); };
+        "MP.PERIOD"   => { MATCH_OP(E_OP_MP_PERIOD); };
+        "MP.SCALE"    => { MATCH_OP(E_OP_MP_SCALE); };
+        "MP.SCL"      => { MATCH_OP(E_OP_MP_SCL); };
 
         # earthsea
         "ES.PRESET"   => { MATCH_OP(E_OP_ES_PRESET); };

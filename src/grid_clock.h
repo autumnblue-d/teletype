@@ -20,9 +20,14 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+// `metro`: advance from the Teletype metro (M) tick. Like `external` it
+// suppresses the internal timer, but the edges come from the metro rather than
+// a Tr input. Driven wholly by the mode shell (which owns the metro seam), so
+// grid_clock has no metro helper -- it only needs to know the timer is off.
 typedef struct {
     uint8_t phase;        // current output phase, 0 or 1
     bool external;        // true = advance from Tr input, ignore internal timer
+    bool metro;           // true = advance from the Teletype metro (M) tick
     uint16_t period;      // internal edge interval in ms
     uint16_t period_min;  // clamp bounds for set_period (from init)
     uint16_t period_max;

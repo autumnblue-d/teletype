@@ -12,6 +12,7 @@ void grid_clock_init(grid_clock_t* c, uint16_t period_min, uint16_t period_max,
                      uint16_t period_default) {
     c->phase = 0;
     c->external = false;
+    c->metro = false;
     c->period_min = period_min;
     c->period_max = period_max;
     c->period = grid_clock_clamp(period_default, period_min, period_max);
@@ -26,7 +27,7 @@ void grid_clock_set_external(grid_clock_t* c, bool on) {
 }
 
 uint8_t grid_clock_internal_fire(grid_clock_t* c, uint8_t* phase_out) {
-    if (c->external) return 0;
+    if (c->external || c->metro) return 0;
     c->phase ^= 1;
     *phase_out = c->phase;
     return 1;

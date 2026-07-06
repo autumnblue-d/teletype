@@ -62,6 +62,27 @@ void grid_key_press(uint8_t x, uint8_t y, uint8_t z) {}
 void meadowphysics_op_reset(int16_t channel) {}
 void meadowphysics_op_stop(int16_t channel) {}
 void meadowphysics_op_run(int16_t on) {}
+int16_t meadowphysics_op_sync_get(void) {
+    return 0;
+}
+void meadowphysics_op_sync_set(int16_t src) {}
+void meadowphysics_op_clock(void) {}
+int16_t meadowphysics_op_voice_get(void) {
+    return 0;
+}
+void meadowphysics_op_voice_set(int16_t mode) {}
+int16_t meadowphysics_op_period_get(void) {
+    return 0;
+}
+void meadowphysics_op_period_set(int16_t ms) {}
+int16_t meadowphysics_op_scale_get(void) {
+    return 0;
+}
+void meadowphysics_op_scale_set(int16_t slot) {}
+int16_t meadowphysics_op_ladder_get(int16_t slot, int16_t degree) {
+    return 0;
+}
+void meadowphysics_op_ladder_set(int16_t slot, int16_t degree, int16_t val) {}
 void kria_op_run(int16_t on) {}
 void kria_op_reset(void) {}
 int16_t kria_op_pattern(int16_t set, int16_t val) {

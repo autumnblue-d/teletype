@@ -8,6 +8,7 @@
 #include "mode_persist.h"  // shared save confirmation
 
 // teletype
+#include "script.h"  // REGULAR_SCRIPT_COUNT (scripts 1-8 for MP_SCRIPT mode)
 #include "teletype.h"
 #include "teletype_io.h"
 
@@ -57,8 +58,14 @@ static mp_engine_t mp_eng;
 static grid_clock_t mp_clk;
 static mp_grid_state_t mp_grid;
 static softTimer_t mpClockTimer = { .next = NULL, .prev = NULL };
+static softTimer_t mpMetroOffTimer = { .next = NULL,
+                                       .prev = NULL };  // metro step off-edge
 static softTimer_t mpUiTimer = { .next = NULL,
                                  .prev = NULL };  // banner self-clear tick
+
+// Floor (ms) for the metro-clocked step's scheduled off-edge, so a very fast M
+// still yields a usable gate.
+#define MP_METRO_GATE_MIN 8
 
 static bool initialized = false;  // engine/clock constructed once per session
 static bool active = false;  // MP view is front-most (drives keyboard + grid)
@@ -131,6 +138,14 @@ static void mp_load_from_scene(void) {
 // view; MP shares them). Additive to the CV/TR jacks.
 static void mp_out_tr(void* c, uint8_t ch, uint8_t on) {
     (void)c;
+    // MP_SCRIPT: each row (ch 0-7) fires the matching Teletype script on its
+    // rising edge, fully replacing the CV/TR jacks. The script itself is what
+    // drives outputs -- so MP claims no channel (see mp_owned_channels) and the
+    // off-edge is a no-op (scripts are momentary).
+    if (mp_eng.cfg.voice_mode == MP_SCRIPT) {
+        if (on && ch < REGULAR_SCRIPT_COUNT) run_script(&scene_state, ch);
+        return;
+    }
     tele_tr(ch, on);
     kria_i2c_tr(ch, on);
 }
@@ -191,27 +206,32 @@ void meadowphysics_mode_exit(void) {
     active = false;
 }
 
+// Bring the internal soft timer into line with the run state and clock source:
+// it drives the engine only while playing on the INTERNAL clock. The EXT (Tr)
+// and METRO sources feed run_clock() from elsewhere, so the timer must be off
+// under them (else two sources would advance the sequencer at once).
+static void mp_sync_clock_timer(void) {
+    bool want = mp_running && !mp_clk.external && !mp_clk.metro;
+    if (want && !timer_enabled) {
+        timer_add(&mpClockTimer, mp_clk.period, &mpClockTimer_callback, NULL);
+        timer_enabled = true;
+    }
+    else if (!want && timer_enabled) {
+        timer_remove(&mpClockTimer);
+        timer_enabled = false;
+    }
+}
+
 // Play/pause the engine (Space in the MP view, or the MP.RUN script op).
 // Running owns the CV/TR outputs; stopping releases them back to scripts.
 void meadowphysics_toggle_run(void) {
     mp_init_once();
-    if (mp_running) {
-        mp_running = false;
-        if (timer_enabled) {
-            timer_remove(&mpClockTimer);
-            timer_enabled = false;
-        }
+    mp_running = !mp_running;
+    mp_sync_clock_timer();
+    if (!mp_running) {
         // Release ownership: gates low. mp_running is now false, so these
         // writes pass the suppression gate; CV is left at its last value.
         for (uint8_t i = 0; i < 4; i++) tele_tr(i, 0);
-    }
-    else {
-        mp_running = true;
-        if (!timer_enabled) {
-            timer_add(&mpClockTimer, mp_clk.period, &mpClockTimer_callback,
-                      NULL);
-            timer_enabled = true;
-        }
     }
     // repaint the grid too: on stop there is no further clock tick to clear the
     // last-lit frame, and the script (MP.RUN) path never touches the grid.
@@ -232,10 +252,41 @@ bool meadowphysics_external_clock(uint8_t level) {
     return true;
 }
 
+// Fires in ISR context; defer the actual off-edge to the event loop.
+static void mpMetroOff_callback(void* o) {
+    (void)o;
+    timer_remove(&mpMetroOffTimer);  // one-shot
+    event_t e = { .type = kEventAppCustom, .data = MP_APPEVT_METRO_OFF };
+    event_post(&e);
+}
+
+// Advance one full step: fire the on-edge now, then schedule the off-edge
+// `gate_ms` later (a gate rather than an instantaneous edge, so CV/TR voice
+// modes get a usable pulse). Used by the metro sync and the MP.CLK op.
+static void mp_full_step(uint16_t gate_ms) {
+    run_clock(1);
+    if (gate_ms < MP_METRO_GATE_MIN) gate_ms = MP_METRO_GATE_MIN;
+    timer_remove(&mpMetroOffTimer);
+    timer_add(&mpMetroOffTimer, gate_ms, &mpMetroOff_callback, NULL);
+}
+
+void meadowphysics_metro_tick(void) {
+    if (!mp_running || !mp_clk.metro) return;
+    // One metro tick = one full step, gate = half the metro interval (a ~50%
+    // duty, matching the internal clock's two-edges-per-step). M is clamped
+    // positive by the M / M! ops, so m/2 is a safe gate length.
+    mp_full_step((uint16_t)(scene_state.variables.m / 2));
+}
+
+void meadowphysics_metro_off(void) {
+    if (mp_running) run_clock(0);
+}
+
 // How many output channels (CV and TR, 0-indexed) MP claims for the current
 // voice mode: 1V uses 1, 2V uses 2, 4V/8T use all 4. The rest are free.
 static uint8_t mp_owned_channels(void) {
     switch (mp_eng.cfg.voice_mode) {
+        case MP_SCRIPT: return 0;  // fires scripts, drives no jack itself
         case MP_1V: return 1;
         case MP_2V: return 2;
         default: return 4;  // 4V, 8T
@@ -323,6 +374,107 @@ static void set_period(uint16_t period_ms) {
     dirty = true;
 }
 
+// Cycle the clock source: INTERNAL -> EXT (Tr) -> METRO (Teletype M) -> ...
+// Under EXT/METRO the internal soft timer is suppressed; mp_sync_clock_timer
+// re-derives it from the new source.
+static void mp_cycle_clock_source(void) {
+    if (mp_clk.metro) {  // METRO -> INTERNAL
+        mp_clk.metro = false;
+    }
+    else if (mp_clk.external) {  // EXT -> METRO
+        grid_clock_set_external(&mp_clk, false);
+        mp_clk.metro = true;
+    }
+    else {  // INTERNAL -> EXT
+        grid_clock_set_external(&mp_clk, true);
+    }
+    mp_sync_clock_timer();
+}
+
+// ---- MP.* script ops (each constructs the engine/bank first) ----
+
+int16_t meadowphysics_op_sync_get(void) {
+    mp_init_once();
+    if (mp_clk.metro) return 2;
+    return mp_clk.external ? 1 : 0;
+}
+
+void meadowphysics_op_sync_set(int16_t src) {
+    mp_init_once();
+    grid_clock_set_external(&mp_clk, src == 1);
+    mp_clk.metro = (src == 2);
+    mp_sync_clock_timer();
+    dirty = true;
+}
+
+void meadowphysics_op_clock(void) {
+    mp_init_once();
+    if (!mp_running) return;
+    mp_full_step(mp_clk.period / 2);  // gate scaled to the configured tempo
+}
+
+int16_t meadowphysics_op_voice_get(void) {
+    mp_init_once();
+    return mp_eng.cfg.voice_mode;
+}
+
+void meadowphysics_op_voice_set(int16_t mode) {
+    mp_init_once();
+    if (mode < 0 || mode >= MP_VOICE_MODE_COUNT) return;
+    mp_eng.cfg.voice_mode = (uint8_t)mode;
+    // release gates on channels the new voice mode no longer uses (SCRIPT uses
+    // none), so scripts get clean TR channels
+    if (mp_running)
+        for (uint8_t i = mp_owned_channels(); i < 4; i++) tele_tr(i, 0);
+    scene_state.mp = mp_eng.cfg;  // keep the scene copy in sync so entering MP
+                                  // doesn't reload-and-clobber this change
+    dirty = true;
+}
+
+int16_t meadowphysics_op_period_get(void) {
+    mp_init_once();
+    return mp_clk.period;
+}
+
+void meadowphysics_op_period_set(int16_t ms) {
+    mp_init_once();
+    if (ms < 0) ms = 0;
+    set_period((uint16_t)ms);  // clamps to [MIN, MAX] and retunes the timer
+}
+
+int16_t meadowphysics_op_scale_get(void) {
+    mp_init_once();
+    return mp_eng.cfg.scale;
+}
+
+void meadowphysics_op_scale_set(int16_t slot) {
+    mp_init_once();
+    if (slot < 0 || slot >= MP_SCALE_SLOTS) return;
+    mp_eng.cfg.scale = (uint8_t)slot;
+    mp_apply_scale();             // rebuild the live pitch table from the slot
+    scene_state.mp = mp_eng.cfg;  // sync scene copy (see voice_set)
+    dirty = true;
+}
+
+int16_t meadowphysics_op_ladder_get(int16_t slot, int16_t degree) {
+    mp_init_once();
+    if (slot < 0 || slot >= MP_SCALE_SLOTS || degree < 0 || degree >= 8)
+        return 0;
+    return mp_scale_bank[slot][degree];
+}
+
+void meadowphysics_op_ladder_set(int16_t slot, int16_t degree, int16_t val) {
+    mp_init_once();
+    if (slot < 0 || slot >= MP_SCALE_SLOTS || degree < 0 || degree >= 8) return;
+    if (val < 0) val = 0;
+    if (val > 7) val = 7;  // match the on-grid scale editor's 0-7 range
+    mp_scale_bank[slot][degree] = (uint8_t)val;
+    mp_bank_dirty = true;  // flushed to flash on the next Config-view/mode exit
+    if ((uint8_t)slot == mp_eng.cfg.scale)
+        mp_apply_scale();  // live update if editing the active slot
+    dirty = true;
+}
+
 void process_meadowphysics_keys(uint8_t key, uint8_t mod_key,
                                 bool is_held_key) {
     if (is_held_key) return;
@@ -369,14 +521,15 @@ void process_meadowphysics_keys(uint8_t key, uint8_t mod_key,
         mode_confirm_show("SAVED");
     }
     else if (match_no_mod(mod_key, key, HID_V)) {
-        mp_eng.cfg.voice_mode = (mp_eng.cfg.voice_mode + 1) & 0x3;
-        // release gates on channels the new (narrower) voice mode no longer
-        // uses, so scripts get clean TR channels
+        mp_eng.cfg.voice_mode =
+            (mp_eng.cfg.voice_mode + 1) % MP_VOICE_MODE_COUNT;
+        // release gates on channels the new voice mode no longer uses (SCRIPT
+        // uses none), so scripts get clean TR channels
         if (mp_running)
             for (uint8_t i = mp_owned_channels(); i < 4; i++) tele_tr(i, 0);
     }
     else if (match_no_mod(mod_key, key, HID_X)) {
-        grid_clock_set_external(&mp_clk, !mp_clk.external);
+        mp_cycle_clock_source();  // INT -> EXT (Tr) -> METRO (M)
     }
     else if (match_no_mod(mod_key, key, HID_UNDERSCORE)) {  // '-' : slower
         set_period(mp_clk.period + MP_TEMPO_STEP);
@@ -409,10 +562,18 @@ void process_meadowphysics_keys(uint8_t key, uint8_t mod_key,
 #define MP_S_TITLE 15
 #define MP_S_DIM 3
 
-static const char* const mp_voice_name[4] = { "1V", "2V", "4V", "8T" };
+static const char* const mp_voice_name[MP_VOICE_MODE_COUNT] = { "1V", "2V",
+                                                                "4V", "8T",
+                                                                "SCR" };
 static const char* const mp_rule_name[8] = { "NONE", "INC", "DEC",  "MAX",
                                              "MIN",  "RND", "POLE", "STOP" };
 static const char* const mp_target_name[4] = { "-", "COUNT", "SPEED", "BOTH" };
+
+// Short clock-source label for the header (INT / EXT / M).
+static const char* mp_clock_src_short(void) {
+    if (mp_clk.metro) return "M";
+    return mp_clk.external ? "EXT" : "INT";
+}
 
 // write a decimal number at (line, x)
 
@@ -452,10 +613,13 @@ uint8_t screen_refresh_meadowphysics(void) {
     font_string_region_clip(&line[1], mp_running ? "RUN" : "STOP", 96, 0,
                             MP_S_VALUE, 0);
 
+    // metro-synced: the step interval is M, not the (unused) internal period
+    uint16_t step_ms =
+        mp_clk.metro ? (uint16_t)scene_state.variables.m : mp_clk.period;
     font_string_region_clip(&line[2], "CLOCK", 0, 0, MP_S_LABEL, 0);
-    font_string_region_clip(&line[2], mp_clk.external ? "EXT" : "INT", 42, 0,
-                            MP_S_VALUE, 0);
-    mode_draw_num(2, 78, mp_clk.period, MP_S_VALUE);
+    font_string_region_clip(&line[2], mp_clock_src_short(), 42, 0, MP_S_VALUE,
+                            0);
+    mode_draw_num(2, 78, step_ms, MP_S_VALUE);
     font_string_region_clip(&line[2], "MS", 108, 0, MP_S_LABEL, 0);
 
     font_string_region_clip(&line[3], "GRID", 0, 0, MP_S_LABEL, 0);
@@ -467,16 +631,24 @@ uint8_t screen_refresh_meadowphysics(void) {
     // --- detail panel (L4-L7), per keyboard-selected view ---
     if (view == MP_VIEW_CLOCK) {
         font_string_region_clip(&line[4], "CLOCK", 0, 0, MP_S_TITLE, 0);
+        const char* src = "INTERNAL";
+        if (mp_clk.metro)
+            src = "TT M";
+        else if (mp_clk.external)
+            src = "EXT TR1";
+        // metro-synced: one full step per M tick (interval = M, steps/min =
+        // 60000 / M). Internal: two edges per step -> 30000 / period.
+        uint16_t period =
+            mp_clk.metro ? (uint16_t)scene_state.variables.m : mp_clk.period;
+        uint16_t per_step = mp_clk.metro ? 60000 : 30000;
+        uint16_t spm = period ? (uint16_t)(per_step / period) : 0;
         font_string_region_clip(&line[5], "SOURCE", 0, 0, MP_S_LABEL, 0);
-        font_string_region_clip(&line[5],
-                                mp_clk.external ? "EXT TR1" : "INTERNAL", 48, 0,
-                                MP_S_VALUE, 0);
+        font_string_region_clip(&line[5], src, 48, 0, MP_S_VALUE, 0);
         font_string_region_clip(&line[6], "PERIOD", 0, 0, MP_S_LABEL, 0);
-        mode_draw_num(6, 48, mp_clk.period, MP_S_VALUE);
+        mode_draw_num(6, 48, period, MP_S_VALUE);
         font_string_region_clip(&line[6], "MS", 78, 0, MP_S_LABEL, 0);
-        // one step = two clock edges, so steps/min = 30000 / period
         font_string_region_clip(&line[7], "STEP/M", 0, 0, MP_S_LABEL, 0);
-        mode_draw_num(7, 48, 30000 / mp_clk.period, MP_S_VALUE);
+        mode_draw_num(7, 48, spm, MP_S_VALUE);
     }
     else if (view == MP_VIEW_CONFIG) {
         font_string_region_clip(&line[4], "CONFIG", 0, 0, MP_S_TITLE, 0);

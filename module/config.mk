@@ -291,7 +291,11 @@ CPPFLAGS = -D BOARD=USER_BOARD -D UHD_ENABLE
 # 16-pattern global kria_config_t bank + global i2c follower bank.
 # sizeof(nvram_data_t) ~144.8 KB, so 145K (148,480 B) fits with ~3.5 KB margin.
 # See KRIA_PORT_PLAN.md §0. Re-verify the struct size in the map if fields added.
-LDFLAGS = -Wl,-e,_trampoline,--defsym=__flash_nvram_size__=142K
+# MP ops (MP.SYNC/CLK/VOICE/PERIOD/SCALE/SCL) needed program flash; funded by
+# SCENE_SLOTS 18 -> 16 (frees ~2 scene slots of NVRAM). nvram_data_t is 0x226b4
+# (~138 KB) at 18 slots, so 16 slots is ~2 slots smaller -> 132K reservation
+# fits it and frees ~10 KB of program flash. Re-verify .flash_nvram in the map.
+LDFLAGS = -Wl,-e,_trampoline,--defsym=__flash_nvram_size__=132K
 
 # Pre- and post-build commands
 PREBUILD_CMD =

@@ -32,11 +32,22 @@ void process_meadowphysics_keys(uint8_t key, uint8_t mod_key, bool is_held_key);
 // bitmask.
 uint8_t screen_refresh_meadowphysics(void);
 
-// handler_AppCustom event code: our clock ISR posts it, main.c dispatches it.
-#define MP_APPEVT_CLOCK 1  // internal clock tick
+// handler_AppCustom event codes: our clock ISRs post these, main.c dispatches
+// them. Distinct from the codes in kria_mode.h / earthsea_mode.h.
+#define MP_APPEVT_CLOCK 1      // internal clock tick
+#define MP_APPEVT_METRO_OFF 5  // scheduled off-edge for a metro-clocked step
 
 // Internal clock tick, dispatched from handler_AppCustom (MP_APPEVT_CLOCK).
 void meadowphysics_clock_tick(void);
+
+// Teletype metro (M) tick: when MP's clock source is METRO, advance one full
+// step (fire the on-edge, schedule the off-edge). Called from the metro branch
+// of handler_AppCustom. No-op unless MP is running on the metro source.
+void meadowphysics_metro_tick(void);
+
+// The scheduled off-edge for a metro-clocked step (clears trigger gates).
+// Dispatched from handler_AppCustom (MP_APPEVT_METRO_OFF).
+void meadowphysics_metro_off(void);
 
 // External-clock edge from handler_Trigger for the configured Tr input (A3);
 // `level` is the input pin state. Returns true if MP consumed the edge (MP mode

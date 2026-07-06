@@ -76,6 +76,22 @@ extern void meadowphysics_op_reset(int16_t channel);
 extern void meadowphysics_op_stop(int16_t channel);
 extern void meadowphysics_op_run(int16_t on);  // 1 = play, 0 = stop
 
+// MP config/transport ops. get/set pairs return the current value; setters
+// validate and no-op on out-of-range args.
+extern int16_t meadowphysics_op_sync_get(void);  // 0 INT, 1 EXT (Tr), 2 M
+extern void meadowphysics_op_sync_set(int16_t src);
+extern void meadowphysics_op_clock(void);  // advance one full step manually
+extern int16_t meadowphysics_op_voice_get(void);  // 0-4 (1V/2V/4V/8T/SCRIPT)
+extern void meadowphysics_op_voice_set(int16_t mode);
+extern int16_t meadowphysics_op_period_get(void);  // internal edge interval ms
+extern void meadowphysics_op_period_set(int16_t ms);
+extern int16_t meadowphysics_op_scale_get(void);  // active scale slot 0-15
+extern void meadowphysics_op_scale_set(int16_t slot);
+// scale ladder rung: slot 0-15, degree 0-7; value clamped 0-7
+extern int16_t meadowphysics_op_ladder_get(int16_t slot, int16_t degree);
+extern void meadowphysics_op_ladder_set(int16_t slot, int16_t degree,
+                                        int16_t val);
+
 // kria ops (native engine). For get/set pairs, `set` != 0 writes `val`; all
 // return the current value. track/param are 0-indexed.
 extern void kria_op_run(int16_t on);  // 1 = play, 0 = stop

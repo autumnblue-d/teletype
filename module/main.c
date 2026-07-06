@@ -591,6 +591,11 @@ void handler_AppCustom(int32_t data) {
         if (meadowphysics_owns_grid()) scene_state.grid.grid_dirty = 1;
         return;
     }
+    if (data == MP_APPEVT_METRO_OFF) {
+        meadowphysics_metro_off();
+        if (meadowphysics_owns_grid()) scene_state.grid.grid_dirty = 1;
+        return;
+    }
     if (data == KR_APPEVT_CLOCK) {
         kria_clock_tick();
         if (kria_owns_grid()) scene_state.grid.grid_dirty = 1;
@@ -628,6 +633,10 @@ void handler_AppCustom(int32_t data) {
     }
     else
         set_metro_icon(false);
+    // Advance MP one full step if it's synced to the metro (M). Runs after the
+    // METRO script, so any MP_SCRIPT-triggered scripts fire this same tick.
+    meadowphysics_metro_tick();
+    if (meadowphysics_owns_grid()) scene_state.grid.grid_dirty = 1;
 }
 
 static void handler_FtdiConnect(s32 data) {

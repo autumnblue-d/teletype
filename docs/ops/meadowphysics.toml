@@ -13,3 +13,27 @@ short = "stop native Meadowphysics counters (`0` = all, `1-8` = individual rows)
 ["MP.RUN"]
 prototype = "MP.RUN x"
 short = "start (`x` = 1) or stop (`x` = 0) the native Meadowphysics engine"
+
+["MP.SYNC"]
+prototype = "MP.SYNC x"
+short = "clock source: `0` internal, `1` external Tr input, `2` the Teletype metro `M`"
+
+["MP.CLK"]
+prototype = "MP.CLK"
+short = "manually advance the running engine one full step (use it to clock MP from a script)"
+
+["MP.VOICE"]
+prototype = "MP.VOICE x"
+short = "output mode `0-4`: `1V`/`2V`/`4V`/`8T`, or `4` = SCRIPT (each row fires script `n+1`)"
+
+["MP.PERIOD"]
+prototype = "MP.PERIOD x"
+short = "internal clock edge interval in ms (two edges = one step)"
+
+["MP.SCALE"]
+prototype = "MP.SCALE x"
+short = "active scale-bank slot (`0-15`)"
+
+["MP.SCL"]
+prototype = "MP.SCL slot degree x"
+short = "get/set a scale ladder rung: `slot` `0-15`, `degree` `0-7` (`0` = base, `1-7` = semitone deltas), value clamped `0-7`"
