@@ -23,7 +23,10 @@
 // -> 0x2A: Earthsea (SCENE_SLOTS 20->18 + global es_config_t bank).
 // -> 0x2B: force reformat so f.kria / f.kria_i2c get seeded at first-run
 // (previously only repaired by boot-time fallbacks).
-#define FIRSTRUN_KEY 0x2C
+// -> 0x2C: SCENE_SLOTS 18->16.
+// -> 0x2D: MP moved from a per-scene mp_config_t to a global 8-slot preset bank
+// (f.mp_slots + f.mp_current); nvram_scene_t.mp dropped.
+#define FIRSTRUN_KEY 0x2D
 
 // Independent version tag for the global scale bank. The scale bank has no
 // load-time validity check (unlike the kria/mp configs, which self-repair via
@@ -66,6 +69,19 @@ static __attribute__((noinline)) void flash_seed_kria_bank(void) {
     kria_config_t kcfg;
     kria_engine_set_defaults(&kcfg);
     flashc_memcpy((void*)&f.kria, &kcfg, sizeof(kcfg), true);
+}
+
+// MP global preset bank defaults: every slot gets the default config and a
+// blank glyph; the current slot is 0. Written slot-by-slot so the staging
+// buffer stays a single mp_config_t rather than the whole bank.
+static __attribute__((noinline)) void flash_seed_mp_bank(void) {
+    mp_config_t cfg;
+    mp_engine_set_defaults(&cfg);
+    for (uint8_t s = 0; s < MP_SLOTS; s++) {
+        flashc_memcpy((void*)&f.mp_slots[s].cfg, &cfg, sizeof(cfg), true);
+        flashc_memset8((void*)&f.mp_slots[s].glyph, 0, 8, true);
+    }
+    flashc_memset8((void*)&f.mp_current, 0, 1, true);
 }
 
 // Global scale bank defaults: slots 0-6 = the 7 diatonic modes, 7-15 =
@@ -140,6 +156,9 @@ void flash_prepare() {
         // Kria global song/config bank defaults (large stack frame, see helper)
         flash_seed_kria_bank();
 
+        // MP global 8-slot preset bank defaults (blank glyphs, current = 0)
+        flash_seed_mp_bank();
+
         // Global i2c follower bank defaults (shared by Kria + MP).
         {
             kria_i2c_fstate_t idef[KRIA_I2C_FOLLOWERS];
@@ -177,8 +196,6 @@ void flash_write(uint8_t preset_no, scene_state_t* scene,
                   sizeof(grid_data_t), true);
     flashc_memcpy((void*)&f.scenes[preset_no].text, text,
                   SCENE_TEXT_LINES * SCENE_TEXT_CHARS, true);
-    flashc_memcpy((void*)&f.scenes[preset_no].mp, &scene->mp,
-                  sizeof(mp_config_t), true);
 }
 
 void flash_read(uint8_t preset_no, scene_state_t* scene,
@@ -206,7 +223,6 @@ void flash_read(uint8_t preset_no, scene_state_t* scene,
 
     if (init_i2c_op_address) scene->i2c_op_address = -1;
     ss_midi_init(scene);
-    memcpy(&scene->mp, &f.scenes[preset_no].mp, sizeof(mp_config_t));
 }
 
 uint8_t flash_last_saved_scene() {
@@ -268,6 +284,28 @@ void flash_get_es(es_config_t* dst) {
 
 void flash_update_es(const es_config_t* src) {
     flashc_memcpy((void*)&f.earthsea, src, sizeof(f.earthsea), true);
+}
+
+void flash_get_mp_slot(uint8_t slot, mp_config_t* cfg, uint8_t glyph[8]) {
+    if (slot >= MP_SLOTS) return;
+    memcpy(cfg, &f.mp_slots[slot].cfg, sizeof(mp_config_t));
+    memcpy(glyph, f.mp_slots[slot].glyph, 8);
+}
+
+void flash_update_mp_slot(uint8_t slot, const mp_config_t* cfg,
+                          const uint8_t glyph[8]) {
+    if (slot >= MP_SLOTS) return;
+    flashc_memcpy((void*)&f.mp_slots[slot].cfg, cfg, sizeof(mp_config_t), true);
+    flashc_memcpy((void*)&f.mp_slots[slot].glyph, glyph, 8, true);
+}
+
+uint8_t flash_get_mp_current(void) {
+    return f.mp_current < MP_SLOTS ? f.mp_current : 0;
+}
+
+void flash_update_mp_current(uint8_t slot) {
+    if (slot >= MP_SLOTS) return;
+    flashc_memset8((void*)&f.mp_current, slot, 1, true);
 }
 
 void flash_update_device_config(device_config_t* device_config) {

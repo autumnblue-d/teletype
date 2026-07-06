@@ -276,7 +276,6 @@ typedef struct {
     cal_data_t cal;
     int8_t i2c_op_address;
     scene_midi_t midi;
-    mp_config_t mp;  // Meadowphysics per-scene config
 } scene_state_t;
 
 extern void ss_init(scene_state_t* ss);
@@ -288,7 +287,6 @@ extern void ss_grid_common_init(grid_common_t* gc);
 extern void ss_rand_init(scene_state_t* ss);
 extern void ss_midi_init(scene_state_t* ss);
 extern void ss_cal_init(scene_state_t* ss);
-extern void ss_mp_init(scene_state_t* ss);
 
 extern void ss_set_in(scene_state_t* ss, int16_t value);
 extern void ss_set_param(scene_state_t* ss, int16_t value);

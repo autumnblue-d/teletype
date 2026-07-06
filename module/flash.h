@@ -32,8 +32,17 @@ typedef struct {
     scene_pattern_t patterns[PATTERN_COUNT];
     grid_data_t grid_data;
     char text[SCENE_TEXT_LINES][SCENE_TEXT_CHARS];
-    mp_config_t mp;  // Meadowphysics per-scene config
 } nvram_scene_t;
+
+// Meadowphysics global 8-slot preset bank (ansible-style): each slot holds a
+// full mp_config_t plus a drawable 8x8 glyph (glyph[row] is a bitmask of the 8
+// columns). Replaces the old per-scene mp_config_t; MP is now scene-independent
+// like the Kria/Earthsea banks.
+#define MP_SLOTS 8
+typedef struct {
+    mp_config_t cfg;
+    uint8_t glyph[8];
+} mp_slot_t;
 
 // Meadowphysics global editable scale bank (MP_SCALE_SLOTS x 8, from
 // meadowphysics_engine.h).
@@ -47,10 +56,13 @@ typedef struct {
     uint8_t scale_bank[MP_SCALE_SLOTS][8];
     kria_config_t kria;  // Kria global preset bank (single song), not per-scene
     kria_i2c_fstate_t kria_i2c[KRIA_I2C_FOLLOWERS];  // global i2c follower bank
-    es_config_t earthsea;  // Earthsea global bank (single instance)
-    uint8_t scale_fresh;   // version tag for the scale-bank self-heal (see
-                           // SCALE_BANK_KEY in flash.c); kept last so adding it
-                           // doesn't shift any existing field's flash offset
+    es_config_t earthsea;          // Earthsea global bank (single instance)
+    mp_slot_t mp_slots[MP_SLOTS];  // Meadowphysics global 8-slot preset bank
+    uint8_t mp_current;            // last-used MP slot, reloaded on boot
+    uint8_t scale_fresh;           // version tag for the scale-bank self-heal
+                                   // (see SCALE_BANK_KEY in flash.c); kept last
+                                   // so adding it doesn't shift any existing
+                                   // field's flash offset
 } nvram_data_t;
 
 u8 is_flash_fresh(void);
@@ -86,5 +98,13 @@ void flash_update_kria_i2c(const kria_i2c_fstate_t* src);
 // Global Earthsea bank (single instance in nvram_data_t; not per-scene).
 void flash_get_es(es_config_t* dst);
 void flash_update_es(const es_config_t* src);
+
+// Global Meadowphysics 8-slot preset bank (not per-scene). Each slot carries a
+// config + an 8-byte glyph; save/load a single slot at a time.
+void flash_get_mp_slot(uint8_t slot, mp_config_t* cfg, uint8_t glyph[8]);
+void flash_update_mp_slot(uint8_t slot, const mp_config_t* cfg,
+                          const uint8_t glyph[8]);
+uint8_t flash_get_mp_current(void);
+void flash_update_mp_current(uint8_t slot);
 
 #endif

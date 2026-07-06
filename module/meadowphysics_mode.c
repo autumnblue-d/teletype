@@ -1,6 +1,6 @@
 #include "meadowphysics_mode.h"
 
-#include <string.h>  // memcmp
+#include <string.h>  // memset (preset glyph buffer)
 
 // this
 #include "globals.h"
@@ -78,6 +78,14 @@ static bool mp_bank_dirty =
 static uint8_t view = MP_VIEW_POSITIONS;
 static bool mp_i2c_view = false;  // grid shows the shared i2c view (keyboard 4)
 
+// MP is stored in a global 8-slot preset bank (f.mp_slots), decoupled from
+// scenes -- ansible-style. The working config lives in mp_eng.cfg; each slot
+// also carries a drawable 8x8 glyph (glyph[row] = column bitmask). See flash.h.
+static uint8_t mp_cur_slot = 0;  // slot the working config last loaded/saved
+static uint8_t mp_sel_slot = 0;  // slot highlighted in the preset browser
+static uint8_t mp_working_glyph[8];  // editable glyph for the working config
+static bool mp_preset_view = false;  // grid shows the 8-slot preset browser (5)
+
 // RNG adapter for the MP_RULE_RND rule (engine takes an injected source).
 static uint32_t mp_rnd(void* ctx) {
     (void)ctx;
@@ -120,17 +128,29 @@ static void mp_ui_cb(void* o) {
     if (mode_confirm_tick()) dirty = true;
 }
 
-// Load the current scene's MP config into the engine, sanitize it, arm the
-// counters, and rebuild the pitch table.
-static void mp_load_from_scene(void) {
-    mp_eng.cfg = scene_state.mp;
-    // A stale/old-layout flash scene can hold out-of-range values that would
+// Load a preset slot (config + glyph) from the global bank into the engine,
+// sanitize it, arm the counters, and rebuild the pitch table.
+static void mp_load_slot(uint8_t slot) {
+    if (slot >= MP_SLOTS) slot = 0;
+    flash_get_mp_slot(slot, &mp_eng.cfg, mp_working_glyph);
+    // A stale/old-layout flash slot can hold out-of-range values that would
     // index out of bounds; fall back to defaults if so.
     if (!mp_engine_config_valid(&mp_eng.cfg))
         mp_engine_set_defaults(&mp_eng.cfg);
     if (mp_eng.cfg.scale >= MP_SCALE_SLOTS) mp_eng.cfg.scale = 0;
     mp_engine_reset(&mp_eng);
     mp_apply_scale();
+    mp_cur_slot = slot;
+    mp_sel_slot = slot;
+}
+
+// Save the working config + glyph into a preset slot and remember it as current
+// (reloaded on next boot).
+static void mp_save_slot(uint8_t slot) {
+    if (slot >= MP_SLOTS) return;
+    flash_update_mp_slot(slot, &mp_eng.cfg, mp_working_glyph);
+    flash_update_mp_current(slot);
+    mp_cur_slot = slot;
 }
 
 // MP output vtable with i2c follower fan-out. Mirrors meadowphysics_binding but
@@ -176,7 +196,8 @@ static void mp_init_once(void) {
                     MP_CLOCK_PERIOD_DEFAULT);
     mp_grid_state_init(&mp_grid);
     flash_get_scale_bank(mp_scale_bank);  // load bank before apply_scale
-    mp_load_from_scene();
+    // restore the last-used preset slot
+    mp_load_slot(flash_get_mp_current());
     timer_add(&mpUiTimer, 100, &mp_ui_cb, NULL);  // banner self-clear
     initialized = true;
 }
@@ -185,10 +206,9 @@ static void mp_init_once(void) {
 // independently of whether you're looking at it (see meadowphysics_toggle_run).
 void set_meadowphysics_mode(void) {
     mp_init_once();
-    // If the scene's MP config changed while we were away (e.g. a scene was
-    // loaded), reload it; otherwise leave a running sequence undisturbed.
-    if (memcmp(&mp_eng.cfg, &scene_state.mp, sizeof(mp_config_t)) != 0)
-        mp_load_from_scene();
+    // MP is a global preset bank now, independent of the loaded scene, so
+    // entering the view leaves the working config (and any running sequence)
+    // untouched -- it only changes via L / S in the preset browser.
     active = true;
     dirty = true;
 }
@@ -196,13 +216,13 @@ void set_meadowphysics_mode(void) {
 // Leave the MP view. The engine keeps running in the background (MP owns the
 // outputs until explicitly stopped); we only relinquish the keyboard/grid.
 void meadowphysics_mode_exit(void) {
-    // Persist the working config back to the scene so a later scene save
-    // captures it.
-    scene_state.mp = mp_eng.cfg;
+    // Working config edits are volatile until saved to a slot (S) -- ansible
+    // semantics -- so nothing config-side is persisted here.
     mp_flush_bank();            // save any scale edits
     mode_flush_i2c_if_dirty();  // persist follower-bank edits
     kria_i2c_oled_exit();  // don't leave the MIDI editor open across mode exit
     mp_i2c_view = false;
+    mp_preset_view = false;
     active = false;
 }
 
@@ -314,10 +334,39 @@ static bool mp_scale_editor_active(void) {
     return active && view == MP_VIEW_CONFIG;
 }
 
+// Preset browser: left column (x==0) rows 0-7 pick the S/L target slot; the
+// right 8x8 block (x>=8) is the drawable glyph canvas for the working config.
+static void mp_preset_grid_key(uint8_t x, uint8_t y, uint8_t z) {
+    if (!z || y >= 8) return;  // act on press, 8 rows only
+    if (x == 0)
+        mp_sel_slot = y;
+    else if (x >= 8)
+        mp_working_glyph[y] ^= 1 << (x - 8);
+}
+
+// Render the preset browser: slot column (selected brightest, current mid, rest
+// dim) + the working glyph in the right 8x8.
+static void mp_preset_grid_refresh(uint8_t* led, bool varibright) {
+    memset(led, 0, MP_ROWS * 16);
+    for (uint8_t s = 0; s < MP_SLOTS; s++)
+        led[s * 16] = (s == mp_sel_slot)   ? 15
+                      : (s == mp_cur_slot) ? (varibright ? 8 : 15)
+                                           : (varibright ? 3 : 0);
+    for (uint8_t r = 0; r < 8; r++)
+        for (uint8_t c = 0; c < 8; c++)
+            if (mp_working_glyph[r] & (1 << c))
+                led[r * 16 + 8 + c] = varibright ? 12 : 15;
+}
+
 void meadowphysics_grid_key(uint8_t x, uint8_t y, uint8_t z) {
     if (!meadowphysics_owns_grid()) return;
     if (active && mp_i2c_view) {
         mode_i2c_view_grid_key(x, y, z);  // shared i2c follower view
+        dirty = true;
+        return;
+    }
+    if (active && mp_preset_view) {
+        mp_preset_grid_key(x, y, z);
         dirty = true;
         return;
     }
@@ -333,6 +382,10 @@ void meadowphysics_grid_key(uint8_t x, uint8_t y, uint8_t z) {
 void meadowphysics_grid_render(void) {
     if (active && mp_i2c_view) {
         kria_i2c_view_render(monomeLedBuffer, monome_is_vari());
+        return;
+    }
+    if (active && mp_preset_view) {
+        mp_preset_grid_refresh(monomeLedBuffer, monome_is_vari());
         return;
     }
     if (mp_scale_editor_active())
@@ -426,8 +479,6 @@ void meadowphysics_op_voice_set(int16_t mode) {
     // none), so scripts get clean TR channels
     if (mp_running)
         for (uint8_t i = mp_owned_channels(); i < 4; i++) tele_tr(i, 0);
-    scene_state.mp = mp_eng.cfg;  // keep the scene copy in sync so entering MP
-                                  // doesn't reload-and-clobber this change
     dirty = true;
 }
 
@@ -451,8 +502,7 @@ void meadowphysics_op_scale_set(int16_t slot) {
     mp_init_once();
     if (slot < 0 || slot >= MP_SCALE_SLOTS) return;
     mp_eng.cfg.scale = (uint8_t)slot;
-    mp_apply_scale();             // rebuild the live pitch table from the slot
-    scene_state.mp = mp_eng.cfg;  // sync scene copy (see voice_set)
+    mp_apply_scale();  // rebuild the live pitch table from the slot
     dirty = true;
 }
 
@@ -487,21 +537,31 @@ void process_meadowphysics_keys(uint8_t key, uint8_t mod_key,
         mp_flush_bank();  // leaving the Config view: save scale edits
         if (mp_i2c_view) mode_flush_i2c_if_dirty();
         mp_i2c_view = false;
+        mp_preset_view = false;
     }
     else if (match_no_mod(mod_key, key, HID_2)) {
         view = MP_VIEW_CLOCK;
         mp_flush_bank();
         if (mp_i2c_view) mode_flush_i2c_if_dirty();
         mp_i2c_view = false;
+        mp_preset_view = false;
     }
     else if (match_no_mod(mod_key, key, HID_3)) {
         view = MP_VIEW_CONFIG;
         if (mp_i2c_view) mode_flush_i2c_if_dirty();
         mp_i2c_view = false;
+        mp_preset_view = false;
     }
     else if (match_no_mod(mod_key, key, HID_4)) {  // shared i2c follower view
         mp_i2c_view = true;
+        mp_preset_view = false;
         kria_i2c_view_enter();
+    }
+    else if (match_no_mod(mod_key, key, HID_5)) {  // preset (slot) browser
+        mp_preset_view = true;
+        if (mp_i2c_view) mode_flush_i2c_if_dirty();
+        mp_i2c_view = false;
+        mp_sel_slot = mp_cur_slot;  // start on the current slot
     }
     else if (match_no_mod(mod_key, key, HID_SPACEBAR)) {
         meadowphysics_toggle_run();  // play / pause
@@ -509,16 +569,23 @@ void process_meadowphysics_keys(uint8_t key, uint8_t mod_key,
     else if (match_no_mod(mod_key, key, HID_R)) {
         mp_engine_reset(&mp_eng);  // reset counters (independent of run state)
     }
-    else if (match_no_mod(mod_key, key, HID_S)) {  // save the current scene
-        // MP config is per-scene, so "save" = commit the whole active scene to
-        // flash (the config rides along in flash_write). Mirrors preset_w's
-        // alt-<enter>, giving MP the same one-key save as Kria/Earthsea.
-        scene_state.mp = mp_eng.cfg;
+    else if (match_no_mod(mod_key, key, HID_S)) {  // save -> selected slot
+        // Commit the working config + glyph to the highlighted preset slot
+        // (mp_sel_slot; defaults to the current slot when the browser is
+        // closed). MP is a global bank, decoupled from the Teletype scene.
+        mp_save_slot(mp_sel_slot);
         mp_flush_bank();            // shared scale bank, if edited
         mode_flush_i2c_if_dirty();  // shared follower bank, if edited
-        flash_write(preset_select, &scene_state, &scene_text);
-        flash_update_last_saved_scene(preset_select);
-        mode_confirm_show("SAVED");
+        char b[8] = "SAVE ";
+        itoa(mp_sel_slot, b + 5, 10);
+        mode_confirm_show(b);
+    }
+    else if (match_no_mod(mod_key, key, HID_L)) {  // load <- selected slot
+        mp_load_slot(mp_sel_slot);
+        flash_update_mp_current(mp_sel_slot);
+        char b[8] = "LOAD ";
+        itoa(mp_sel_slot, b + 5, 10);
+        mode_confirm_show(b);
     }
     else if (match_no_mod(mod_key, key, HID_V)) {
         mp_eng.cfg.voice_mode =
@@ -593,11 +660,11 @@ uint8_t screen_refresh_meadowphysics(void) {
     const char* cmsg;
     const char* title = mode_confirm_active(&cmsg) ? cmsg : "MEADOWPHYSICS";
     font_string_region_clip(&line[0], title, 0, 0, MP_S_TITLE, 0);
-    // Active scene number: MP config is per-scene (unlike Kria/Earthsea global
-    // banks), so surface which slot a save lands in.
-    char scenebuf[6] = { 'S' };
-    itoa(preset_select, scenebuf + 1, 10);
-    font_string_region_clip(&line[0], scenebuf, 82, 0, MP_S_DIM, 0);
+    // Current MP preset slot (global 8-slot bank, not the Teletype scene).
+    font_string_region_clip(&line[0], "SL", 74, 0, MP_S_DIM, 0);
+    char slotbuf[4];
+    itoa(mp_cur_slot, slotbuf, 10);
+    font_string_region_clip(&line[0], slotbuf, 90, 0, MP_S_DIM, 0);
     // view tabs, active one bright
     font_string_region_clip(&line[0], "P", 104, 0,
                             view == MP_VIEW_POSITIONS ? MP_S_TITLE : MP_S_DIM,
@@ -629,7 +696,16 @@ uint8_t screen_refresh_meadowphysics(void) {
     mode_draw_num(3, 108, mp_eng.cfg.scale, MP_S_VALUE);
 
     // --- detail panel (L4-L7), per keyboard-selected view ---
-    if (view == MP_VIEW_CLOCK) {
+    if (mp_preset_view) {
+        font_string_region_clip(&line[4], "PRESET", 0, 0, MP_S_TITLE, 0);
+        font_string_region_clip(&line[5], "SLOT", 0, 0, MP_S_LABEL, 0);
+        mode_draw_num(5, 48, mp_sel_slot, MP_S_VALUE);
+        font_string_region_clip(&line[6], "CUR", 66, 0, MP_S_LABEL, 0);
+        mode_draw_num(6, 96, mp_cur_slot, MP_S_VALUE);
+        font_string_region_clip(&line[7], "S:SAVE L:LOAD GRID:GLYPH", 0, 0,
+                                MP_S_DIM, 0);
+    }
+    else if (view == MP_VIEW_CLOCK) {
         font_string_region_clip(&line[4], "CLOCK", 0, 0, MP_S_TITLE, 0);
         const char* src = "INTERNAL";
         if (mp_clk.metro)
