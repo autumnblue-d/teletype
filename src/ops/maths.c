@@ -170,6 +170,8 @@ static void op_DV_R_get(const void *data, scene_state_t *ss, exec_state_t *es,
                         command_state_t *cs);
 static void op_DV_B_get(const void *data, scene_state_t *ss, exec_state_t *es,
                         command_state_t *cs);
+static void op_DV_K_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                        command_state_t *cs);
 static void op_BETA_get(const void *data, scene_state_t *ss, exec_state_t *es,
                         command_state_t *cs);
 static void op_BETA_K_get(const void *data, scene_state_t *ss, exec_state_t *es,
@@ -287,6 +289,7 @@ const tele_op_t op_DV_DV  = MAKE_GET_SET_OP(DV.DV, op_DV_DV_get, op_DV_DV_set, 0
 const tele_op_t op_DV_L   = MAKE_GET_SET_OP(DV.L, op_DV_L_get, op_DV_L_set, 0, true);
 const tele_op_t op_DV_R   = MAKE_GET_OP(DV.R   , op_DV_R_get    , 0, false);
 const tele_op_t op_DV_B   = MAKE_GET_OP(DV.B   , op_DV_B_get    , 1, true);
+const tele_op_t op_DV_K   = MAKE_GET_OP(DV.K   , op_DV_K_get    , 3, true);
 const tele_op_t op_BETA   = MAKE_GET_OP(BETA   , op_BETA_get    , 1, true);
 const tele_op_t op_BETA_K = MAKE_GET_OP(BETA.K , op_BETA_K_get  , 3, true);
 const tele_op_t op_BPM   = MAKE_GET_OP(BPM     , op_BPM_get     , 1, true);
@@ -1248,6 +1251,23 @@ static void op_DV_B_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
                         exec_state_t *NOTUSED(es), command_state_t *cs) {
     int16_t max = cs_pop(cs);
     float v = beta_fast(dejavu_next(dejavu_global()));
+    int32_t range = (int32_t)max + 1;
+    int32_t scaled = range > 0 ? (int32_t)(v * (float)range) : 0;
+    if (scaled < 0) scaled = 0;
+    if (scaled > max) scaled = max;
+    cs_push(cs, (int16_t)scaled);
+}
+
+// DV.K a b max: advance deja vu, warp its uniform [0,1) output through the
+// variable-shape beta surrogate (shape params a, b in eighths, as BETA.K),
+// scale to [0,max].
+static void op_DV_K_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
+                        exec_state_t *NOTUSED(es), command_state_t *cs) {
+    int16_t a = cs_pop(cs);
+    int16_t b = cs_pop(cs);
+    int16_t max = cs_pop(cs);
+    float v = beta_shape_icdf(dejavu_next(dejavu_global()), (float)a / 8.0f,
+                              (float)b / 8.0f);
     int32_t range = (int32_t)max + 1;
     int32_t scaled = range > 0 ? (int32_t)(v * (float)range) : 0;
     if (scaled < 0) scaled = 0;

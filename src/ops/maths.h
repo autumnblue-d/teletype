@@ -80,6 +80,7 @@ extern const tele_op_t op_DV_DV;
 extern const tele_op_t op_DV_L;
 extern const tele_op_t op_DV_R;
 extern const tele_op_t op_DV_B;
+extern const tele_op_t op_DV_K;
 extern const tele_op_t op_BETA;
 extern const tele_op_t op_BETA_K;
 extern const tele_op_t op_BPM;

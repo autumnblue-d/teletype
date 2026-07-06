@@ -52,7 +52,9 @@ length (`1`–`16`) and `DV.R` re-locks a brand-new loop.
 
 By default `DV` values are uniformly distributed. `DV.B` instead shapes each
 value through the same bell-with-fat-tails distribution as Marbles' X output
-(see `BETA`), so values cluster toward the middle of the range.
+(see `BETA`), so values cluster toward the middle of the range. `DV.K` is the
+adjustable-shape variant, warping each value through the same variable
+distribution as `BETA.K` (shape set by `a` and `b`).
 
 The déjà vu state is global (shared by all `DV` ops), not per-scene, and resets
 on power cycle.
@@ -75,6 +77,10 @@ short = "re-lock the déjà vu loop: refill it with fresh random values"
 ["DV.B"]
 prototype = "DV.B max"
 short = "like `DV`, but shape the value through the `BETA` distribution before scaling to `0`–`max` (the Marbles X-output character)"
+
+["DV.K"]
+prototype = "DV.K a b max"
+short = "like `DV`, but shape the value through the variable `BETA.K` distribution (shape set by `a` and `b`) before scaling to `0`–`max`"
 
 [BETA]
 prototype = "BETA x"
