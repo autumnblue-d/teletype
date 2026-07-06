@@ -609,6 +609,17 @@ short = "Get the latest controller number (0..127) received via MIDI in"
 prototype = "I2M.Q.LCC"  
 short = "Get the latest controller value (0..127) received via MIDI in"  
 
-["I2M.PANIC"]  
-prototype = "I2M.PANIC"  
+["I2M.PANIC"]
+prototype = "I2M.PANIC"
 short = "Send MIDI Note Off messages for all notes on all channels, and reset note duration, shift, repetition, ratcheting, min/max"
+
+["I2M.TEST"]
+prototype = "I2M.TEST value1 value2"
+short = "Diagnostic: send a raw test message (I2C command `255`) to the I2C2MIDI device — `value1` as one byte, `value2` as two bytes"
+description = """
+`I2M.TEST` is a low-level diagnostic op for checking the I2C link to an
+I2C2MIDI device. It sends a raw four-byte message: the test command (`255`),
+then `value1` as a single byte and `value2` as two bytes (high byte first). It
+does not send MIDI itself — the connected I2C2MIDI firmware decides what to do
+with the test values.
+"""
