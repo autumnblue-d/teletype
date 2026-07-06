@@ -86,6 +86,12 @@ static uint8_t mp_sel_slot = 0;  // slot highlighted in the preset browser
 static uint8_t mp_working_glyph[8];  // editable glyph for the working config
 static bool mp_preset_view = false;  // grid shows the 8-slot preset browser (5)
 
+// Double-tap the already-selected slot in the preset browser to load it: a
+// second tap within MP_DBLTAP_TICKS UI ticks (100 ms each) of the first.
+#define MP_DBLTAP_TICKS 4
+static uint8_t mp_tap_slot = 0xFF;  // slot tapped first (double-tap detection)
+static uint8_t mp_tap_ticks = 0;    // remaining ticks in the double-tap window
+
 // RNG adapter for the MP_RULE_RND rule (engine takes an injected source).
 static uint32_t mp_rnd(void* ctx) {
     (void)ctx;
@@ -125,6 +131,7 @@ static void mp_flush_bank(void) {
 // transient "SAVED" banner after its delay.
 static void mp_ui_cb(void* o) {
     (void)o;
+    if (mp_tap_ticks) mp_tap_ticks--;  // expire the preset double-tap window
     if (mode_confirm_tick()) dirty = true;
 }
 
@@ -151,6 +158,16 @@ static void mp_save_slot(uint8_t slot) {
     flash_update_mp_slot(slot, &mp_eng.cfg, mp_working_glyph);
     flash_update_mp_current(slot);
     mp_cur_slot = slot;
+}
+
+// Load a slot and surface a "LOAD n" banner. Shared by the L key and the preset
+// browser's double-tap gesture.
+static void mp_load_and_confirm(uint8_t slot) {
+    mp_load_slot(slot);
+    flash_update_mp_current(slot);
+    char b[8] = "LOAD ";
+    itoa(slot, b + 5, 10);
+    mode_confirm_show(b);
 }
 
 // MP output vtable with i2c follower fan-out. Mirrors meadowphysics_binding but
@@ -338,8 +355,17 @@ static bool mp_scale_editor_active(void) {
 // right 8x8 block (x>=8) is the drawable glyph canvas for the working config.
 static void mp_preset_grid_key(uint8_t x, uint8_t y, uint8_t z) {
     if (!z || y >= 8) return;  // act on press, 8 rows only
-    if (x == 0)
-        mp_sel_slot = y;
+    if (x == 0) {
+        if (mp_tap_ticks && mp_tap_slot == y) {  // double-tap: load the slot
+            mp_tap_ticks = 0;
+            mp_load_and_confirm(y);
+        }
+        else {  // single tap: select it, arm the double-tap window
+            mp_sel_slot = y;
+            mp_tap_slot = y;
+            mp_tap_ticks = MP_DBLTAP_TICKS;
+        }
+    }
     else if (x >= 8)
         mp_working_glyph[y] ^= 1 << (x - 8);
 }
@@ -581,11 +607,7 @@ void process_meadowphysics_keys(uint8_t key, uint8_t mod_key,
         mode_confirm_show(b);
     }
     else if (match_no_mod(mod_key, key, HID_L)) {  // load <- selected slot
-        mp_load_slot(mp_sel_slot);
-        flash_update_mp_current(mp_sel_slot);
-        char b[8] = "LOAD ";
-        itoa(mp_sel_slot, b + 5, 10);
-        mode_confirm_show(b);
+        mp_load_and_confirm(mp_sel_slot);
     }
     else if (match_no_mod(mod_key, key, HID_V)) {
         mp_eng.cfg.voice_mode =

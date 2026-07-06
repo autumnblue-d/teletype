@@ -1677,7 +1677,7 @@ const char* help17[HELP17_LENGTH] = { "17/21 I2C2MIDI",
                                       "    SEND NOTE OFF TO ALL",
                                       "    RESET NOTE PARAMETERS" };
 
-#define HELP18_LENGTH 65
+#define HELP18_LENGTH 66
 const char* help18[HELP18_LENGTH] = { "18/21 MEADOWPHYSICS",
                                       " ",
                                       "CASCADING COUNTER",
@@ -1715,6 +1715,7 @@ const char* help18[HELP18_LENGTH] = { "18/21 MEADOWPHYSICS",
                                       "EDIT SCALE ON GRID",
                                       "PRESET VIEW (5):",
                                       "COL0: PICK SLOT",
+                                      "  2X TAP: LOAD",
                                       "RIGHT 8x8: GLYPH",
                                       " ",
                                       "OUTPUTS (VOICE):",
