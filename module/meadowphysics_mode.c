@@ -141,14 +141,27 @@ static void mp_load_slot(uint8_t slot) {
     if (slot >= MP_SLOTS) slot = 0;
     flash_get_mp_slot(slot, &mp_eng.cfg, mp_working_glyph);
     // A stale/old-layout flash slot can hold out-of-range values that would
-    // index out of bounds; fall back to defaults if so.
-    if (!mp_engine_config_valid(&mp_eng.cfg))
+    // index out of bounds; fall back to defaults if so. An unseeded slot's
+    // glyph is likewise garbage (no validity check of its own), so blank it --
+    // matching ansible's default_mp, which zeroes glyphs on a fresh flash.
+    if (!mp_engine_config_valid(&mp_eng.cfg)) {
         mp_engine_set_defaults(&mp_eng.cfg);
+        memset(mp_working_glyph, 0, 8);
+    }
     if (mp_eng.cfg.scale >= MP_SCALE_SLOTS) mp_eng.cfg.scale = 0;
     mp_engine_reset(&mp_eng);
     mp_apply_scale();
     mp_cur_slot = slot;
     mp_sel_slot = slot;
+}
+
+// Read a slot's glyph into `out` for preview/editing. A slot whose config fails
+// validation was never seeded (in-place upgrade left garbage there), so return
+// a blank glyph rather than random pixels -- same fallback as mp_load_slot.
+static void mp_read_slot_glyph(uint8_t slot, uint8_t out[8]) {
+    mp_config_t tmp;
+    flash_get_mp_slot(slot, &tmp, out);
+    if (!mp_engine_config_valid(&tmp)) memset(out, 0, 8);
 }
 
 // Save the working config + glyph into a preset slot and remember it as current
@@ -364,8 +377,9 @@ static void mp_preset_grid_key(uint8_t x, uint8_t y, uint8_t z) {
             mp_preset_view = false;
             view = MP_VIEW_POSITIONS;
         }
-        else {  // single tap: select it, arm the double-tap window
+        else {  // single tap: select it, preview its glyph, arm double-tap
             mp_sel_slot = y;
+            mp_read_slot_glyph(y, mp_working_glyph);
             mp_tap_slot = y;
             mp_tap_ticks = MP_DBLTAP_TICKS;
         }
