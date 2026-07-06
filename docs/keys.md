@@ -50,21 +50,21 @@ In most cases, the clipboard is shared between _live_, _edit_ and the 2 _preset_
 
 ## Live mode
 
-| `Key`                    | Action                   |
-|--------------------------|--------------------------|
-| **`<down>`** / **`C-n`** | history next             |
-| **`<up>`** / **`C-p`**   | history previous         |
-| **`<enter>`**            | execute command          |
-| **`~`**                  | toggle variables         |
-| **`[`** / **`]`**        | switch to edit mode      |
-| **`alt-g`**              | toggle grid visualizer   |
-| **`shift-d`**            | live dashboard           |
-| **`alt-<arrows>`**       | move grid cursor         |
-| **`alt-shift-<arrows>`** | select grid area         |
-| **`alt-<space>`**        | emulate grid press       |
-| **`alt-/`**              | switch grid pages        |
-| **`alt-\`**              | toggle grid control view |
-| **`alt-<prt sc>`**       | insert grid x/y/w/h      |
+| `Key`                       | Action                   |
+|-----------------------------|--------------------------|
+| **`<down>`** / **`ctrl-n`** | history next             |
+| **`<up>`** / **`ctrl-p`**   | history previous         |
+| **`<enter>`**               | execute command          |
+| **`~`**                     | toggle variables         |
+| **`[`** / **`]`**           | switch to edit mode      |
+| **`alt-g`**                 | toggle grid visualizer   |
+| **`shift-d`**               | live dashboard           |
+| **`alt-<arrows>`**          | move grid cursor         |
+| **`shift-alt-<arrows>`**    | select grid area         |
+| **`alt-<space>`**           | emulate grid press       |
+| **`alt-/`**                 | switch grid pages        |
+| **`alt-\`**                 | toggle grid control view |
+| **`alt-<prt sc>`**          | insert grid x/y/w/h      |
 
 In full grid visualizer mode pressing `alt` is not required.
 
@@ -72,21 +72,21 @@ In full grid visualizer mode pressing `alt` is not required.
 
 In _edit_ mode multiple lines can be selected and used with the clipboard.
 
-| `Key`                   | Action                    |
-|-------------------------|---------------------------|
-| **`<down>`** / **`C-n`**| line down                 |
-| **`<up>`** / **`C-p`**  | line up                   |
-| **`[`**                 | previous script           |
-| **`]`**                 | next script               |
-| **`<enter>`**           | enter command             |
-| **`shift-<enter>`**     | insert command            |
-| **`alt-/`**             | toggle line comment       |
-| **`shift-<up>`**        | expand selection up       |
-| **`shift-<down>`**      | expand selection down     |
-| **`alt-<delete>`**      | delete selection          |
-| **`alt-<up>`**          | move selection up         |
-| **`alt-<down>`**        | move selection down       |
-| **`ctrl-z`**            | undo (3 levels)           |
+| `Key`                       | Action                |
+|-----------------------------|-----------------------|
+| **`<down>`** / **`ctrl-n`** | line down             |
+| **`<up>`** / **`ctrl-p`**   | line up               |
+| **`[`**                     | previous script       |
+| **`]`**                     | next script           |
+| **`<enter>`**               | enter command         |
+| **`shift-<enter>`**         | insert command        |
+| **`alt-/`**                 | toggle line comment   |
+| **`shift-<up>`**            | expand selection up   |
+| **`shift-<down>`**          | expand selection down |
+| **`alt-<delete>`**          | delete selection      |
+| **`alt-<up>`**              | move selection up     |
+| **`alt-<down>`**            | move selection down   |
+| **`ctrl-z`**                | undo (3 levels)       |
 
 ## Tracker mode
 
@@ -111,11 +111,11 @@ The tracker mode clipboard is independent of text and code clipboard.
 | **`shift-[`**           | decrement by 12 semitones                                                             |
 | **`shift-]`**           | increment by 12 semitones                                                             |
 | **`alt-<0-9>`**         | increment by `<0-9>` semitones (0=10, 1=11)                                           |
-| **`shift-alt-<0-9>`**   | decrement by `<0-9>` semitones  (0=10, 1=11)                                          |
+| **`shift-alt-<0-9>`**   | decrement by `<0-9>` semitones (0=10, 1=11)                                           |
 | **`<backspace>`**       | delete a digit                                                                        |
 | **`shift-<backspace>`** | delete an entry, shift numbers up                                                     |
-| **`<enter>`**           | commit edit (increase length if cursor in position after last entry)                  |
-| **`shift-<enter>`**     | commit edit, then duplicate entry and shift downwards (increase length as `<enter>`)  |
+| **`<enter>`**           | commit edit (increase length if the cursor is in the position after the last entry)   |
+| **`shift-<enter>`**     | commit edit, then duplicate the entry and shift downwards (increases length, like `<enter>`) |
 | **`alt-x`**             | cut value (n.b. `ctrl-x` not supported)                                               |
 | **`alt-c`**             | copy value (n.b. `ctrl-c` not supported)                                              |
 | **`alt-v`**             | paste value (n.b. `ctrl-v` not supported)                                             |
@@ -135,34 +135,82 @@ The tracker mode clipboard is independent of text and code clipboard.
 
 ## Preset read mode
 
-| `Key`                    | Action      |
-|--------------------------|-------------|
-| **`<down>`** / **`C-n`** | line down   |
-| **`<up>`** / **`C-p`**   | line up     |
-| **`<left>`** / **`[`**   | preset down |
-| **`<right>`** / **`]`**  | preset up   |
-| **`<enter>`**            | load preset |
+| `Key`                       | Action      |
+|-----------------------------|-------------|
+| **`<down>`** / **`ctrl-n`** | line down   |
+| **`<up>`** / **`ctrl-p`**   | line up     |
+| **`<left>`** / **`[`**      | preset down |
+| **`<right>`** / **`]`**     | preset up   |
+| **`<enter>`**               | load preset |
 
 ## Preset write mode
 
-| `Key`                    | Action      |
-|--------------------------|-------------|
-| **`<down>`** / **`C-n`** | line down   |
-| **`<up>`** / **`C-p`**   | line up     |
-| **`[`**                  | preset down |
-| **`]`**                  | preset up   |
-| **`<enter>`**            | enter text  |
-| **`shift-<enter>`**      | insert text |
-| **`alt-<enter>`**        | save preset |
+| `Key`                       | Action      |
+|-----------------------------|-------------|
+| **`<down>`** / **`ctrl-n`** | line down   |
+| **`<up>`** / **`ctrl-p`**   | line up     |
+| **`[`**                     | preset down |
+| **`]`**                     | preset up   |
+| **`<enter>`**               | enter text  |
+| **`shift-<enter>`**         | insert text |
+| **`alt-<enter>`**           | save preset |
 
 ## Help mode
 
-| `Key`                    | Action          |
-|--------------------------|-----------------|
-| **`<down>`** / **`C-n`** | line down       |
-| **`<up>`** / **`C-p`**   | line up         |
-| **`<left>`** / **`[`**   | previous page   |
-| **`<right>`** / **`]`**  | next page       |
-| **`C-f`** / **`C-s`**    | search forward  |
-| **`C-r`**                | search backward |
+| `Key`                       | Action          |
+|-----------------------------|-----------------|
+| **`<down>`** / **`ctrl-n`** | line down       |
+| **`<up>`** / **`ctrl-p`**   | line up         |
+| **`<left>`** / **`[`**      | previous page   |
+| **`<right>`** / **`]`**     | next page       |
+| **`ctrl-f`** / **`ctrl-s`** | search forward  |
+| **`ctrl-r`**                | search backward |
+
+## Native Kria mode
+
+Keyboard shortcuts for the on-board Kria sequencer; the grid is the main interface. See the manual's Kria section for grid details.
+
+| `Key`             | Action                     |
+|-------------------|----------------------------|
+| **`<space>`**     | start / stop the sequencer |
+| **`r`**           | reset the engine           |
+| **`x`**           | toggle external clock      |
+| **`-`**           | slower tempo               |
+| **`=`**           | faster tempo               |
+| **`s`**           | save scene                 |
+| **`1`**           | sequencer view             |
+| **`2`**           | time view                  |
+| **`3`**           | config view                |
+| **`4`**           | i2c follower view          |
+
+## Native Meadowphysics mode
+
+The engine keeps playing in the background even when this view is not front-most.
+
+| `Key`             | Action                                     |
+|-------------------|--------------------------------------------|
+| **`<space>`**     | play / pause                               |
+| **`r`**           | reset counters                             |
+| **`x`**           | cycle clock source (internal / Tr / metro) |
+| **`v`**           | cycle voice (output) mode                  |
+| **`-`**           | slower tempo                               |
+| **`=`**           | faster tempo                               |
+| **`[`** / **`]`** | previous / next scale                      |
+| **`s`**           | save scene                                 |
+| **`1`**           | positions view                             |
+| **`2`**           | clock view                                 |
+| **`3`**           | config view                                |
+| **`4`**           | i2c follower view                          |
+
+## Native Earthsea mode
+
+| `Key`             | Action                  |
+|-------------------|-------------------------|
+| **`<space>`**     | start / stop            |
+| **`a`**           | arm / disarm recording  |
+| **`x`**           | toggle external clock   |
+| **`[`** / **`]`** | previous / next pattern |
+| **`s`**           | save scene              |
+| **`1`**           | earthsea surface view   |
+| **`4`**           | i2c follower view       |
 </div>

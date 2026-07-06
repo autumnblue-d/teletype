@@ -12,7 +12,7 @@ Here is a picture to help understand the naming of the various parts of a Telety
 
 `PRE`
 
-: The (optional)  part before the _`PRE SEP`_, e.g. `IF X`.
+: The (optional) part before the _`PRE SEP`_, e.g. `IF X`.
 
 `POST`
 
@@ -77,7 +77,7 @@ Sub commands can also be used with `L`.
 
 ## Aliases
 
-In general, aliases are a simple concept to understand. Certain `OP`s have been given shorted names to save space and the amount of typing, for example:
+In general, aliases are a simple concept to understand. Certain `OP`s have been given shortened names to save space and the amount of typing, for example:
 
 ```
 TR.PULSE 1
@@ -98,7 +98,7 @@ X + 1 1
 
 The key to understanding this is that the Teletype uses _prefix notation_[^polish] always, even when using mathematical symbols.
 
-[^polish]: Also know as _Polish notation_.
+[^polish]: Also known as _Polish notation_.
 
 The following example (using _infix notation_) **will not work**:
 
@@ -110,7 +110,7 @@ Aliases are entirely optional, most `OP`s do not have aliases. Consult the `OP` 
 
 ## Avoiding non-determinism
 
-Although happy accidents in the modular world are one of it's many joys, when writing computer programs they can be incredibly frustrating. Here are some small tips to help keep things predictable (when you want them to be):
+Although happy accidents in the modular world are one of its many joys, when writing computer programs they can be incredibly frustrating. Here are some small tips to help keep things predictable (when you want them to be):
 
   1. **Don't use variables unless you need to.**
   
@@ -126,26 +126,26 @@ Although happy accidents in the modular world are one of it's many joys, when wr
   
   4. **Avoid using `A`, `B`, `C` and `D` to refer to the trigger outputs, instead use the numerical values directly.**
    
-     As `A-D` are variables, they may no longer contain the values `1-4`, and while this was the recommend way to name triggers, it is no longer consider ideal. Newer versions of the Teletype hardware have replaced the labels on the trigger outputs, with the numbers `1` to `4`.
+     As `A-D` are variables, they may no longer contain the values `1-4`, and while this was the recommended way to name triggers, it is no longer considered ideal. Newer versions of the Teletype hardware have replaced the labels on the trigger outputs, with the numbers `1` to `4`.
 
 ## Grid integration
 
 Grid integration can be described very simply: it allows you to use grid with
-teletype. However, there is more to it than just that. You can create custom
+Teletype. However, there is more to it than just that. You can create custom
 grid interfaces that can be tailored individually for each scene. Since it's
 done with scripts you can dynamically change these interfaces at any point -
 you could even create a dynamic interface that reacts to the scene itself or
 incoming triggers or control voltages.
 
 You can simply use grid as an LED display to visualize your scene. Or make it
-into an earthsea style keyboard. You can create sequencers, or control surfaces
+into an Earthsea-style keyboard. You can create sequencers, or control surfaces
 to control other sequencers. The grid operators simplify building very complex
 interfaces, while something simple like a bank of faders can be done with just
 two lines of scripts.
 
 Grid integration consists of 3 main features: grid operators, Grid Visualizer,
 and Grid Control mode. Grid operators allow you to draw on grid or create grid
-controls, such as buttons and faders, that can trigger scripts when pressed. 
+controls, such as buttons and faders, that can trigger scripts when pressed.
 As with any other operators you can execute them in Live screen or use them in
 any of your scripts.
 
@@ -169,7 +169,7 @@ develop - simply press the front panel button while the grid is attached. It can
 serve as a simple way to use grid to control any scene even without using grid
 ops, but it can also be very helpful when used together with a scripted grid
 interface. For more information and diagrams please refer to 
-[the Grid Control documentation](https://github.com/scanner-darkly/teletype/wiki/GRID-CONTROL-MODE),
+[the Grid Control documentation](https://github.com/scanner-darkly/teletype/wiki/GRID-CONTROL-MODE).
 
 If you do want to try and build your own grid interfaces 
 [the Grid Studies](https://github.com/scanner-darkly/teletype/wiki/GRID-INTEGRATION)

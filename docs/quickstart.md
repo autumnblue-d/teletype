@@ -4,7 +4,7 @@
 
 ![Panel Overlay](img/panel-overlay.png)
 
-The keyboard is attached to the front panel, for typing commands. The commands can be executed immediately in *LIVE mode* or assigned to one of the eight trigger inputs in *EDIT mode*. The knob and in jack can be used to set and replace values.
+The keyboard is attached to the front panel, for typing commands. The commands can be executed immediately in *LIVE mode* or assigned to one of the eight trigger inputs in *EDIT mode*. The knob and IN jack can be used to set and replace values.
 
 ## LIVE mode
 
@@ -86,14 +86,14 @@ Now the metronome is off, and the `M` script will not be executed. Set `M.ACT` t
 
 ## Patterns
 
-Patterns facilitate musical data manipulation-- lists of numbers that can be used as sequences, chord sets, rhythms, or whatever you choose. Pattern memory consists four banks of 64 steps. Functions are provided for a variety of pattern creation, transformation, and playback. The most basic method of creating a pattern is by directly adding numbers to the sequence:
+Patterns facilitate musical data manipulation: lists of numbers that can be used as sequences, chord sets, rhythms, or whatever you choose. Pattern memory consists of four patterns of 64 steps. Functions are provided for a variety of pattern creation, transformation, and playback. The most basic method of creating a pattern is by directly adding numbers to the sequence:
 
     P.PUSH 5
     P.PUSH 11
     P.PUSH 9
     P.PUSH 3
 
-`P.PUSH` adds the provided value to the end of the list-- patterns keep track of their length, which can be read or modified with `P.L`. Now the pattern length is 4, and the list looks something like:
+`P.PUSH` adds the provided value to the end of the list — patterns keep track of their length, which can be read or modified with `P.L`. Now the pattern length is 4, and the list looks something like:
 
     5, 11, 9, 3
 
@@ -119,17 +119,17 @@ We can change a value within the pattern directly:
 
 This changes index 0 to 12 (it was previously 5), so now we have *12, 11, 9, 3.*
 
-We've been working with pattern `0` up to this point. There are four pattern banks, and we can switch banks this way:
+We've been working with pattern `0` up to this point. There are four patterns, and we can switch between them this way:
 
     P.N 1
 
-Now we're on pattern bank 1. `P.NEXT`, `P.PUSH`, `P`, (and several more commands) all reference the current pattern bank. Each pattern maintains its own play index, wrap parameter, length, etc.
+Now we're on pattern 1. `P.NEXT`, `P.PUSH`, `P`, (and several more commands) all reference the current pattern. Each pattern maintains its own play index, wrap parameter, length, etc.
 
 We can directly access and change *any* pattern value with the command `PN`:
 
     PN 3 0 22
 
-Here the first argument (3) is the *bank*, second (0) is the *index*, and last is the new value (22). You could do this by doing `P.N 3` then `P 0 22` but there are cases where a direct read/write is needed in your patch.
+Here the first argument (3) is the *pattern*, second (0) is the *index*, and last is the new value (22). You could do this by doing `P.N 3` then `P 0 22` but there are cases where a direct read/write is needed in your patch.
 
 Check the *Command Set* section below for more pattern commands.
 
@@ -139,13 +139,13 @@ Patterns are stored in flash with each scene!
 
 Editing patterns with scripts or from the command line isn't always ergonomic. When you'd like to visually edit patterns, TRACKER mode is the way.
 
-The `TAB` key cycles between LIVE, EDIT and TRACKER mode.  You can also get directly to TRACKER mode by pressing the `NUM LOCK` key.  TRACKER mode is the one with 4 columns of numbers on the Teletype screen.
+The `TAB` key cycles between LIVE, EDIT and TRACKER mode. You can also get directly to TRACKER mode by pressing the `NUM LOCK` key. TRACKER mode is the one with 4 columns of numbers on the Teletype screen.
 
 The current pattern memory is displayed in these columns. Use the arrow keys to navigate. Holding ALT will jump by pages.
 
 The edit position is indicated by the brightest number. Very dim numbers indicate they are outside the pattern length.
 
-Use the square bracket keys `[` and `]` to decrease/increase the values. Backspace sets the value to 0. Entering numbers will overwrite a new value. You can cut/copy/paste with ALT-X-C-V.
+Use the square bracket keys `[` and `]` to decrease/increase the values. Backspace sets the value to 0. Entering a number overwrites the value. You can cut/copy/paste with ALT-X-C-V.
 
 Check the *Keys* section for a complete list of tracker shortcuts.
 
@@ -180,7 +180,7 @@ Once complete, Teletype will attempt to read any files named `tt##.txt` and load
 memory. For example, a file named `tt13.txt` would be loaded as scene 13 on
 Teletype. The screen will display `READ......` Once this process is complete, Teletype will return to LIVE mode and the drive can be safely removed.
 
-For best results, use an FAT-formatted USB flash drive. If Teletype does not
+For best results, use a FAT-formatted USB flash drive. If Teletype does not
 recognize a disk that is inserted within a few seconds, it may be best to try another.
 
 An
@@ -249,7 +249,7 @@ Here is an example of using an operator `RAND` to set a random voltage:
 
     CV 1 V RAND 4
 
-First a random value between 0 and 3 is generated. The result is turned into a volt with a table lookup, and the final value is assigned to CV 1.
+First a random value between 0 and 4 is generated. The result is turned into a volt with a table lookup, and the final value is assigned to CV 1.
 
 The order of the arguments is important, of course. Consider:
 
@@ -274,4 +274,4 @@ This is particularly useful in **INIT** scripts where you may want to initialize
 
 ## Continuing
 
-Don't forget to checkout the [Teletype Studies](https://monome.org/docs/modular/teletype/studies-1) for an example-driven guide to the language.
+Don't forget to check out the [Teletype Studies](https://monome.org/docs/modular/teletype/studies-1) for an example-driven guide to the language.
