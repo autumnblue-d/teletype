@@ -1,5 +1,6 @@
 ["MP.PRESET"]
-prototype = "MP.PRESET x"
+prototype = "MP.PRESET"
+prototype_set = "MP.PRESET x"
 short = "get/set the active preset slot (0-7); setting loads that slot's pattern + glyph"
 
 ["MP.RESET"]
@@ -15,7 +16,8 @@ prototype = "MP.RUN x"
 short = "start (`x` = 1) or stop (`x` = 0) the native Meadowphysics engine"
 
 ["MP.SYNC"]
-prototype = "MP.SYNC x"
+prototype = "MP.SYNC"
+prototype_set = "MP.SYNC x"
 short = "clock source: `0` internal, `1` external Tr input, `2` the Teletype metro `M`"
 
 ["MP.CLK"]
@@ -23,17 +25,21 @@ prototype = "MP.CLK"
 short = "manually advance the running engine one full step (use it to clock MP from a script)"
 
 ["MP.VOICE"]
-prototype = "MP.VOICE x"
+prototype = "MP.VOICE"
+prototype_set = "MP.VOICE x"
 short = "output mode `0-4`: `1V`/`2V`/`4V`/`8T`, or `4` = SCRIPT (each row fires script `n+1`)"
 
 ["MP.PERIOD"]
-prototype = "MP.PERIOD x"
+prototype = "MP.PERIOD"
+prototype_set = "MP.PERIOD x"
 short = "internal clock edge interval in ms (two edges = one step)"
 
 ["MP.SCALE"]
-prototype = "MP.SCALE x"
+prototype = "MP.SCALE"
+prototype_set = "MP.SCALE x"
 short = "active scale-bank slot (`0-15`)"
 
 ["MP.SCL"]
-prototype = "MP.SCL slot degree x"
-short = "scale ladder rung: `slot` `0-15`, `degree` `0-7` (`0` = base). Get returns the cumulative note offset (summed rungs) the engine plays for that degree; set writes the per-rung semitone delta, clamped `0-7`"
+prototype = "MP.SCL slot degree"
+prototype_set = "MP.SCL slot degree x"
+short = "scale ladder rung: `slot` `0-15`, `degree` `0-7` (`0` = base). Get returns the cumulative note offset (summed rungs) the engine plays for that degree; set writes the per-rung semitone delta `x`, clamped `0-7`"
