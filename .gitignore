@@ -59,3 +59,10 @@ __pycache__/
 /docs/cheatsheet/*
 !/docs/cheatsheet/cs-common.tex
 /docs/testServe/
+
+# Local planning notes (not for publication)
+/ANSIBLE_JSON_INTEGRATION.md
+/HARDWARE_SUMMARY.md
+/MEMORY_USAGE.md
+/MIDI_OUT_PLAN.md
+/USB_HUB_HOW_IT_WORKS.md
