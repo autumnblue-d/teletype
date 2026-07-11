@@ -29,7 +29,8 @@ teletype.zip: clean-zip
 		module/update_firmware.command \
 		docs/teletype.pdf \
 		docs/teletype.html \
-		docs/cheatsheet/cheatsheet.pdf
+		docs/cheatsheet/cheatsheet.pdf && \
+	zip teletype.zip presets/tt*.txt
 
 format:
 	git-clang-format -f --style=file main
