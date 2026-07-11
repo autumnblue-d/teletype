@@ -29,7 +29,8 @@ teletype.zip: clean-zip
 		module/update_firmware.command \
 		docs/teletype.pdf \
 		docs/teletype.html \
-		docs/cheatsheet/cheatsheet.pdf && \
+		docs/cheatsheet.pdf \
+		docs/cheatsheet-i2c.pdf && \
 	zip teletype.zip presets/tt*.txt
 
 format:
