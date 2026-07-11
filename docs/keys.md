@@ -12,6 +12,9 @@ These bindings work everywhere.
 | **`alt-<esc>`**                      | preset write mode                              |
 | **`win-<esc>`**                      | clear delays, stack and slews                  |
 | **`shift-alt-?`** / **`alt-h`**      | help text, or return to last mode              |
+| **`alt-k`**                          | show/hide Kria, or return to last mode         |
+| **`alt-m`**                          | show/hide Meadowphysics, or return to last mode |
+| **`alt-e`**                          | show/hide Earthsea, or return to last mode     |
 | **`<F1>`** to **`<F8>`**             | run corresponding script                       |
 | **`<F9>`**                           | run metro script                               |
 | **`<F10>`**                          | run init script                                |

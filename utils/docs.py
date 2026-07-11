@@ -147,6 +147,8 @@ def common_md():
 
     advanced = Path(DOCS_DIR / "advanced.md").read_text() + "\n\n"
 
+    trilogy = Path(DOCS_DIR / "trilogy.md").read_text() + "\n\n"
+
     pdf_alpha_ops = "\\appendix\n\n"
     pdf_alpha_ops += "# Alphabetical list of OPs and MODs\n\n"
     html_alpha_ops = pdf_alpha_ops
@@ -160,8 +162,8 @@ def common_md():
 
     changelog = Path(ROOT_DIR / "CHANGELOG.md").read_text() + "\n\n"
 
-    pdf_output = intro + pdf_ops_section + advanced + pdf_alpha_ops + missing + changelog
-    html_output = intro + html_ops_section + advanced + html_alpha_ops + missing + changelog
+    pdf_output = intro + pdf_ops_section + advanced + trilogy + pdf_alpha_ops + missing + changelog
+    html_output = intro + html_ops_section + advanced + trilogy + html_alpha_ops + missing + changelog
 
     return {"pdf": pdf_output, "html": html_output}
 
