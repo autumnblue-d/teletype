@@ -542,11 +542,27 @@ static uint8_t midi_resolve(i2c_follower_t* f, uint8_t track, uint8_t* ch_out,
     return 1;
 }
 
-static void ii_tr_i2m(i2c_follower_t* f, uint8_t track, uint8_t state) {
-    uint8_t ch, note;
-    if (!midi_resolve(f, track, &ch, &note)) return;
+// ---- MIDI-follower note lifecycle -----------------------------------------
+// The Kria/MP engines are CV/gate-shaped (ported from Ansible): they hand the
+// followers a new note-on with no intervening note-off on a retrigger or a
+// voice-steal (a still-high gate that just changes CV is fine for analog, but
+// leaks a stuck note on MIDI). So each MIDI follower keeps a per-voice ledger
+// (mo_on/mo_note/mo_ch) and releases the previous note before starting a new
+// one. Keyed by voice index (the `track` arg is the output voice slot for both
+// KR and MP, incl. MP's stolen voices), so polyphonic-on-one-channel modes and
+// voice stealing are both handled.
+
+static void mo_tx(i2c_follower_t* f, uint8_t ch, uint8_t note, uint8_t on) {
+    uint8_t pack[3];
+    pack[0] = (on ? 0x90 : 0x80) | (ch & 0x0f);
+    pack[1] = note;
+    pack[2] = on ? KR_MIDI_VEL : 0;
+    tele_midi_out(f->port, pack, 3);
+}
+
+static void i2m_tx(i2c_follower_t* f, uint8_t ch, uint8_t note, uint8_t on) {
     uint8_t d[4];
-    if (state) {  // i2c2midi note-on = cmd 20 (ch, note, vel)
+    if (on) {  // i2c2midi note-on = cmd 20 (ch, note, vel)
         d[0] = 20;
         d[1] = ch;
         d[2] = note;
@@ -561,18 +577,48 @@ static void ii_tr_i2m(i2c_follower_t* f, uint8_t track, uint8_t state) {
     }
 }
 
-static void ii_tr_mo(i2c_follower_t* f, uint8_t track, uint8_t state) {
-    uint8_t ch, note;
-    if (!midi_resolve(f, track, &ch, &note)) return;
-    uint8_t pack[3];
-    pack[0] = (state ? 0x90 : 0x80) | (ch & 0x0f);  // note-on/off + channel
-    pack[1] = note;
-    pack[2] = state ? KR_MIDI_VEL : 0;
-    tele_midi_out(f->port, pack, 3);
+static void ii_tr_i2m(i2c_follower_t* f, uint8_t track, uint8_t state) {
+    if (state) {
+        if (f->mo_on & (1 << track)) {  // release prior note on this voice
+            i2m_tx(f, f->mo_ch[track], f->mo_note[track], 0);
+            f->mo_on &= ~(1 << track);
+        }
+        uint8_t ch, note;
+        if (!midi_resolve(f, track, &ch, &note)) return;
+        i2m_tx(f, ch, note, 1);
+        f->mo_ch[track] = ch;
+        f->mo_note[track] = note;
+        f->mo_on |= (1 << track);
+    }
+    else {
+        if (!(f->mo_on & (1 << track))) return;  // nothing sounding
+        i2m_tx(f, f->mo_ch[track], f->mo_note[track], 0);
+        f->mo_on &= ~(1 << track);
+    }
 }
 
-// Mute: note-off every gate (harmless for unrouted ones); notes are stable in
-// all supported modes, so recomputing here matches what was sent.
+static void ii_tr_mo(i2c_follower_t* f, uint8_t track, uint8_t state) {
+    if (state) {
+        if (f->mo_on & (1 << track)) {  // release prior note on this voice
+            mo_tx(f, f->mo_ch[track], f->mo_note[track], 0);
+            f->mo_on &= ~(1 << track);
+        }
+        uint8_t ch, note;
+        if (!midi_resolve(f, track, &ch, &note)) return;
+        mo_tx(f, ch, note, 1);
+        f->mo_ch[track] = ch;
+        f->mo_note[track] = note;
+        f->mo_on |= (1 << track);
+    }
+    else {
+        if (!(f->mo_on & (1 << track))) return;  // nothing sounding
+        mo_tx(f, f->mo_ch[track], f->mo_note[track], 0);
+        f->mo_on &= ~(1 << track);
+    }
+}
+
+// Mute: release every voice that is actually sounding (the ledger tracks what
+// was sent, so this can't leave a stuck note or emit spurious offs).
 static void ii_mute_i2m(i2c_follower_t* f, uint8_t track, uint8_t mode) {
     (void)track;
     (void)mode;

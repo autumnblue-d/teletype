@@ -47,6 +47,13 @@ struct i2c_follower {
     uint8_t port;                    // MO USB cable (0=A, 1=B)
     uint8_t notes[KRIA_I2C_TRACKS];  // 8T fixed notes
     uint8_t chans[KRIA_I2C_TRACKS];  // 8T.CHANS per-gate channels
+    // Per-voice sounding-note ledger for the MIDI followers (MO / I2M). mo_on
+    // is a bitmask of voices currently holding a note; mo_note/mo_ch are what
+    // was actually sent. Guarantees a note-off before every retrigger or
+    // voice-steal so MIDI notes never stick or drop. Zero-init = all silent.
+    uint8_t mo_on;
+    uint8_t mo_note[KRIA_I2C_TRACKS];
+    uint8_t mo_ch[KRIA_I2C_TRACKS];
 };
 
 // Set the current pitch (semitone index) + aux (duration, for velocity) for a

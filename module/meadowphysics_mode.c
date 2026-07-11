@@ -314,9 +314,16 @@ static void mpMetroOff_callback(void* o) {
 // `gate_ms` later (a gate rather than an instantaneous edge, so CV/TR voice
 // modes get a usable pulse). Used by the metro sync and the MP.CLK op.
 static void mp_full_step(uint16_t gate_ms) {
+    // Drain the previous step's pending off-edge before this on-edge so state[]
+    // resets and the retrigger is re-detected as a fresh rising edge under fast
+    // tempo. Without this, a shared cancellable off-timer could be removed
+    // before it fired, leaving state[] high so mp_engine_clock suppresses the
+    // note-on entirely (dropped note). Mirrors the internal grid metro's
+    // alternating two-phase clock; no-op if the off already fired.
+    run_clock(0);
+    timer_remove(&mpMetroOffTimer);
     run_clock(1);
     if (gate_ms < MP_METRO_GATE_MIN) gate_ms = MP_METRO_GATE_MIN;
-    timer_remove(&mpMetroOffTimer);
     timer_add(&mpMetroOffTimer, gate_ms, &mpMetroOff_callback, NULL);
 }
 
