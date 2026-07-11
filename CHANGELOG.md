@@ -3,7 +3,7 @@
 ## v5.0.x:
 
 - **NEW**: native Kria mode: run monome Kria's step sequencer directly on Teletype without an external Ansible, with a full grid UI, i2c follower output (Just Friends, TELEXo, ER-301, Disting EX, W/, Crow), and script control through the existing `KR.*` op set (`KR.PAT`, `KR.SCALE`, `KR.PERIOD`, `KR.POS`, `KR.CUE`, `KR.MUTE`, `KR.CLK`, …) now driving the on-board engine; new op `KR.RUN` starts/stops the sequencer
-- **NEW**: native Meadowphysics mode: run Meadowphysics' cascading counter sequencer on-board; it keeps playing in the background while you edit scripts or use other modes; new ops `MP.RUN`, `MP.SYNC`, `MP.CLK`, `MP.VOICE`, `MP.PERIOD`, `MP.SCALE`, `MP.SCL`
+- **NEW**: native Meadowphysics mode: run Meadowphysics' cascading counter sequencer on-board; it keeps playing in the background while you edit scripts or use other modes; new ops `MP.RUN`, `MP.SYNC`, `MP.CLK`, `MP.VOICE`, `MP.PERIOD`, `MP.SCALE`, `MP.SCL`, `MP.PRESET`
 - **NEW**: native Earthsea mode: on-board port of Whimsical Raps' Earthsea firmware for Just Friends, with its own grid UI, i2c followers, and `ES.*` ops
 - **NEW**: global editable scale bank shared by the native Kria, Meadowphysics, and Earthsea modes, with a grid interval editor in each mode's Config view
 - **NEW**: `KR.II` op: enable/disable i2c follower output for the native Kria and Meadowphysics engines
@@ -15,7 +15,12 @@
 - **IMP**: USB host hub support
 - **IMP**: unified save UX across native Kria, Meadowphysics, and Earthsea modes (shared confirmation, `S` key, scene-flush behavior)
 - **IMP**: per-voice-mode output ownership frees CV/TR outputs not used by the active native mode's voice mode, so scripts can use them
+- **IMP**: USB MIDI Out now uses a transmit ring queue with message batching for smoother, higher-throughput output
+- **IMP**: Meadowphysics preset browser previews the slot glyph on selection and closes after a double-tap load
 - **FIX**: fix risk of crash/corruption in help mode reverse search
+- **FIX**: native Kria and Meadowphysics no longer drop or hang MIDI notes — per-voice note ledger plus Meadowphysics off-edge handling, and short-duration notes are gate-floored so they still articulate
+- **FIX**: wider USB MIDI compatibility — control-pipe sizing and full-speed endpoint fixes let more class-compliant controllers and synths enumerate through the hub
+- **FIX**: USB HID keyboard fixes
 
 ## v5.0.0
 

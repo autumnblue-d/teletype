@@ -799,7 +799,7 @@ const char* help10[HELP10_LENGTH] = { "10/21 MIDI IN",
                                       "    RESET CLOCK COUNTER" };
 
 #define HELP11_LENGTH 39
-const char* help11[HELP11_LENGTH] = { "11/21 GENERIC I2C",
+const char* help11[HELP11_LENGTH] = { "12/21 GENERIC I2C",
                                       " ",
                                       "IIA",
                                       "    GET I2C ADDRESS",
@@ -840,7 +840,7 @@ const char* help11[HELP11_LENGTH] = { "11/21 GENERIC I2C",
                                       "    BYTE QUERY BYTE PARAMS" };
 
 #define HELP12_LENGTH 36
-const char* help12[HELP12_LENGTH] = { "12/21 TELEX INPUT",
+const char* help12[HELP12_LENGTH] = { "13/21 TELEX INPUT",
                                       " ",
                                       "TI.PARAM X|(TI.PRM)",
                                       "    GET KNOB VALUE",
@@ -878,7 +878,7 @@ const char* help12[HELP12_LENGTH] = { "12/21 TELEX INPUT",
                                       "    RESET CALIB FOR DEVICE D" };
 
 #define HELP13_LENGTH 164
-const char* help13[HELP13_LENGTH] = { "13/21 TELEX OUTPUT",
+const char* help13[HELP13_LENGTH] = { "14/21 TELEX OUTPUT",
                                       " ",
                                       "TO.TR X Y",
                                       "    SET TR VALUE (0/1)",
@@ -1044,7 +1044,7 @@ const char* help13[HELP13_LENGTH] = { "13/21 TELEX OUTPUT",
                                       "    RESET CV CALIB" };
 
 #define HELP14_LENGTH 146
-const char* help14[HELP14_LENGTH] = { "14/21 ANSIBLE",
+const char* help14[HELP14_LENGTH] = { "15/21 ANSIBLE",
                                       " ",
                                       "ANS.G.LED X Y",
                                       "    READ GRID LED STATE",
@@ -1192,7 +1192,7 @@ const char* help14[HELP14_LENGTH] = { "14/21 ANSIBLE",
                                       "    (E.G. N 6, V -1)" };
 
 #define HELP15_LENGTH 85
-const char* help15[HELP15_LENGTH] = { "15/21 JUST FRIENDS & W/",
+const char* help15[HELP15_LENGTH] = { "16/21 JUST FRIENDS & W/",
                                       " ",
                                       "JF.ADDR X",
                                       "    SETS JF II ADDRESS",
@@ -1279,7 +1279,7 @@ const char* help15[HELP15_LENGTH] = { "15/21 JUST FRIENDS & W/",
                                       "    SET LOOP STATE ON/OFF" };
 
 #define HELP16_LENGTH 197
-const char* help16[HELP16_LENGTH] = { "16/21 DISTING EX",
+const char* help16[HELP16_LENGTH] = { "17/21 DISTING EX",
                                       "EX",
                                       "    GET CURRENT UNIT",
                                       "EX X",
@@ -1478,7 +1478,7 @@ const char* help16[HELP16_LENGTH] = { "16/21 DISTING EX",
                                       "    SAVE RIGHT PRESET"};
 
 #define HELP17_LENGTH 198
-const char* help17[HELP17_LENGTH] = { "17/21 I2C2MIDI",
+const char* help17[HELP17_LENGTH] = { "18/21 I2C2MIDI",
                                       " ",
                                       "I2M.CH x",
                                       "I2M.# x",
@@ -1678,7 +1678,7 @@ const char* help17[HELP17_LENGTH] = { "17/21 I2C2MIDI",
                                       "    RESET NOTE PARAMETERS" };
 
 #define HELP18_LENGTH 66
-const char* help18[HELP18_LENGTH] = { "18/21 MEADOWPHYSICS",
+const char* help18[HELP18_LENGTH] = { "19/21 MEADOWPHYSICS",
                                       " ",
                                       "CASCADING COUNTER",
                                       "SEQUENCER (ANSIBLE",
@@ -1746,7 +1746,7 @@ const char* help18[HELP18_LENGTH] = { "18/21 MEADOWPHYSICS",
                                       "A GRID GLYPH." };
 
 #define HELP19_LENGTH 31
-const char* help19[HELP19_LENGTH] = { "19/21 MIDI OUT",
+const char* help19[HELP19_LENGTH] = { "11/21 MIDI OUT",
                                       " ",
                                       "MO.CH",
                                       "    GET CURRENT OUT CHANNEL",
@@ -1923,14 +1923,14 @@ const char* help21[HELP21_LENGTH] = { "21/21 EARTHSEA",
 
 const char** help_pages[HELP_PAGES] = { help1,  help2,  help3,  help4,  help5,
                                         help6,  help7,  help8,  help9,  help10,
-                                        help11, help12, help13, help14, help15,
-                                        help16, help17, help18, help19, help20,
+                                        help19, help11, help12, help13, help14,
+                                        help15, help16, help17, help18, help20,
                                         help21 };
 const uint8_t help_length[HELP_PAGES] = {
     HELP1_LENGTH,  HELP2_LENGTH,  HELP3_LENGTH,  HELP4_LENGTH,  HELP5_LENGTH,
     HELP6_LENGTH,  HELP7_LENGTH,  HELP8_LENGTH,  HELP9_LENGTH,  HELP10_LENGTH,
-    HELP11_LENGTH, HELP12_LENGTH, HELP13_LENGTH, HELP14_LENGTH, HELP15_LENGTH,
-    HELP16_LENGTH, HELP17_LENGTH, HELP18_LENGTH, HELP19_LENGTH, HELP20_LENGTH,
+    HELP19_LENGTH, HELP11_LENGTH, HELP12_LENGTH, HELP13_LENGTH, HELP14_LENGTH,
+    HELP15_LENGTH, HELP16_LENGTH, HELP17_LENGTH, HELP18_LENGTH, HELP20_LENGTH,
     HELP21_LENGTH
 };
 
