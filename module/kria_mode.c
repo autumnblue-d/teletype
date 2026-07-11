@@ -185,6 +185,12 @@ static void km_altblink_cb(void* o) {
 // Schedule the note-off (and, on the initial clock fire, the first repeat) for
 // a track whose gate just went high. Real-tick scaling from the measured clock
 // length (Ansible's dur/rpt + rptTicks). Runs in the event loop (not ISR).
+// Minimum note-off delay (ms). Ansible's Kria gate is a short CV *trigger* — as
+// little as ~2-5 ms at the default duration — which is inaudible as a MIDI note
+// (the synth never articulates it, so notes appear dropped). Floor the gate so
+// every MIDI note is long enough to sound; harmless as a CV/TR trigger.
+#define KR_GATE_MIN_MS 30
+
 static void km_schedule_gate(uint8_t ch) {
     kria_track_t* t = &eng.cfg.p[eng.cfg.pattern].t[ch];
     uint8_t rpt = eng.rt.rpt[ch];
@@ -192,6 +198,26 @@ static void km_schedule_gate(uint8_t ch) {
     uint16_t dur = kria_clock_scale_duration(eng.rt.dur_unscaled[ch],
                                              clock_delta, t->tmul[KR_P_TR]);
     uint32_t off = dur / rpt;
+    // Floor the gate to a usable MIDI note length (Ansible's short CV-trigger
+    // gate is inaudible as a MIDI note).
+    uint32_t gate_min;
+    if (rpt > 1) {
+        // Ratchet: make each repeat last until just before the next one — the
+        // longest audible length that still ends before the next note-on (so it
+        // doesn't overlap/race it). Fast/high-count ratchets are inherently
+        // short; this is the best we can do without them running together.
+        uint32_t spacing =
+            kria_clock_repeat_ticks(clock_delta, t->tmul[KR_P_TR], rpt);
+        gate_min = spacing > 4 ? spacing - 3 : spacing;
+    }
+    else {
+        // Single note: an absolute usable minimum, but capped below the step so
+        // the note still ends before the next one at fast tempo.
+        gate_min = KR_GATE_MIN_MS;
+        uint32_t cap = (clock_delta * 3) / 4;
+        if (cap && gate_min > cap) gate_min = cap;
+    }
+    if (off < gate_min) off = gate_min;
     if (off < 1) off = 1;
 
     timer_remove(&auxTimer[ch]);
