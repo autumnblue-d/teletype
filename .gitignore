@@ -60,7 +60,8 @@ __pycache__/
 !/docs/cheatsheet/cs-common.tex
 /docs/testServe/
 
-# Local planning notes (not for publication)
+# Local planning notes and helper scripts (not for publication)
+/run-clang-format.py
 /ANSIBLE_JSON_INTEGRATION.md
 /HARDWARE_SUMMARY.md
 /MEMORY_USAGE.md
