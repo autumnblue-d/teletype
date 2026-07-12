@@ -42,11 +42,15 @@ short = "as `MO.NG` on channel `w` for note `x` at velocity `y`, with the Note O
 
 ["MO.TR"]
 prototype = "MO.TR x y"
-short = "send a MIDI note trigger for note `x` (0..127) at velocity `y` (0..127): Note On now, automatic Note Off after a 10ms gate (for percussive/one-shot voices)"
+short = "send a MIDI note trigger for note `x` (0..127) at velocity `y` (0..127): Note On now, automatic Note Off after the `MO.TR.TIME` gate (20ms by default), for percussive/one-shot voices"
 
 ["MO.TR#"]
 prototype = "MO.TR# w x y"
 short = "as `MO.TR` on channel `w` for note `x` at velocity `y`"
+
+["MO.TR.TIME"]
+prototype = "MO.TR.TIME x"
+short = "get/set the gate length in milliseconds used by `MO.TR`/`MO.TR#` (default 20, quantised to the 10ms tick)"
 
 ["MO.NALL"]
 prototype = "MO.NALL"

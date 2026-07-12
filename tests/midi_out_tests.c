@@ -27,6 +27,22 @@ static TEST mo_cmd(scene_state_t *ss, char *line) {
     PASS();
 }
 
+// As mo_cmd, but assert the command returned a value equal to `expected`.
+static TEST mo_cmd_val(scene_state_t *ss, char *line, int16_t expected) {
+    exec_state_t es;
+    es_init(&es);
+    es_push(&es);
+    es_variables(&es)->script_number = 0;
+    tele_command_t cmd;
+    char err[TELE_ERROR_MSG_LENGTH];
+    ASSERT_EQ_FMT(E_OK, parse(line, &cmd, err), "%d");
+    ASSERT_EQ_FMT(E_OK, validate(&cmd, err), "%d");
+    process_result_t r = process_command(ss, &es, &cmd);
+    ASSERT_EQ(true, r.has_value);
+    ASSERT_EQ_FMT(expected, r.value, "%d");
+    PASS();
+}
+
 // Count captured packets whose status high-nibble matches (e.g. 0x80 off).
 static int count_status(uint8_t status_nibble) {
     int n = 0;
@@ -62,20 +78,42 @@ TEST test_MO_NG_note_on_then_scheduled_off() {
     PASS();
 }
 
-TEST test_MO_TR_uses_10ms_default_gate() {
+TEST test_MO_TR_uses_20ms_default_gate() {
     scene_state_t ss;
     ss_init(&ss);
-    CHECK_CALL(mo_cmd(&ss, "MO.CH 1"));  // pin default channel to 0 (0x90)
+    CHECK_CALL(mo_cmd(&ss, "MO.CH 1"));        // pin default channel to 0 (0x90)
+    CHECK_CALL(mo_cmd(&ss, "MO.TR.TIME 20"));  // pin gate to the 20 ms default
     test_midi_out_reset();
 
     CHECK_CALL(mo_cmd(&ss, "MO.TR 40 120"));
     ASSERT_EQ_FMT(0x90, test_midi_out_msg[0][0], "%d");
     ASSERT_EQ_FMT(40, test_midi_out_msg[0][1], "%d");
 
-    tele_tick(&ss, 10);  // one 10 ms tick releases it
+    tele_tick(&ss, 10);  // 10 ms remaining, not due yet
+    ASSERT_EQ_FMT((size_t)1, test_midi_out_count, "%zu");
+    tele_tick(&ss, 10);  // 20 ms -> Note Off
     ASSERT_EQ_FMT((size_t)2, test_midi_out_count, "%zu");
     ASSERT_EQ_FMT(0x80, test_midi_out_msg[1][0], "%d");
     ASSERT_EQ_FMT(40, test_midi_out_msg[1][1], "%d");
+
+    PASS();
+}
+
+TEST test_MO_TR_TIME_get_set() {
+    scene_state_t ss;
+    ss_init(&ss);
+    CHECK_CALL(mo_cmd(&ss, "MO.CH 1"));
+
+    CHECK_CALL(mo_cmd(&ss, "MO.TR.TIME 40"));   // set
+    CHECK_CALL(mo_cmd_val(&ss, "MO.TR.TIME", 40));  // get round-trips
+
+    test_midi_out_reset();
+    CHECK_CALL(mo_cmd(&ss, "MO.TR 50 100"));
+    tele_tick(&ss, 30);  // 10 ms remaining
+    ASSERT_EQ_FMT((size_t)1, test_midi_out_count, "%zu");
+    tele_tick(&ss, 10);  // 40 ms -> Note Off
+    ASSERT_EQ_FMT((size_t)2, test_midi_out_count, "%zu");
+    ASSERT_EQ_FMT(0x80, test_midi_out_msg[1][0], "%d");
 
     PASS();
 }
@@ -192,7 +230,8 @@ TEST test_MO_PB_packs_two_7bit_bytes() {
 
 SUITE(midi_out_suite) {
     RUN_TEST(test_MO_NG_note_on_then_scheduled_off);
-    RUN_TEST(test_MO_TR_uses_10ms_default_gate);
+    RUN_TEST(test_MO_TR_uses_20ms_default_gate);
+    RUN_TEST(test_MO_TR_TIME_get_set);
     RUN_TEST(test_MO_NG_channel_variant);
     RUN_TEST(test_MO_NG_retrigger_single_off);
     RUN_TEST(test_MO_NALL_flushes_held_notes);

@@ -1078,6 +1078,7 @@
         "MO.NALL"     => { MATCH_OP(E_OP_MO_NALL); };
         "MO.TR"       => { MATCH_OP(E_OP_MO_TR); };
         "MO.TR#"      => { MATCH_OP(E_OP_MO_TR_POUND); };
+        "MO.TR.TIME"  => { MATCH_OP(E_OP_MO_TR_TIME); };
         "MO.CC"       => { MATCH_OP(E_OP_MO_CC); };
         "MO.CC#"      => { MATCH_OP(E_OP_MO_CC_POUND); };
         "MO.PB"       => { MATCH_OP(E_OP_MO_PB); };

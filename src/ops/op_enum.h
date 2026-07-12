@@ -1008,6 +1008,7 @@ typedef enum {
     E_OP_MO_TR,
     E_OP_MO_TR_POUND,
     E_OP_MO_NALL,
+    E_OP_MO_TR_TIME,
     E_OP__LENGTH,
 } tele_op_idx_t;
 

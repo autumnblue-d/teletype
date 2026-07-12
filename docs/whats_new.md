@@ -11,7 +11,7 @@
 - **NEW**: Marbles-style beta-distribution shaping ops: `BETA`, `BETA.K`, `DV.B`, `DV.K`
 - **NEW**: Grids topographic drum ops: `GR.P`, `GR.L`, `GR.A`
 - **NEW**: USB MIDI Out ops (`MO.*`): channel/port select, note/CC, pitch bend, program change, clock/start/stop/continue
-- **NEW**: USB MIDI Out note-duration ops: `MO.NG`/`MO.NG#` send a note with an automatic Note Off after a millisecond gate, `MO.TR`/`MO.TR#` fire a momentary note trigger (10ms gate, for percussive/one-shot voices), and `MO.NALL` releases every held note
+- **NEW**: USB MIDI Out note-duration ops: `MO.NG`/`MO.NG#` send a note with an automatic Note Off after a millisecond gate, `MO.TR`/`MO.TR#` fire a momentary note trigger (for percussive/one-shot voices) whose gate defaults to 20ms and is settable with `MO.TR.TIME`, and `MO.NALL` releases every held note
 - **NEW**: USB MIDI In and Out both support A/B port selection
 - **IMP**: USB MIDI Out realtime messages (clock/start/stop/continue) are prioritised so they are not dropped or delayed behind a burst of queued notes
 - **FIX**: `MO.PB` now sends a correct 14-bit pitch bend (two 7-bit data bytes) instead of a malformed message

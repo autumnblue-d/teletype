@@ -1745,7 +1745,7 @@ const char* help18[HELP18_LENGTH] = { "19/21 MEADOWPHYSICS",
                                       "& LOAD, EACH WITH",
                                       "A GRID GLYPH." };
 
-#define HELP19_LENGTH 39
+#define HELP19_LENGTH 43
 const char* help19[HELP19_LENGTH] = { "11/21 MIDI OUT",
                                       " ",
                                       "MO.CH",
@@ -1767,7 +1767,11 @@ const char* help19[HELP19_LENGTH] = { "11/21 MIDI OUT",
                                       "    NOTE ON, OFF AFTER Z MS",
                                       "MO.TR X Y",
                                       "MO.TR# W X Y",
-                                      "    NOTE TRIGGER, 10MS GATE",
+                                      "    NOTE TRIGGER, 20MS GATE",
+                                      "MO.TR.TIME",
+                                      "    GET TRIGGER GATE MS",
+                                      "MO.TR.TIME X",
+                                      "    SET TRIGGER GATE MS",
                                       "MO.NALL",
                                       "    RELEASE ALL HELD NOTES",
                                       "MO.CC X Y",

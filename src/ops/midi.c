@@ -68,6 +68,10 @@ static void op_MI_CLKR_get(const void *data, scene_state_t *ss,
 // EX.M.CH.
 static u8 midi_out_channel = 0;
 static u8 midi_out_port = 0;
+// Gate length for the momentary trigger ops (MO.TR / MO.TR#), in ms. Settable
+// via MO.TR.TIME; the default suits percussive voices (e.g. an Elektron Rytm
+// drum track needs a little more than a hair-trigger).
+static u16 midi_out_trigger_ms = 20;
 
 static void op_MO_CH_get(const void *data, scene_state_t *ss, exec_state_t *es,
                          command_state_t *cs);
@@ -119,9 +123,10 @@ static void op_MO_TR_POUND_get(const void *data, scene_state_t *ss,
                                exec_state_t *es, command_state_t *cs);
 static void op_MO_NALL_get(const void *data, scene_state_t *ss,
                            exec_state_t *es, command_state_t *cs);
-
-// Default gate for the momentary trigger ops (MO.TR / MO.TR#), in ms.
-#define MO_TRIGGER_MS 10
+static void op_MO_TR_TIME_get(const void *data, scene_state_t *ss,
+                              exec_state_t *es, command_state_t *cs);
+static void op_MO_TR_TIME_set(const void *data, scene_state_t *ss,
+                              exec_state_t *es, command_state_t *cs);
 
 // clang-format off
 
@@ -176,6 +181,7 @@ const tele_op_t op_MO_NG_POUND = MAKE_GET_OP(MO.NG#,    op_MO_NG_POUND_get, 4, f
 const tele_op_t op_MO_TR       = MAKE_GET_OP(MO.TR,     op_MO_TR_get,       2, false);
 const tele_op_t op_MO_TR_POUND = MAKE_GET_OP(MO.TR#,    op_MO_TR_POUND_get, 3, false);
 const tele_op_t op_MO_NALL     = MAKE_GET_OP(MO.NALL,   op_MO_NALL_get,     0, false);
+const tele_op_t op_MO_TR_TIME  = MAKE_GET_SET_OP(MO.TR.TIME, op_MO_TR_TIME_get, op_MO_TR_TIME_set, 0, true);
 
 // clang-format on
 
@@ -672,7 +678,7 @@ static void op_MO_TR_get(const void *NOTUSED(data), scene_state_t *ss,
                          exec_state_t *NOTUSED(es), command_state_t *cs) {
     u16 note = cs_pop(cs);
     u16 velocity = cs_pop(cs);
-    mo_note_on_dur(ss, midi_out_channel, note, velocity, MO_TRIGGER_MS);
+    mo_note_on_dur(ss, midi_out_channel, note, velocity, midi_out_trigger_ms);
 }
 
 static void op_MO_TR_POUND_get(const void *NOTUSED(data), scene_state_t *ss,
@@ -681,11 +687,25 @@ static void op_MO_TR_POUND_get(const void *NOTUSED(data), scene_state_t *ss,
     u16 note = cs_pop(cs);
     u16 velocity = cs_pop(cs);
     if (ch < 0 || ch > 15) return;
-    mo_note_on_dur(ss, ch, note, velocity, MO_TRIGGER_MS);
+    mo_note_on_dur(ss, ch, note, velocity, midi_out_trigger_ms);
 }
 
 static void op_MO_NALL_get(const void *NOTUSED(data), scene_state_t *ss,
                            exec_state_t *NOTUSED(es),
                            command_state_t *NOTUSED(cs)) {
     mo_flush_note_offs(ss);
+}
+
+static void op_MO_TR_TIME_get(const void *NOTUSED(data),
+                              scene_state_t *NOTUSED(ss),
+                              exec_state_t *NOTUSED(es), command_state_t *cs) {
+    cs_push(cs, midi_out_trigger_ms);
+}
+
+static void op_MO_TR_TIME_set(const void *NOTUSED(data),
+                              scene_state_t *NOTUSED(ss),
+                              exec_state_t *NOTUSED(es), command_state_t *cs) {
+    s16 ms = cs_pop(cs);
+    if (ms < 1) return;
+    midi_out_trigger_ms = ms;
 }
