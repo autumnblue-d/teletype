@@ -509,7 +509,9 @@ static void op_MO_CC_POUND_get(const void *NOTUSED(data),
 static void op_MO_PB_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
                          exec_state_t *NOTUSED(es), command_state_t *cs) {
     u16 bend = cs_pop(cs);
-    mo_send(0xE0 + midi_out_channel, bend, bend >> 8);
+    if (bend > 16383) bend = 16383;
+    // 14-bit value split into two 7-bit data bytes: LSB first, then MSB.
+    mo_send(0xE0 + midi_out_channel, bend & 0x7F, (bend >> 7) & 0x7F);
 }
 
 static void op_MO_PRG_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
