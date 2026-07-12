@@ -6,6 +6,7 @@
 #include <unistd.h>  // ssize_t
 
 #include "helpers.h"
+#include "ops/midi.h"
 #include "ops/op.h"
 #include "scanner.h"
 #include "table.h"
@@ -339,6 +340,9 @@ void tele_tick(scene_state_t *ss, uint8_t time) {
         ss->turtle.stepped = false;
         run_script(ss, turtle_get_script(&ss->turtle));
     }
+
+    // emit any MIDI-out Note-Offs that have come due (MO.NG / MO.TR)
+    mo_process_note_offs(ss, time);
 
     // process delays
     for (int16_t i = 0; i < DELAY_SIZE; i++) {

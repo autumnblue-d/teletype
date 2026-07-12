@@ -17,6 +17,7 @@ void ss_init(scene_state_t* ss) {
     ss_grid_init(ss);
     ss_rand_init(ss);
     ss_midi_init(ss);
+    memset(&ss->midi_out, 0, sizeof(ss->midi_out));
     ss->delay.count = 0;
     for (size_t i = 0; i < NB_NBX_SCALES; i++) {
         ss->variables.n_scale_bits[i] = bit_reverse(0b101011010101, 12);

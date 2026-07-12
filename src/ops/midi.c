@@ -109,6 +109,19 @@ static void op_MO_STOP_get(const void *data, scene_state_t *ss,
                            exec_state_t *es, command_state_t *cs);
 static void op_MO_CONT_get(const void *data, scene_state_t *ss,
                            exec_state_t *es, command_state_t *cs);
+static void op_MO_NG_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                         command_state_t *cs);
+static void op_MO_NG_POUND_get(const void *data, scene_state_t *ss,
+                               exec_state_t *es, command_state_t *cs);
+static void op_MO_TR_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                         command_state_t *cs);
+static void op_MO_TR_POUND_get(const void *data, scene_state_t *ss,
+                               exec_state_t *es, command_state_t *cs);
+static void op_MO_NALL_get(const void *data, scene_state_t *ss,
+                           exec_state_t *es, command_state_t *cs);
+
+// Default gate for the momentary trigger ops (MO.TR / MO.TR#), in ms.
+#define MO_TRIGGER_MS 10
 
 // clang-format off
 
@@ -158,6 +171,11 @@ const tele_op_t op_MO_CLK      = MAKE_GET_OP(MO.CLK,    op_MO_CLK_get,      0, f
 const tele_op_t op_MO_START    = MAKE_GET_OP(MO.START,  op_MO_START_get,    0, false);
 const tele_op_t op_MO_STOP     = MAKE_GET_OP(MO.STOP,   op_MO_STOP_get,     0, false);
 const tele_op_t op_MO_CONT     = MAKE_GET_OP(MO.CONT,   op_MO_CONT_get,     0, false);
+const tele_op_t op_MO_NG       = MAKE_GET_OP(MO.NG,     op_MO_NG_get,       3, false);
+const tele_op_t op_MO_NG_POUND = MAKE_GET_OP(MO.NG#,    op_MO_NG_POUND_get, 4, false);
+const tele_op_t op_MO_TR       = MAKE_GET_OP(MO.TR,     op_MO_TR_get,       2, false);
+const tele_op_t op_MO_TR_POUND = MAKE_GET_OP(MO.TR#,    op_MO_TR_POUND_get, 3, false);
+const tele_op_t op_MO_NALL     = MAKE_GET_OP(MO.NALL,   op_MO_NALL_get,     0, false);
 
 // clang-format on
 
@@ -421,6 +439,88 @@ static void mo_send(u8 status, u8 d1, u8 d2) {
     tele_midi_out(midi_out_port, pack, 3);
 }
 
+// Send a Note-Off on an explicit port/channel (used by the scheduled-off pool,
+// whose entries each remember the port their Note-On went out on).
+static void mo_send_off(u8 port, u8 channel, u8 note) {
+    u8 pack[3] = { 0x80 + channel, note, 0 };
+    tele_midi_out(port, pack, 3);
+}
+
+// Register a Note-Off to fire after dur ms. If this (port,channel,note) is
+// already held, refresh its deadline (retrigger stays a single Note-Off); else
+// take a free slot; if the pool is full, steal the slot nearest to firing by
+// sending its Note-Off early so no held note is ever leaked.
+static void mo_schedule_off(scene_state_t *ss, u8 port, u8 channel, u8 note,
+                            s16 dur) {
+    scene_midi_out_t *m = &ss->midi_out;
+    for (u8 i = 0; i < MIDI_OUT_NOTE_SLOTS; i++) {
+        if (m->notes[i].active && m->notes[i].port == port &&
+            m->notes[i].channel == channel && m->notes[i].note == note) {
+            m->notes[i].ticks_remaining = dur;
+            return;
+        }
+    }
+    for (u8 i = 0; i < MIDI_OUT_NOTE_SLOTS; i++) {
+        if (!m->notes[i].active) {
+            m->notes[i].active = 1;
+            m->notes[i].port = port;
+            m->notes[i].channel = channel;
+            m->notes[i].note = note;
+            m->notes[i].ticks_remaining = dur;
+            m->count++;
+            return;
+        }
+    }
+    u8 victim = 0;
+    for (u8 i = 1; i < MIDI_OUT_NOTE_SLOTS; i++) {
+        if (m->notes[i].ticks_remaining < m->notes[victim].ticks_remaining)
+            victim = i;
+    }
+    mo_send_off(m->notes[victim].port, m->notes[victim].channel,
+                m->notes[victim].note);
+    m->notes[victim].port = port;
+    m->notes[victim].channel = channel;
+    m->notes[victim].note = note;
+    m->notes[victim].ticks_remaining = dur;
+}
+
+// Send a Note-On now and schedule its Note-Off dur ms later.
+static void mo_note_on_dur(scene_state_t *ss, u8 channel, u16 note,
+                           u16 velocity, s16 dur) {
+    if (note > 127) return;
+    if (velocity > 127) velocity = 127;
+    mo_send(0x90 + channel, note, velocity);
+    mo_schedule_off(ss, midi_out_port, channel, note, dur);
+}
+
+// Tick service: count down every held note and emit its Note-Off when due.
+// Called from tele_tick() with the ms elapsed since the last tick.
+void mo_process_note_offs(scene_state_t *ss, u8 time) {
+    scene_midi_out_t *m = &ss->midi_out;
+    if (m->count == 0) return;
+    for (u8 i = 0; i < MIDI_OUT_NOTE_SLOTS; i++) {
+        if (!m->notes[i].active) continue;
+        m->notes[i].ticks_remaining -= time;
+        if (m->notes[i].ticks_remaining <= 0) {
+            mo_send_off(m->notes[i].port, m->notes[i].channel,
+                        m->notes[i].note);
+            m->notes[i].active = 0;
+            m->count--;
+        }
+    }
+}
+
+// Release every held note immediately (MO.NALL, and on scene load).
+void mo_flush_note_offs(scene_state_t *ss) {
+    scene_midi_out_t *m = &ss->midi_out;
+    for (u8 i = 0; i < MIDI_OUT_NOTE_SLOTS; i++) {
+        if (!m->notes[i].active) continue;
+        mo_send_off(m->notes[i].port, m->notes[i].channel, m->notes[i].note);
+        m->notes[i].active = 0;
+    }
+    m->count = 0;
+}
+
 static void op_MO_CH_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
                          exec_state_t *NOTUSED(es), command_state_t *cs) {
     cs_push(cs, midi_out_channel + 1);
@@ -546,4 +646,46 @@ static void op_MO_CONT_get(const void *NOTUSED(data),
                            exec_state_t *NOTUSED(es),
                            command_state_t *NOTUSED(cs)) {
     mo_send(0xFB, 0, 0);
+}
+
+static void op_MO_NG_get(const void *NOTUSED(data), scene_state_t *ss,
+                         exec_state_t *NOTUSED(es), command_state_t *cs) {
+    u16 note = cs_pop(cs);
+    u16 velocity = cs_pop(cs);
+    s16 dur = cs_pop(cs);
+    if (dur < 1) dur = 1;
+    mo_note_on_dur(ss, midi_out_channel, note, velocity, dur);
+}
+
+static void op_MO_NG_POUND_get(const void *NOTUSED(data), scene_state_t *ss,
+                               exec_state_t *NOTUSED(es), command_state_t *cs) {
+    s16 ch = cs_pop(cs) - 1;
+    u16 note = cs_pop(cs);
+    u16 velocity = cs_pop(cs);
+    s16 dur = cs_pop(cs);
+    if (ch < 0 || ch > 15) return;
+    if (dur < 1) dur = 1;
+    mo_note_on_dur(ss, ch, note, velocity, dur);
+}
+
+static void op_MO_TR_get(const void *NOTUSED(data), scene_state_t *ss,
+                         exec_state_t *NOTUSED(es), command_state_t *cs) {
+    u16 note = cs_pop(cs);
+    u16 velocity = cs_pop(cs);
+    mo_note_on_dur(ss, midi_out_channel, note, velocity, MO_TRIGGER_MS);
+}
+
+static void op_MO_TR_POUND_get(const void *NOTUSED(data), scene_state_t *ss,
+                               exec_state_t *NOTUSED(es), command_state_t *cs) {
+    s16 ch = cs_pop(cs) - 1;
+    u16 note = cs_pop(cs);
+    u16 velocity = cs_pop(cs);
+    if (ch < 0 || ch > 15) return;
+    mo_note_on_dur(ss, ch, note, velocity, MO_TRIGGER_MS);
+}
+
+static void op_MO_NALL_get(const void *NOTUSED(data), scene_state_t *ss,
+                           exec_state_t *NOTUSED(es),
+                           command_state_t *NOTUSED(cs)) {
+    mo_flush_note_offs(ss);
 }

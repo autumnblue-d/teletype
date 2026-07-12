@@ -11,6 +11,7 @@ tests: main.o \
 	dejavu_tests.o \
 	beta_tests.o \
 	serialize_scene_tests.o \
+	midi_out_tests.o \
 	meadowphysics_tests.o ../src/meadowphysics_engine.o \
 	../src/meadowphysics_binding.o ../src/meadowphysics_clock.o \
 	../src/meadowphysics_grid.o \

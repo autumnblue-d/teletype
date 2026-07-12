@@ -11,7 +11,10 @@
 - **NEW**: Marbles-style beta-distribution shaping ops: `BETA`, `BETA.K`, `DV.B`, `DV.K`
 - **NEW**: Grids topographic drum ops: `GR.P`, `GR.L`, `GR.A`
 - **NEW**: USB MIDI Out ops (`MO.*`): channel/port select, note/CC, pitch bend, program change, clock/start/stop/continue
+- **NEW**: USB MIDI Out note-duration ops: `MO.NG`/`MO.NG#` send a note with an automatic Note Off after a millisecond gate, `MO.TR`/`MO.TR#` fire a momentary note trigger (10ms gate, for percussive/one-shot voices), and `MO.NALL` releases every held note
 - **NEW**: USB MIDI In and Out both support A/B port selection
+- **IMP**: USB MIDI Out realtime messages (clock/start/stop/continue) are prioritised so they are not dropped or delayed behind a burst of queued notes
+- **FIX**: `MO.PB` now sends a correct 14-bit pitch bend (two 7-bit data bytes) instead of a malformed message
 - **IMP**: USB host hub support
 - **IMP**: unified save UX across native Kria, Meadowphysics, and Earthsea modes (shared confirmation, `S` key, scene-flush behavior)
 - **IMP**: per-voice-mode output ownership frees CV/TR outputs not used by the active native mode's voice mode, so scripts can use them

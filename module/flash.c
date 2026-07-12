@@ -8,6 +8,7 @@
 #include "init_teletype.h"
 #include "kria_i2c.h"  // kria_i2c_defaults (follower-bank first-run seed)
 #include "music.h"     // SCALE_INT (MP scale-bank defaults)
+#include "ops/midi.h"  // mo_flush_note_offs (release held MO notes on load)
 #include "print_funcs.h"
 
 // this
@@ -203,6 +204,8 @@ void flash_read(uint8_t preset_no, scene_state_t* scene,
                 uint8_t init_pattern, uint8_t init_grid,
                 uint8_t init_i2c_op_address) {
     if (preset_no >= SCENE_SLOTS) return;
+    // release any notes the outgoing scene was holding so they don't hang
+    mo_flush_note_offs(scene);
     memcpy(ss_scripts_ptr(scene), &f.scenes[preset_no].scripts,
            ss_scripts_size(EDITABLE_SCRIPT_COUNT));
     if (init_pattern) {

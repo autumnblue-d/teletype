@@ -32,6 +32,26 @@ short = "send MIDI Note Off message for note `x` (0..127)"
 prototype = "MO.NO# x y"
 short = "send MIDI Note Off message on channel `x` for note `y` (0..127)"
 
+["MO.NG"]
+prototype = "MO.NG x y z"
+short = "send MIDI Note On for note `x` (0..127) at velocity `y` (0..127), then an automatic Note Off after `z` milliseconds (quantised to the 10ms tick)"
+
+["MO.NG#"]
+prototype = "MO.NG# w x y z"
+short = "as `MO.NG` on channel `w` for note `x` at velocity `y`, with the Note Off after `z` milliseconds"
+
+["MO.TR"]
+prototype = "MO.TR x y"
+short = "send a MIDI note trigger for note `x` (0..127) at velocity `y` (0..127): Note On now, automatic Note Off after a 10ms gate (for percussive/one-shot voices)"
+
+["MO.TR#"]
+prototype = "MO.TR# w x y"
+short = "as `MO.TR` on channel `w` for note `x` at velocity `y`"
+
+["MO.NALL"]
+prototype = "MO.NALL"
+short = "immediately send Note Off for every note still held by `MO.NG`/`MO.TR` (panic); also happens automatically on scene load"
+
 ["MO.CC"]
 prototype = "MO.CC x y"
 short = "send MIDI CC message for controller `x` (0..127) and value `y` (0..127)"

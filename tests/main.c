@@ -9,6 +9,7 @@
 #include "kria_tests.h"
 #include "match_token_tests.h"
 #include "meadowphysics_tests.h"
+#include "midi_out_tests.h"
 #include "op_mod_tests.h"
 #include "parser_tests.h"
 #include "process_tests.h"
@@ -56,7 +57,22 @@ int16_t get_dashboard_value(uint8_t index) {
     return 0;
 }
 void reset_midi_counter() {}
-void tele_midi_out(uint8_t port, uint8_t* pack, uint8_t len) {}
+// Capture MIDI-out packets so midi_out_tests can assert on what was sent.
+#define TEST_MIDI_OUT_CAP 64
+size_t test_midi_out_count = 0;
+uint8_t test_midi_out_port[TEST_MIDI_OUT_CAP];
+uint8_t test_midi_out_msg[TEST_MIDI_OUT_CAP][3];
+void test_midi_out_reset(void) {
+    test_midi_out_count = 0;
+}
+void tele_midi_out(uint8_t port, uint8_t* pack, uint8_t len) {
+    if (test_midi_out_count >= TEST_MIDI_OUT_CAP) return;
+    test_midi_out_port[test_midi_out_count] = port;
+    test_midi_out_msg[test_midi_out_count][0] = pack[0];
+    test_midi_out_msg[test_midi_out_count][1] = len > 1 ? pack[1] : 0;
+    test_midi_out_msg[test_midi_out_count][2] = len > 2 ? pack[2] : 0;
+    test_midi_out_count++;
+}
 void tele_save_calibration() {}
 void grid_key_press(uint8_t x, uint8_t y, uint8_t z) {}
 void meadowphysics_op_reset(int16_t channel) {}
@@ -164,6 +180,7 @@ int main(int argc, char** argv) {
     RUN_SUITE(meadowphysics_suite);
     RUN_SUITE(kria_suite);
     RUN_SUITE(es_suite);
+    RUN_SUITE(midi_out_suite);
 
     GREATEST_MAIN_END();
 }

@@ -49,5 +49,16 @@ extern const tele_op_t op_MO_CLK;
 extern const tele_op_t op_MO_START;
 extern const tele_op_t op_MO_STOP;
 extern const tele_op_t op_MO_CONT;
+extern const tele_op_t op_MO_NG;
+extern const tele_op_t op_MO_NG_POUND;
+extern const tele_op_t op_MO_TR;
+extern const tele_op_t op_MO_TR_POUND;
+extern const tele_op_t op_MO_NALL;
+
+// Service the MIDI-out scheduled-Note-Off pool. mo_process_note_offs() is
+// called each tick (time = ms elapsed); mo_flush_note_offs() releases all held
+// notes at once (MO.NALL and scene load).
+void mo_process_note_offs(scene_state_t *ss, uint8_t time);
+void mo_flush_note_offs(scene_state_t *ss);
 
 #endif

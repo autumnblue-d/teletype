@@ -1003,6 +1003,11 @@ typedef enum {
     E_OP_MO_START,
     E_OP_MO_STOP,
     E_OP_MO_CONT,
+    E_OP_MO_NG,
+    E_OP_MO_NG_POUND,
+    E_OP_MO_TR,
+    E_OP_MO_TR_POUND,
+    E_OP_MO_NALL,
     E_OP__LENGTH,
 } tele_op_idx_t;
 

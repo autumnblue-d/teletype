@@ -330,7 +330,8 @@ const tele_op_t *tele_ops[E_OP__LENGTH] = {
 
     &op_MO_CH, &op_MO_PORT, &op_MO_N, &op_MO_N_POUND, &op_MO_NO,
     &op_MO_NO_POUND, &op_MO_CC, &op_MO_CC_POUND, &op_MO_PB, &op_MO_PRG,
-    &op_MO_CLK, &op_MO_START, &op_MO_STOP, &op_MO_CONT
+    &op_MO_CLK, &op_MO_START, &op_MO_STOP, &op_MO_CONT, &op_MO_NG,
+    &op_MO_NG_POUND, &op_MO_TR, &op_MO_TR_POUND, &op_MO_NALL
 };
 
 /////////////////////////////////////////////////////////////////

@@ -245,6 +245,23 @@ typedef struct {
     uint8_t clock_div;
 } scene_midi_t;
 
+// Runtime pool of MIDI-out notes with a scheduled Note-Off (MO.NG / MO.TR).
+// Transient — not serialized. Serviced each tick by mo_process_note_offs().
+#define MIDI_OUT_NOTE_SLOTS 16
+
+typedef struct {
+    uint8_t active;          // slot in use
+    uint8_t port;            // USB virtual cable the Note-On went out on
+    uint8_t channel;         // 0-15
+    uint8_t note;            // 0-127
+    int16_t ticks_remaining; // ms until the Note-Off is sent
+} midi_out_note_t;
+
+typedef struct {
+    midi_out_note_t notes[MIDI_OUT_NOTE_SLOTS];
+    uint8_t count; // active slots
+} scene_midi_out_t;
+
 typedef struct {
     random_state_t rand;
     s16 seed;
@@ -276,6 +293,7 @@ typedef struct {
     cal_data_t cal;
     int8_t i2c_op_address;
     scene_midi_t midi;
+    scene_midi_out_t midi_out;
 } scene_state_t;
 
 extern void ss_init(scene_state_t* ss);

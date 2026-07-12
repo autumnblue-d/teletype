@@ -1073,6 +1073,11 @@
         "MO.N#"       => { MATCH_OP(E_OP_MO_N_POUND); };
         "MO.NO"       => { MATCH_OP(E_OP_MO_NO); };
         "MO.NO#"      => { MATCH_OP(E_OP_MO_NO_POUND); };
+        "MO.NG"       => { MATCH_OP(E_OP_MO_NG); };
+        "MO.NG#"      => { MATCH_OP(E_OP_MO_NG_POUND); };
+        "MO.NALL"     => { MATCH_OP(E_OP_MO_NALL); };
+        "MO.TR"       => { MATCH_OP(E_OP_MO_TR); };
+        "MO.TR#"      => { MATCH_OP(E_OP_MO_TR_POUND); };
         "MO.CC"       => { MATCH_OP(E_OP_MO_CC); };
         "MO.CC#"      => { MATCH_OP(E_OP_MO_CC_POUND); };
         "MO.PB"       => { MATCH_OP(E_OP_MO_PB); };
