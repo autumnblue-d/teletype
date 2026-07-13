@@ -60,4 +60,19 @@ void mode_i2c_view_grid_key(uint8_t x, uint8_t y, uint8_t z);
 // Draw an integer at OLED region line `ln`, x-pixel `x`, fg brightness `fg`.
 void mode_draw_num(uint8_t ln, uint8_t x, int val, uint8_t fg);
 
+// ---- shared OLED title-bar refresh ---------------------------------------
+
+// OLED font shade levels shared by all three grid modes (label / value /
+// title). Each mode had its own identical KM_S_*/MP_S_*/EM_S_* triple.
+#define MODE_S_LABEL 5
+#define MODE_S_VALUE 12
+#define MODE_S_TITLE 15
+
+// Begin a mode's screen_refresh. Returns false when there is nothing to draw:
+// *out_mask holds what screen_refresh_* should return (0 = screen unchanged,
+// 0xFF = the i2c follower editor owns the screen). Returns true after clearing
+// all 8 lines and drawing `app_title` (or the active SAVED banner) on line 0 --
+// the caller then renders lines 1..7 and returns 0b11111111. Clears *dirty.
+bool mode_screen_begin(bool* dirty, const char* app_title, uint8_t* out_mask);
+
 #endif

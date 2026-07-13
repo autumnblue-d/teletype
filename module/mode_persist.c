@@ -9,6 +9,7 @@
 #include "init_teletype.h"  // get_ticks (ms)
 #include "kria_i2c.h"       // shared follower bank + i2c grid view
 #include "kria_i2c_oled.h"  // MIDI-follower OLED editor
+#include "region.h"         // region_fill
 #include "util.h"           // itoa
 
 // How long the "SAVED" banner stays up (ms). Long enough to read, short enough
@@ -103,4 +104,24 @@ void mode_draw_num(uint8_t ln, uint8_t x, int val, uint8_t fg) {
     char s[8];
     itoa(val, s, 10);
     font_string_region_clip(&line[ln], s, x, 0, fg, 0);
+}
+
+bool mode_screen_begin(bool* dirty, const char* app_title, uint8_t* out_mask) {
+    if (!*dirty) {
+        *out_mask = 0;
+        return false;
+    }
+    *dirty = false;
+
+    if (mode_i2c_oled_render_active()) {
+        *out_mask = 0b11111111;
+        return false;
+    }
+
+    for (uint8_t i = 0; i < 8; i++) region_fill(&line[i], 0);
+
+    const char* cmsg;
+    const char* title = mode_confirm_active(&cmsg) ? cmsg : app_title;
+    font_string_region_clip(&line[0], title, 0, 0, MODE_S_TITLE, 0);
+    return true;
 }

@@ -906,10 +906,6 @@ void process_kria_keys(uint8_t key, uint8_t mod_key, bool is_held_key) {
 
 // ---- OLED ----
 
-#define KM_S_LABEL 5
-#define KM_S_VALUE 12
-#define KM_S_TITLE 15
-
 static const char* const km_page_name[10] = { "TRIG",  "NOTE",   "OCT",
                                               "DUR",   "RPT",    "ALT",
                                               "GLIDE", "SCALE",  "PATT",
@@ -1092,38 +1088,31 @@ int16_t kria_op_ii(int16_t follower, int16_t set, int16_t val) {
 }
 
 uint8_t screen_refresh_kria(void) {
-    if (!dirty) return 0;
-    dirty = false;
+    uint8_t mask;
+    if (!mode_screen_begin(&dirty, "KRIA", &mask)) return mask;
 
-    if (mode_i2c_oled_render_active()) return 0b11111111;
-
-    for (uint8_t i = 0; i < 8; i++) region_fill(&line[i], 0);
-
-    const char* cmsg;
-    const char* title = mode_confirm_active(&cmsg) ? cmsg : "KRIA";
-    font_string_region_clip(&line[0], title, 0, 0, KM_S_TITLE, 0);
-    font_string_region_clip(&line[0], km_view_name[km_view], 54, 0, KM_S_VALUE,
+    font_string_region_clip(&line[0], km_view_name[km_view], 54, 0, MODE_S_VALUE,
                             0);
     font_string_region_clip(&line[0], kria_running ? "RUN" : "STOP", 100, 0,
-                            KM_S_VALUE, 0);
+                            MODE_S_VALUE, 0);
 
-    font_string_region_clip(&line[1], "PATT", 0, 0, KM_S_LABEL, 0);
-    mode_draw_num(1, 42, eng.cfg.pattern, KM_S_VALUE);
+    font_string_region_clip(&line[1], "PATT", 0, 0, MODE_S_LABEL, 0);
+    mode_draw_num(1, 42, eng.cfg.pattern, MODE_S_VALUE);
     font_string_region_clip(&line[1], eng.cfg.meta ? "META" : "", 84, 0,
-                            KM_S_VALUE, 0);
+                            MODE_S_VALUE, 0);
 
-    font_string_region_clip(&line[2], "CLOCK", 0, 0, KM_S_LABEL, 0);
+    font_string_region_clip(&line[2], "CLOCK", 0, 0, MODE_S_LABEL, 0);
     font_string_region_clip(&line[2], clk.external ? "EXT" : "INT", 42, 0,
-                            KM_S_VALUE, 0);
-    mode_draw_num(2, 78, clk.period, KM_S_VALUE);
-    font_string_region_clip(&line[2], "MS", 108, 0, KM_S_LABEL, 0);
+                            MODE_S_VALUE, 0);
+    mode_draw_num(2, 78, clk.period, MODE_S_VALUE);
+    font_string_region_clip(&line[2], "MS", 108, 0, MODE_S_LABEL, 0);
 
-    font_string_region_clip(&line[3], "TRACK", 0, 0, KM_S_LABEL, 0);
-    mode_draw_num(3, 42, kgrid.track, KM_S_VALUE);
-    font_string_region_clip(&line[3], "PAGE", 66, 0, KM_S_LABEL, 0);
+    font_string_region_clip(&line[3], "TRACK", 0, 0, MODE_S_LABEL, 0);
+    mode_draw_num(3, 42, kgrid.track, MODE_S_VALUE);
+    font_string_region_clip(&line[3], "PAGE", 66, 0, MODE_S_LABEL, 0);
     font_string_region_clip(&line[3],
                             kgrid.mode < 10 ? km_page_name[kgrid.mode] : "?",
-                            102, 0, KM_S_VALUE, 0);
+                            102, 0, MODE_S_VALUE, 0);
 
     font_string_region_clip(&line[7], "1SEQ 2TIME 3CFG 4I2C  SPACE:RUN S:SAVE",
                             0, 0, 3, 0);

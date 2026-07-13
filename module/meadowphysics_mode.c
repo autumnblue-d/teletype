@@ -696,9 +696,9 @@ void process_meadowphysics_keys(uint8_t key, uint8_t mod_key,
 }
 
 // Brightness levels for the OLED (label / value / title).
-#define MP_S_LABEL 5
-#define MP_S_VALUE 12
-#define MP_S_TITLE 15
+#define MODE_S_LABEL 5
+#define MODE_S_VALUE 12
+#define MODE_S_TITLE 15
 #define MP_S_DIM 3
 
 static const char* const mp_voice_name[MP_VOICE_MODE_COUNT] = { "1V", "2V",
@@ -720,18 +720,12 @@ static const char* mp_clock_src_short(void) {
 // panel (L4-L7) selected by the keyboard 1/2/3 views. Net-new (Ansible has no
 // display); complements the grid, which shows the counters visually.
 uint8_t screen_refresh_meadowphysics(void) {
-    if (!dirty) return 0;
-    dirty = false;
-
-    if (mode_i2c_oled_render_active()) return 0b11111111;
+    uint8_t mask;
+    if (!mode_screen_begin(&dirty, "MEADOWPHYSICS", &mask)) return mask;
 
     static const char* const grid_sub[3] = { "POS", "SPD", "RUL" };
-    for (uint8_t i = 0; i < 8; i++) region_fill(&line[i], 0);
 
     // --- header (all views) ---
-    const char* cmsg;
-    const char* title = mode_confirm_active(&cmsg) ? cmsg : "MEADOWPHYSICS";
-    font_string_region_clip(&line[0], title, 0, 0, MP_S_TITLE, 0);
     // Current MP preset slot (global 8-slot bank, not the Teletype scene).
     font_string_region_clip(&line[0], "SL", 74, 0, MP_S_DIM, 0);
     char slotbuf[4];
@@ -739,46 +733,46 @@ uint8_t screen_refresh_meadowphysics(void) {
     font_string_region_clip(&line[0], slotbuf, 90, 0, MP_S_DIM, 0);
     // view tabs, active one bright
     font_string_region_clip(&line[0], "P", 104, 0,
-                            view == MP_VIEW_POSITIONS ? MP_S_TITLE : MP_S_DIM,
+                            view == MP_VIEW_POSITIONS ? MODE_S_TITLE : MP_S_DIM,
                             0);
     font_string_region_clip(&line[0], "C", 113, 0,
-                            view == MP_VIEW_CLOCK ? MP_S_TITLE : MP_S_DIM, 0);
+                            view == MP_VIEW_CLOCK ? MODE_S_TITLE : MP_S_DIM, 0);
     font_string_region_clip(&line[0], "F", 122, 0,
-                            view == MP_VIEW_CONFIG ? MP_S_TITLE : MP_S_DIM, 0);
+                            view == MP_VIEW_CONFIG ? MODE_S_TITLE : MP_S_DIM, 0);
 
-    font_string_region_clip(&line[1], "VOICE", 0, 0, MP_S_LABEL, 0);
+    font_string_region_clip(&line[1], "VOICE", 0, 0, MODE_S_LABEL, 0);
     font_string_region_clip(&line[1], mp_voice_name[mp_eng.cfg.voice_mode], 42,
-                            0, MP_S_VALUE, 0);
+                            0, MODE_S_VALUE, 0);
     font_string_region_clip(&line[1], mp_running ? "RUN" : "STOP", 96, 0,
-                            MP_S_VALUE, 0);
+                            MODE_S_VALUE, 0);
 
     // metro-synced: the step interval is M, not the (unused) internal period
     uint16_t step_ms =
         mp_clk.metro ? (uint16_t)scene_state.variables.m : mp_clk.period;
-    font_string_region_clip(&line[2], "CLOCK", 0, 0, MP_S_LABEL, 0);
-    font_string_region_clip(&line[2], mp_clock_src_short(), 42, 0, MP_S_VALUE,
+    font_string_region_clip(&line[2], "CLOCK", 0, 0, MODE_S_LABEL, 0);
+    font_string_region_clip(&line[2], mp_clock_src_short(), 42, 0, MODE_S_VALUE,
                             0);
-    mode_draw_num(2, 78, step_ms, MP_S_VALUE);
-    font_string_region_clip(&line[2], "MS", 108, 0, MP_S_LABEL, 0);
+    mode_draw_num(2, 78, step_ms, MODE_S_VALUE);
+    font_string_region_clip(&line[2], "MS", 108, 0, MODE_S_LABEL, 0);
 
-    font_string_region_clip(&line[3], "GRID", 0, 0, MP_S_LABEL, 0);
+    font_string_region_clip(&line[3], "GRID", 0, 0, MODE_S_LABEL, 0);
     font_string_region_clip(&line[3], grid_sub[mp_grid.edit_mode], 42, 0,
-                            MP_S_VALUE, 0);
-    font_string_region_clip(&line[3], "SCL", 78, 0, MP_S_LABEL, 0);
-    mode_draw_num(3, 108, mp_eng.cfg.scale, MP_S_VALUE);
+                            MODE_S_VALUE, 0);
+    font_string_region_clip(&line[3], "SCL", 78, 0, MODE_S_LABEL, 0);
+    mode_draw_num(3, 108, mp_eng.cfg.scale, MODE_S_VALUE);
 
     // --- detail panel (L4-L7), per keyboard-selected view ---
     if (mp_preset_view) {
-        font_string_region_clip(&line[4], "PRESET", 0, 0, MP_S_TITLE, 0);
-        font_string_region_clip(&line[5], "SLOT", 0, 0, MP_S_LABEL, 0);
-        mode_draw_num(5, 48, mp_sel_slot, MP_S_VALUE);
-        font_string_region_clip(&line[6], "CUR", 66, 0, MP_S_LABEL, 0);
-        mode_draw_num(6, 96, mp_cur_slot, MP_S_VALUE);
+        font_string_region_clip(&line[4], "PRESET", 0, 0, MODE_S_TITLE, 0);
+        font_string_region_clip(&line[5], "SLOT", 0, 0, MODE_S_LABEL, 0);
+        mode_draw_num(5, 48, mp_sel_slot, MODE_S_VALUE);
+        font_string_region_clip(&line[6], "CUR", 66, 0, MODE_S_LABEL, 0);
+        mode_draw_num(6, 96, mp_cur_slot, MODE_S_VALUE);
         font_string_region_clip(&line[7], "S:SAVE L:LOAD GRID:GLYPH", 0, 0,
                                 MP_S_DIM, 0);
     }
     else if (view == MP_VIEW_CLOCK) {
-        font_string_region_clip(&line[4], "CLOCK", 0, 0, MP_S_TITLE, 0);
+        font_string_region_clip(&line[4], "CLOCK", 0, 0, MODE_S_TITLE, 0);
         const char* src = "INTERNAL";
         if (mp_clk.metro)
             src = "TT M";
@@ -790,50 +784,50 @@ uint8_t screen_refresh_meadowphysics(void) {
             mp_clk.metro ? (uint16_t)scene_state.variables.m : mp_clk.period;
         uint16_t per_step = mp_clk.metro ? 60000 : 30000;
         uint16_t spm = period ? (uint16_t)(per_step / period) : 0;
-        font_string_region_clip(&line[5], "SOURCE", 0, 0, MP_S_LABEL, 0);
-        font_string_region_clip(&line[5], src, 48, 0, MP_S_VALUE, 0);
-        font_string_region_clip(&line[6], "PERIOD", 0, 0, MP_S_LABEL, 0);
-        mode_draw_num(6, 48, period, MP_S_VALUE);
-        font_string_region_clip(&line[6], "MS", 78, 0, MP_S_LABEL, 0);
-        font_string_region_clip(&line[7], "STEP/M", 0, 0, MP_S_LABEL, 0);
-        mode_draw_num(7, 48, spm, MP_S_VALUE);
+        font_string_region_clip(&line[5], "SOURCE", 0, 0, MODE_S_LABEL, 0);
+        font_string_region_clip(&line[5], src, 48, 0, MODE_S_VALUE, 0);
+        font_string_region_clip(&line[6], "PERIOD", 0, 0, MODE_S_LABEL, 0);
+        mode_draw_num(6, 48, period, MODE_S_VALUE);
+        font_string_region_clip(&line[6], "MS", 78, 0, MODE_S_LABEL, 0);
+        font_string_region_clip(&line[7], "STEP/M", 0, 0, MODE_S_LABEL, 0);
+        mode_draw_num(7, 48, spm, MODE_S_VALUE);
     }
     else if (view == MP_VIEW_CONFIG) {
-        font_string_region_clip(&line[4], "CONFIG", 0, 0, MP_S_TITLE, 0);
-        font_string_region_clip(&line[5], "VOICE", 0, 0, MP_S_LABEL, 0);
+        font_string_region_clip(&line[4], "CONFIG", 0, 0, MODE_S_TITLE, 0);
+        font_string_region_clip(&line[5], "VOICE", 0, 0, MODE_S_LABEL, 0);
         font_string_region_clip(&line[5], mp_voice_name[mp_eng.cfg.voice_mode],
-                                48, 0, MP_S_VALUE, 0);
-        font_string_region_clip(&line[6], "SCALE", 0, 0, MP_S_LABEL, 0);
-        mode_draw_num(6, 48, mp_eng.cfg.scale, MP_S_VALUE);  // slot number
+                                48, 0, MODE_S_VALUE, 0);
+        font_string_region_clip(&line[6], "SCALE", 0, 0, MODE_S_LABEL, 0);
+        mode_draw_num(6, 48, mp_eng.cfg.scale, MODE_S_VALUE);  // slot number
         font_string_region_clip(&line[6],
                                 mp_eng.cfg.scale < MP_SCALE_NAMED
                                     ? mp_scale_name[mp_eng.cfg.scale]
                                     : "USER",
-                                72, 0, MP_S_VALUE, 0);
+                                72, 0, MODE_S_VALUE, 0);
         font_string_region_clip(&line[7], "V:VOICE [ ]:SCALE", 0, 0, MP_S_DIM,
                                 0);
     }
     else {  // MP_VIEW_POSITIONS: detail for the selected row
         uint8_t er = mp_grid.edit_row;
-        font_string_region_clip(&line[4], "ROW", 0, 0, MP_S_LABEL, 0);
-        mode_draw_num(4, 30, er, MP_S_TITLE);
-        font_string_region_clip(&line[5], "CNT", 0, 0, MP_S_LABEL, 0);
-        mode_draw_num(5, 30, mp_eng.cfg.count[er], MP_S_VALUE);
-        font_string_region_clip(&line[5], "RNG", 66, 0, MP_S_LABEL, 0);
-        mode_draw_num(5, 96, mp_eng.cfg.min[er], MP_S_VALUE);
-        font_string_region_clip(&line[5], "-", 108, 0, MP_S_LABEL, 0);
-        mode_draw_num(5, 114, mp_eng.cfg.max[er], MP_S_VALUE);
-        font_string_region_clip(&line[6], "SPD", 0, 0, MP_S_LABEL, 0);
-        mode_draw_num(6, 30, mp_eng.cfg.speed[er], MP_S_VALUE);
-        font_string_region_clip(&line[6], "RULE", 66, 0, MP_S_LABEL, 0);
+        font_string_region_clip(&line[4], "ROW", 0, 0, MODE_S_LABEL, 0);
+        mode_draw_num(4, 30, er, MODE_S_TITLE);
+        font_string_region_clip(&line[5], "CNT", 0, 0, MODE_S_LABEL, 0);
+        mode_draw_num(5, 30, mp_eng.cfg.count[er], MODE_S_VALUE);
+        font_string_region_clip(&line[5], "RNG", 66, 0, MODE_S_LABEL, 0);
+        mode_draw_num(5, 96, mp_eng.cfg.min[er], MODE_S_VALUE);
+        font_string_region_clip(&line[5], "-", 108, 0, MODE_S_LABEL, 0);
+        mode_draw_num(5, 114, mp_eng.cfg.max[er], MODE_S_VALUE);
+        font_string_region_clip(&line[6], "SPD", 0, 0, MODE_S_LABEL, 0);
+        mode_draw_num(6, 30, mp_eng.cfg.speed[er], MODE_S_VALUE);
+        font_string_region_clip(&line[6], "RULE", 66, 0, MODE_S_LABEL, 0);
         font_string_region_clip(&line[6],
                                 mp_rule_name[mp_eng.cfg.rules[er] & 7], 102, 0,
-                                MP_S_VALUE, 0);
-        font_string_region_clip(&line[7], "DST R", 0, 0, MP_S_LABEL, 0);
-        mode_draw_num(7, 36, mp_eng.cfg.rule_dests[er], MP_S_VALUE);
+                                MODE_S_VALUE, 0);
+        font_string_region_clip(&line[7], "DST R", 0, 0, MODE_S_LABEL, 0);
+        mode_draw_num(7, 36, mp_eng.cfg.rule_dests[er], MODE_S_VALUE);
         font_string_region_clip(
             &line[7], mp_target_name[mp_eng.cfg.rule_dest_targets[er] & 3], 66,
-            0, MP_S_VALUE, 0);
+            0, MODE_S_VALUE, 0);
     }
 
     return 0b11111111;

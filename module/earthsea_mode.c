@@ -491,51 +491,44 @@ int16_t es_op_cv(int16_t voice) {
 
 // ---- OLED ----
 
-#define EM_S_LABEL 5
-#define EM_S_VALUE 12
-#define EM_S_TITLE 15
+#define MODE_S_LABEL 5
+#define MODE_S_VALUE 12
+#define MODE_S_TITLE 15
 
 
 uint8_t screen_refresh_earthsea(void) {
-    if (!dirty) return 0;
-    dirty = false;
-
-    if (mode_i2c_oled_render_active()) return 0b11111111;
-
-    for (uint8_t i = 0; i < 8; i++) region_fill(&line[i], 0);
+    uint8_t mask;
+    if (!mode_screen_begin(&dirty, "EARTHSEA", &mask)) return mask;
 
     static const char* const mode_name[] = { "STOP", "ARM", "REC", "PLAY" };
     const es_pattern_t* p = &eng.cfg.p[eng.cfg.p_select];
 
-    const char* cmsg;
-    const char* title = mode_confirm_active(&cmsg) ? cmsg : "EARTHSEA";
-    font_string_region_clip(&line[0], title, 0, 0, EM_S_TITLE, 0);
     font_string_region_clip(&line[0], em_view == EM_VIEW_I2C ? "I2C" : "", 66,
-                            0, EM_S_VALUE, 0);
+                            0, MODE_S_VALUE, 0);
     font_string_region_clip(&line[0], mode_name[eng.rt.mode & 3], 100, 0,
-                            EM_S_VALUE, 0);
+                            MODE_S_VALUE, 0);
 
-    font_string_region_clip(&line[1], "PATT", 0, 0, EM_S_LABEL, 0);
-    mode_draw_num(1, 42, eng.cfg.p_select, EM_S_VALUE);
-    mode_draw_num(1, 66, p->length, EM_S_LABEL);
-    font_string_region_clip(&line[1], p->loop ? "LOOP" : "", 96, 0, EM_S_VALUE,
+    font_string_region_clip(&line[1], "PATT", 0, 0, MODE_S_LABEL, 0);
+    mode_draw_num(1, 42, eng.cfg.p_select, MODE_S_VALUE);
+    mode_draw_num(1, 66, p->length, MODE_S_LABEL);
+    font_string_region_clip(&line[1], p->loop ? "LOOP" : "", 96, 0, MODE_S_VALUE,
                             0);
 
-    font_string_region_clip(&line[2], "EDGE", 0, 0, EM_S_LABEL, 0);
+    font_string_region_clip(&line[2], "EDGE", 0, 0, MODE_S_LABEL, 0);
     if (p->edge == ES_EDGE_PATTERN)
-        font_string_region_clip(&line[2], "PATT", 42, 0, EM_S_VALUE, 0);
+        font_string_region_clip(&line[2], "PATT", 42, 0, MODE_S_VALUE, 0);
     else if (p->edge == ES_EDGE_DRONE)
-        font_string_region_clip(&line[2], "DRONE", 42, 0, EM_S_VALUE, 0);
+        font_string_region_clip(&line[2], "DRONE", 42, 0, MODE_S_VALUE, 0);
     else {
-        font_string_region_clip(&line[2], "FIXED", 42, 0, EM_S_VALUE, 0);
-        mode_draw_num(2, 84, p->edge_time, EM_S_VALUE);
+        font_string_region_clip(&line[2], "FIXED", 42, 0, MODE_S_VALUE, 0);
+        mode_draw_num(2, 84, p->edge_time, MODE_S_VALUE);
     }
 
-    font_string_region_clip(&line[3], "CLOCK", 0, 0, EM_S_LABEL, 0);
+    font_string_region_clip(&line[3], "CLOCK", 0, 0, MODE_S_LABEL, 0);
     font_string_region_clip(&line[3], eng.rt.clock_external ? "EXT" : "INT", 42,
-                            0, EM_S_VALUE, 0);
+                            0, MODE_S_VALUE, 0);
     font_string_region_clip(&line[3], eng.cfg.arp ? "ARP" : "", 84, 0,
-                            EM_S_VALUE, 0);
+                            MODE_S_VALUE, 0);
 
     font_string_region_clip(
         &line[7], "SPC:PLAY A:ARM X:EXT [ ]:PATT S:SAVE 4:I2C", 0, 0, 3, 0);
