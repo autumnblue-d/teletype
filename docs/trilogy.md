@@ -103,20 +103,35 @@ toggles.
 
 **MP-SEQ sub-tab (x8 again).** Tapping the DUR selector a second time switches
 the page to a **six-lane Meadowphysics-style cascade sequencer** on rows 0–5.
-Each lane is a counter that, on rollover, fires a script — lane 1 → script 3, …
-lane 6 → script 8 — driving your scripts rather than CV/TR. It rides Kria's
-clock (each lane's *speed* divides it). Editing is exactly Meadowphysics (see
-below): tap a cell to set a lane's position, tap again to set its range; hold
-**column 0** for the speed / trigger view (and to pick the lane), **column 1**
-for the rules view. In the rules view the eight rules are laid across **columns
-8–15** (col 8 = *none* … col 15 = *stop*) — one press each — rather than
-Meadowphysics' one-rule-per-row selection, which the six-lane window can't
-reach; this is what makes *pole* and *stop* selectable here. Kria's
-LOOP / TIME / PROB mods and grid row 6 are not used here.
+Each lane is a counter that, on rollover, **fires a script** — lane 1 →
+script 3, … lane 6 → script 8 — so the sequencer drives your scripts instead of
+CV/TR. It rides Kria's clock, and each lane's *speed* divides that clock. The
+MP-SEQ pattern is stored **per Kria pattern**, alongside the rest of the song.
 
-**Outputs:** track *n* drives **CV *n*** and **TR *n***. A muted track frees its
-CV/TR for scripts. Kria's state is a single global song, shared across scenes;
-the MP-SEQ pattern is stored per Kria pattern, with the rest of the song.
+The page reuses the Meadowphysics grid verbatim, so editing is three held
+views (grid **row 6** and Kria's LOOP / TIME / PROB mods are unused here):
+
+- **Positions** (default): tap a cell to set a lane's count (its reset
+  position); a second tap in the same row sets the lane's min–max range.
+- **Speed / trigger** — hold **column 0** (which also picks the lane to edit).
+  Cols 8–15 set that lane's clock-divide *speed* (tap twice for a speed range);
+  **col 2** stops / starts the lane; **col 5** / **col 6** set the toggle /
+  trigger cascade bits; **col 3** the sync bits; **col 4** the manual-play
+  toggle.
+- **Rules** — hold **column 1**. **Columns 8–15** pick the rule — *none, inc,
+  dec, max, min, rnd, pole, stop* — one press each. (This column layout,
+  instead of Meadowphysics' one-rule-per-row selection, is what lets the
+  six-lane window reach *pole* and *stop*.) **Cols 4–6** choose the
+  **destination lane** — the row you press — and whether the rule nudges its
+  **count** (col 4), **speed** (col 5), or **both** (col 6) on rollover. That
+  destination edit is the cascade: one lane's rollover reshapes another.
+
+Leaving the sub-tab (any nav press) cleanly ends whichever view you were
+holding.
+
+**Outputs:** track *n* drives **CV *n*** and **TR *n***; a muted track frees its
+CV/TR for scripts. Kria's state is a single global song shared across scenes,
+but the MP-SEQ pattern travels **per Kria pattern**.
 
 ## Meadowphysics
 
