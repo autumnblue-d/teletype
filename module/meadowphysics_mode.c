@@ -22,6 +22,7 @@
 
 // kria's i2c follower module (shared, global follower table)
 #include "kria_i2c.h"
+#include "kria_i2c_view.h"  // shared i2c grid view
 #include "kria_i2c_oled.h"  // shared MIDI-follower OLED editor
 
 // libavr32

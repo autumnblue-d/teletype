@@ -88,18 +88,10 @@ void kria_i2c_set_chan_slot(uint8_t index, uint8_t slot, uint8_t chan);
 uint8_t kria_i2c_is_midi(uint8_t index);   // 1 if follower is I2M/MO
 uint8_t kria_i2c_chan_max(uint8_t index);  // MIDI channel count (16/32)
 
-// Shared i2c view (Ansible ii pages), used by both the Kria and MP shells.
-// enter() resets the view; render() fills a 16x8 led buffer; key() handles a
-// press and returns true if a follower setting changed (caller should mark the
-// bank dirty). take_dirty() returns+clears the accumulated edit flag (call at
-// view-leave / mode-exit to decide whether to flash).
-void kria_i2c_view_enter(void);
-void kria_i2c_view_render(uint8_t* led, uint8_t vari);
-void kria_i2c_view_key(uint8_t x, uint8_t y, uint8_t z);
+// Bank-dirty flag: any follower setting changed since the last flush. Set by
+// the setters above (and by the grid view in kria_i2c_view.c, which drives them)
+// and by KR.II; take_dirty() returns+clears it (call at view-leave / mode-exit
+// to decide whether to flash). The grid view itself lives in kria_i2c_view.h.
 uint8_t kria_i2c_take_dirty(void);
-
-// Poll for a pending request to open the OLED MIDI editor (returns the follower
-// index, or -1). Set when the user config-taps a MIDI follower on the grid.
-int8_t kria_i2c_view_take_oled_req(void);
 
 #endif

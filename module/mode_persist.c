@@ -7,7 +7,8 @@
 #include "font.h"           // font_string_region_clip
 #include "globals.h"        // region line[8]
 #include "init_teletype.h"  // get_ticks (ms)
-#include "kria_i2c.h"       // shared follower bank + i2c grid view
+#include "kria_i2c.h"       // shared follower bank
+#include "kria_i2c_view.h"  // shared i2c grid view
 #include "kria_i2c_oled.h"  // MIDI-follower OLED editor
 #include "region.h"         // region_fill
 #include "util.h"           // itoa

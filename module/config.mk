@@ -100,6 +100,7 @@ CSRCS = \
 	../src/kria_clock.c					\
 	../src/kria_grid.c					\
 	../src/kria_i2c.c					\
+	../src/kria_i2c_view.c					\
 	../src/es_engine.c					\
 	../src/es_binding.c					\
 	../src/es_grid.c					\

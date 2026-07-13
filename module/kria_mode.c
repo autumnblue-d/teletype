@@ -19,6 +19,7 @@
 #include "kria_engine.h"
 #include "kria_grid.h"
 #include "kria_i2c.h"       // follower output
+#include "kria_i2c_view.h"  // shared i2c grid view
 #include "kria_i2c_oled.h"  // MIDI-follower OLED editor
 #include "meadowphysics_engine.h"  // MP-style cascade seq (DUR sub-tab)
 #include "tuning.h"         // per-channel tuning table + editor helpers

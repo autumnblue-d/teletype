@@ -16,7 +16,8 @@
 #include "es_engine.h"
 #include "es_grid.h"
 #include "helpers.h"        // note_to_cv (ES.CV, shared ET mapping)
-#include "kria_i2c.h"       // shared follower bank + ii view
+#include "kria_i2c.h"       // shared follower bank
+#include "kria_i2c_view.h"  // shared i2c grid view
 #include "kria_i2c_oled.h"  // MIDI-follower OLED editor
 
 // libavr32
