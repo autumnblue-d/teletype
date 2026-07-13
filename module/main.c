@@ -31,7 +31,6 @@
 #include "region.h"
 #include "screen.h"
 #include "timers.h"
-#include "uhi_hub.h" // USB hub debug string (uhi_hub_debug_get) for the OLED
 #include "util.h"
 
 // this
@@ -562,46 +561,13 @@ void handler_ScreenRefresh(int32_t data) {
         case M_EARTHSEA: screen_dirty = screen_refresh_earthsea(); break;
     }
 
-    u8 hub_dbg_active = 0;
-#if defined(USB_HOST_HUB_SUPPORT) && UHI_HUB_DEBUG_OLED
-    const char* hub_dbg = uhi_hub_debug_get();
-    hub_dbg_active = (hub_dbg && hub_dbg[0]) ? 1 : 0;
-#endif
-
     u8 grid = 0;
     for (size_t i = 0; i < 8; i++)
         if (screen_dirty & (1 << i)) {
             grid = 1;
-            // While the hub-debug overlay owns the top line, don't paint the
-            // mode's line 0 — that would alternate mode content with the overlay
-            // and flicker. The overlay draws line 0 itself, below.
-            if (i == 0 && hub_dbg_active) continue;
             if (ss_counter < SS_TIMEOUT) region_draw(&line[i]);
         }
     if (grid_control_mode && grid) scene_state.grid.grid_dirty = 1;
-
-#if defined(USB_HOST_HUB_SUPPORT) && UHI_HUB_DEBUG_OLED
-    // USB hub debug overlay on the top line (a debugging aid for the
-    // low-speed-behind-hub work; enable with -DUHI_HUB_DEBUG_OLED=1). Redraw
-    // ONLY when the text changed, or when the mode just tried to repaint line 0
-    // — redrawing every frame flickers.
-    if (hub_dbg_active && ss_counter < SS_TIMEOUT) {
-        static char hub_dbg_last[24] = { 0 };
-        u8 changed = 0;
-        size_t i = 0;
-        for (; hub_dbg[i] && i < sizeof(hub_dbg_last) - 1; i++) {
-            if (hub_dbg_last[i] != hub_dbg[i]) changed = 1;
-            hub_dbg_last[i] = hub_dbg[i];
-        }
-        if (hub_dbg_last[i] != 0) changed = 1;
-        hub_dbg_last[i] = 0;
-        if (changed || (screen_dirty & 1)) {
-            region_fill(&line[0], 0);
-            font_string_region_clip(&line[0], hub_dbg, 0, 0, 0xf, 0);
-            region_draw(&line[0]);
-        }
-    }
-#endif
 
 #ifdef TELETYPE_PROFILE
     profile_update(&prof_ScreenRefresh);
