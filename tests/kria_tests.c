@@ -518,6 +518,174 @@ TEST loop_setters_wrap(void) {
     PASS();
 }
 
+// ---- script-trigger sequencer (6 lanes -> scripts 3-8) ----
+
+TEST script_lane_fires_on_armed_step(void) {
+    kria_engine_set_defaults(&E.cfg);
+    E.cfg.p[0].script_lanes[0] = (1u << 0) | (1u << 2);  // lane0 steps 0,2
+    E.cfg.p[0].script_lanes[3] = (1u << 1);              // lane3 step 1
+    RND.next = 3;
+    kria_engine_init(&E, &OUT, test_rnd, &RND, NULL);  // reset: step = lend(15)
+    kria_engine_clock(&E, 1);  // -> step 0: lane 0 armed
+    ASSERT_EQ(0, E.rt.script_step[0]);
+    ASSERT_EQ(1u << 0, E.rt.script_fired);
+    kria_engine_clock(&E, 1);  // -> step 1: lane 3 armed
+    ASSERT_EQ(1u << 3, E.rt.script_fired);
+    kria_engine_clock(&E, 1);  // -> step 2: lane 0 armed
+    ASSERT_EQ(1u << 0, E.rt.script_fired);
+    kria_engine_clock(&E, 1);  // -> step 3: nothing armed
+    ASSERT_EQ(0, E.rt.script_fired);
+    PASS();
+}
+
+TEST script_prob_zero_never_fires(void) {
+    kria_engine_set_defaults(&E.cfg);
+    E.cfg.p[0].script_lanes[0] = 1u << 0;
+    E.cfg.p[0].script_prob[0][0] = 0;  // 0% -> never
+    RND.next = 3;                      // would fire at any nonzero prob
+    kria_engine_init(&E, &OUT, test_rnd, &RND, NULL);
+    kria_engine_clock(&E, 1);  // step 0
+    ASSERT_EQ(0, E.rt.script_fired);
+    PASS();
+}
+
+TEST script_seq_tmul_divides_clock(void) {
+    kria_engine_set_defaults(&E.cfg);
+    E.cfg.p[0].script_lanes[0] = 0xFFFF;  // every step armed
+    E.cfg.p[0].script_tmul[0] = 2;        // lane 0 advances every 2 clocks
+    RND.next = 3;
+    kria_engine_init(&E, &OUT, test_rnd, &RND, NULL);
+    kria_engine_clock(&E, 1);  // advance -> step 0, fire
+    ASSERT_EQ(0, E.rt.script_step[0]);
+    ASSERT_EQ(1u << 0, E.rt.script_fired);
+    kria_engine_clock(&E, 1);  // divider holds -> no advance, no fire
+    ASSERT_EQ(0, E.rt.script_step[0]);
+    ASSERT_EQ(0, E.rt.script_fired);
+    kria_engine_clock(&E, 1);  // advance -> step 1, fire
+    ASSERT_EQ(1, E.rt.script_step[0]);
+    ASSERT_EQ(1u << 0, E.rt.script_fired);
+    PASS();
+}
+
+TEST script_seq_loop_bounds_respected(void) {
+    kria_engine_set_defaults(&E.cfg);
+    E.cfg.p[0].script_lstart[0] = 1;
+    E.cfg.p[0].script_lend[0] = 2;  // lane 0 loops only steps 1..2
+    RND.next = 3;
+    kria_engine_init(&E, &OUT, test_rnd, &RND, NULL);  // step = lend(2)
+    kria_engine_clock(&E, 1);
+    ASSERT_EQ(1, E.rt.script_step[0]);  // lend -> lstart
+    kria_engine_clock(&E, 1);
+    ASSERT_EQ(2, E.rt.script_step[0]);
+    kria_engine_clock(&E, 1);
+    ASSERT_EQ(1, E.rt.script_step[0]);  // wraps back to lstart
+    PASS();
+}
+
+TEST script_lanes_run_independent_lengths(void) {
+    kria_engine_set_defaults(&E.cfg);
+    // lane 0 loops steps 0..1 (len 2); lane 1 loops steps 0..2 (len 3)
+    E.cfg.p[0].script_lstart[0] = 0;
+    E.cfg.p[0].script_lend[0] = 1;
+    E.cfg.p[0].script_lstart[1] = 0;
+    E.cfg.p[0].script_lend[1] = 2;
+    E.cfg.p[0].script_lanes[0] = 0xFFFF;
+    E.cfg.p[0].script_lanes[1] = 0xFFFF;
+    RND.next = 3;
+    kria_engine_init(&E, &OUT, test_rnd, &RND, NULL);
+    uint8_t s0[6], s1[6];
+    for (int i = 0; i < 6; i++) {
+        kria_engine_clock(&E, 1);
+        s0[i] = E.rt.script_step[0];
+        s1[i] = E.rt.script_step[1];
+    }
+    // lane 0: 0,1,0,1,0,1   lane 1: 0,1,2,0,1,2  (drift = polymeter)
+    ASSERT_EQ(0, s0[0]);
+    ASSERT_EQ(1, s0[1]);
+    ASSERT_EQ(0, s0[2]);
+    ASSERT_EQ(1, s0[3]);
+    ASSERT_EQ(0, s0[4]);
+    ASSERT_EQ(1, s0[5]);
+    ASSERT_EQ(0, s1[0]);
+    ASSERT_EQ(1, s1[1]);
+    ASSERT_EQ(2, s1[2]);
+    ASSERT_EQ(0, s1[3]);
+    ASSERT_EQ(1, s1[4]);
+    ASSERT_EQ(2, s1[5]);
+    PASS();
+}
+
+TEST config_valid_rejects_bad_scriptseq(void) {
+    kria_config_t cfg;
+    kria_engine_set_defaults(&cfg);
+    cfg.p[0].script_tmul[0] = 0;  // divider must be >= 1
+    ASSERT_FALSE(kria_engine_config_valid(&cfg));
+    kria_engine_set_defaults(&cfg);
+    cfg.p[0].script_prob[0][0] = 4;  // probability 0..3
+    ASSERT_FALSE(kria_engine_config_valid(&cfg));
+    kria_engine_set_defaults(&cfg);
+    cfg.p[0].script_lend[0] = 16;  // loop index out of range
+    ASSERT_FALSE(kria_engine_config_valid(&cfg));
+    PASS();
+}
+
+TEST grid_dur_button_double_tabs_scriptseq(void) {
+    kria_grid_state_t G;
+    kria_engine_set_defaults(&E.cfg);
+    kria_engine_init(&E, &OUT, test_rnd, &RND, NULL);
+    kria_grid_state_init(&G);  // starts on KR_P_TR
+    kria_grid_process_key(&E, &G, 8, 7, 1);  // x8: -> DUR
+    ASSERT_EQ(KR_P_DUR, G.mode);
+    kria_grid_process_key(&E, &G, 8, 7, 1);  // x8 again: -> SCRIPTSEQ
+    ASSERT_EQ(KR_MODE_SCRIPTSEQ, G.mode);
+    kria_grid_process_key(&E, &G, 8, 7, 1);  // x8 again: back to DUR
+    ASSERT_EQ(KR_P_DUR, G.mode);
+    PASS();
+}
+
+TEST grid_scriptseq_edits_lanes(void) {
+    kria_grid_state_t G;
+    kria_engine_set_defaults(&E.cfg);
+    kria_engine_init(&E, &OUT, test_rnd, &RND, NULL);
+    kria_grid_state_init(&G);
+    G.mode = KR_MODE_SCRIPTSEQ;
+    // NONE: row y IS the lane; toggle lane 2 step 5
+    kria_grid_process_key(&E, &G, 5, 2, 1);
+    ASSERT_EQ(1u << 5, E.cfg.p[0].script_lanes[2]);
+    kria_grid_process_key(&E, &G, 5, 2, 1);
+    ASSERT_EQ(0, E.cfg.p[0].script_lanes[2]);
+    // PROB: cycle that step's probability 3 -> 0 -> 1
+    G.mod_mode = KR_MOD_PROB;
+    ASSERT_EQ(3, E.cfg.p[0].script_prob[2][5]);  // default
+    kria_grid_process_key(&E, &G, 5, 2, 1);
+    ASSERT_EQ(0, E.cfg.p[0].script_prob[2][5]);
+    kria_grid_process_key(&E, &G, 5, 2, 1);
+    ASSERT_EQ(1, E.cfg.p[0].script_prob[2][5]);
+    // TIME: per-lane divider, keyed off the pressed row (lane)
+    G.mod_mode = KR_MOD_TIME;
+    kria_grid_process_key(&E, &G, 3, 0, 1);  // lane 0 -> tmul 4
+    kria_grid_process_key(&E, &G, 7, 2, 1);  // lane 2 -> tmul 8
+    ASSERT_EQ(4, E.cfg.p[0].script_tmul[0]);
+    ASSERT_EQ(8, E.cfg.p[0].script_tmul[2]);
+    ASSERT_EQ(1, E.cfg.p[0].script_tmul[1]);  // untouched lane keeps default
+    // LOOP: per-lane two-press range on the pressed row
+    G.mod_mode = KR_MOD_LOOP;
+    G.loop_count = 0;
+    kria_grid_process_key(&E, &G, 4, 0, 1);  // lane 0 first press
+    kria_grid_process_key(&E, &G, 9, 0, 1);  // lane 0 second press -> [4,9]
+    kria_grid_process_key(&E, &G, 4, 0, 0);
+    kria_grid_process_key(&E, &G, 9, 0, 0);
+    kria_grid_process_key(&E, &G, 1, 3, 1);  // lane 3 first press
+    kria_grid_process_key(&E, &G, 5, 3, 1);  // lane 3 second press -> [1,5]
+    ASSERT_EQ(4, E.cfg.p[0].script_lstart[0]);
+    ASSERT_EQ(9, E.cfg.p[0].script_lend[0]);
+    ASSERT_EQ(1, E.cfg.p[0].script_lstart[3]);
+    ASSERT_EQ(5, E.cfg.p[0].script_lend[3]);
+    ASSERT_EQ(0, E.cfg.p[0].script_lstart[1]);  // untouched lane keeps default
+    ASSERT_EQ(15, E.cfg.p[0].script_lend[1]);
+    PASS();
+}
+
 SUITE(kria_suite) {
     RUN_TEST(defaults_are_valid);
     RUN_TEST(loop_setters_wrap);
@@ -547,4 +715,12 @@ SUITE(kria_suite) {
     RUN_TEST(grid_pattern_hold_copies_and_switches);
     RUN_TEST(grid_pattern_hold_abandoned_on_page_change);
     RUN_TEST(grid_render_smoke);
+    RUN_TEST(script_lane_fires_on_armed_step);
+    RUN_TEST(script_prob_zero_never_fires);
+    RUN_TEST(script_seq_tmul_divides_clock);
+    RUN_TEST(script_seq_loop_bounds_respected);
+    RUN_TEST(script_lanes_run_independent_lengths);
+    RUN_TEST(config_valid_rejects_bad_scriptseq);
+    RUN_TEST(grid_dur_button_double_tabs_scriptseq);
+    RUN_TEST(grid_scriptseq_edits_lanes);
 }

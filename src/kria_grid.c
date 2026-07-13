@@ -484,6 +484,46 @@ static void draw_pattern(kria_engine_t* e, kria_grid_state_t* g, uint8_t* led) {
     }
 }
 
+// Script-trigger sequencer (KR_MODE_SCRIPTSEQ): 6 lanes (rows 0-5) = scripts
+// 3-8, 16 steps, one shared playhead. Mirrors draw_tr's look: armed steps lit,
+// a swept playhead column, a dim shared loop-region band. Under KR_MOD_PROB the
+// armed cells' brightness encodes per-step probability instead.
+static void draw_scriptseq(kria_engine_t* e, kria_grid_state_t* g,
+                           uint8_t* led) {
+    uint8_t ep = edit_pat(e, g);
+    kria_pattern_t* pat = &e->cfg.p[ep];
+    int prob_view = (g->mod_mode == KR_MOD_PROB);
+    int ph = playhead_ok(e, g);
+    uint8_t add = (uint8_t)(2 + (g->mod_mode == KR_MOD_LOOP));
+    uint8_t lane, s;
+    for (lane = 0; lane < KRIA_SCRIPT_LANES; lane++) {
+        uint16_t bits = pat->script_lanes[lane];
+        // armed steps
+        for (s = 0; s < 16; s++) {
+            if (!(bits & (1u << s))) continue;
+            uint8_t idx = (uint8_t)(lane * 16 + s);
+            if (prob_view) {
+                uint8_t w = pat->script_prob[lane][s];  // 0..3
+                led[idx] = (uint8_t)(w == 0 ? 2 : 2 + w * 3);  // 2/5/8/11
+            }
+            else
+                led[idx] = 3;
+        }
+        // per-lane loop-region band (brighter while editing the loop)
+        {
+            uint8_t ls = pat->script_lstart[lane], le = pat->script_lend[lane];
+            int lswap = (le < ls);
+            for (s = 0; s < 16; s++) {
+                int in = lswap ? (s >= ls || s <= le) : (s >= ls && s <= le);
+                if (in) led[lane * 16 + s] += add;
+            }
+        }
+        // per-lane playhead
+        if (ph && e->rt.script_step[lane] < 16)
+            led[lane * 16 + e->rt.script_step[lane]] += 4;
+    }
+}
+
 // Mod overlay drawn before the page: returns 1 if it fully replaces the page.
 static int draw_mod_overlay(kria_engine_t* e, kria_grid_state_t* g,
                             uint8_t* led) {
@@ -493,6 +533,15 @@ static int draw_mod_overlay(kria_engine_t* e, kria_grid_state_t* g,
         case KR_MOD_LOOP: led[R7 + 10] = L1; return 0;
         case KR_MOD_TIME:
             led[R7 + 11] = L1;
+            if (mode == KR_MODE_SCRIPTSEQ) {
+                // per-lane divider ruler: row = lane, lit column = its tmul
+                for (uint8_t lane = 0; lane < KRIA_SCRIPT_LANES; lane++) {
+                    uint8_t tm = e->cfg.p[ep].script_tmul[lane];
+                    memset(led + lane * 16, 3, 16);
+                    if (tm >= 1 && tm <= 16) led[lane * 16 + tm - 1] = L1;
+                }
+                return 1;
+            }
             memset(led + R1, 3, 16);
             if (mode < KRIA_NUM_PARAMS) {
                 uint8_t tm = e->cfg.p[ep].t[track].tmul[mode];
@@ -503,6 +552,12 @@ static int draw_mod_overlay(kria_engine_t* e, kria_grid_state_t* g,
             }
             return 1;
         case KR_MOD_PROB:
+            // Script-seq shows probability in-place (brightness), so let the
+            // page draw underneath instead of replacing it.
+            if (mode == KR_MODE_SCRIPTSEQ) {
+                led[R7 + 12] = L1;
+                return 0;
+            }
             led[R7 + 12] = L1;
             memset(led + R5, 3, 16);
             if (mode < KRIA_NUM_PARAMS) {
@@ -527,7 +582,7 @@ static void draw_bottom_row(kria_engine_t* e, kria_grid_state_t* g,
     memset(led + R7 + 5, L0, 4);  // x=5..8
     led[R7 + 10] = L0;
     led[R7 + 11] = L0;
-    if (mode < KRIA_NUM_PARAMS) led[R7 + 12] = L0;
+    if (mode < KRIA_NUM_PARAMS || mode == KR_MODE_SCRIPTSEQ) led[R7 + 12] = L0;
     led[R7 + 14] = L0;
     led[R7 + 15] =
         (e->cfg.meta && g->meta_lock && g->meta_lock_blink) ? L1 : L0;
@@ -547,7 +602,8 @@ static void draw_bottom_row(kria_engine_t* e, kria_grid_state_t* g,
         case KR_P_ALTNOTE: idx = R7 + 6; break;
         case KR_P_OCT:
         case KR_P_GLIDE: idx = R7 + 7; break;
-        case KR_P_DUR: idx = R7 + 8; break;
+        case KR_P_DUR:
+        case KR_MODE_SCRIPTSEQ: idx = R7 + 8; break;  // shared DUR selector
         case KR_MODE_SCALE: idx = R7 + 14; break;
         case KR_MODE_PATTERN: idx = R7 + 15; break;
         default: idx = R7 + 0; break;
@@ -557,7 +613,8 @@ static void draw_bottom_row(kria_engine_t* e, kria_grid_state_t* g,
             (e->cfg.meta && g->meta_lock && g->meta_lock_blink) ? L1 : L2;
     else {
         int is_alt =
-            (mode == KR_P_RPT || mode == KR_P_ALTNOTE || mode == KR_P_GLIDE);
+            (mode == KR_P_RPT || mode == KR_P_ALTNOTE || mode == KR_P_GLIDE ||
+             mode == KR_MODE_SCRIPTSEQ);
         led[idx] = (is_alt && g->alt_blink) ? L1 : L2;
     }
 }
@@ -574,6 +631,7 @@ void kria_grid_refresh(kria_engine_t* e, kria_grid_state_t* g, uint8_t* led,
             case KR_P_ALTNOTE: draw_note(e, g, led); break;
             case KR_P_OCT: draw_oct(e, g, led); break;
             case KR_P_DUR: draw_dur(e, g, led); break;
+            case KR_MODE_SCRIPTSEQ: draw_scriptseq(e, g, led); break;
             case KR_P_RPT: draw_rpt(e, g, led); break;
             case KR_P_GLIDE: draw_glide(e, g, led); break;
             case KR_MODE_SCALE: draw_scale(e, g, led); break;
@@ -605,7 +663,7 @@ static void key_bottom_row(kria_engine_t* e, kria_grid_state_t* g, uint8_t x,
         else if (x == 7)
             g->mode = (mode == KR_P_OCT) ? KR_P_GLIDE : KR_P_OCT;
         else if (x == 8)
-            g->mode = KR_P_DUR;
+            g->mode = (mode == KR_P_DUR) ? KR_MODE_SCRIPTSEQ : KR_P_DUR;
         else if (x == 10) {
             g->mod_mode = KR_MOD_LOOP;
             g->loop_count = 0;
@@ -613,7 +671,8 @@ static void key_bottom_row(kria_engine_t* e, kria_grid_state_t* g, uint8_t x,
         else if (x == 11)
             g->mod_mode = KR_MOD_TIME;
         else if (x == 12) {
-            if (mode < KRIA_NUM_PARAMS) g->mod_mode = KR_MOD_PROB;
+            if (mode < KRIA_NUM_PARAMS || mode == KR_MODE_SCRIPTSEQ)
+                g->mod_mode = KR_MOD_PROB;
         }
         else if (x == 14)
             g->mode = KR_MODE_SCALE;
@@ -829,6 +888,55 @@ void kria_grid_process_key(kria_engine_t* e, kria_grid_state_t* g, uint8_t x,
                 default: break;
             }
             break;
+
+        case KR_MODE_SCRIPTSEQ: {
+            // Six lanes (rows 0-5) = scripts 3-8, track-independent.
+            kria_pattern_t* pat = &e->cfg.p[ep];
+            switch (mm) {
+                case KR_MOD_NONE:
+                    if (z && y < KRIA_SCRIPT_LANES)
+                        pat->script_lanes[y] ^= (uint16_t)(1u << x);
+                    break;
+                case KR_MOD_PROB:
+                    // cycle this step's fire probability 0->1->2->3->0
+                    if (z && y < KRIA_SCRIPT_LANES) {
+                        uint8_t* w = &pat->script_prob[y][x];
+                        *w = (uint8_t)(*w >= 3 ? 0 : *w + 1);
+                    }
+                    break;
+                case KR_MOD_LOOP:
+                    // per-lane two-press loop gesture; the pressed row y is the
+                    // lane being edited (loop_edit), as on the mTr page.
+                    if (z && y < KRIA_SCRIPT_LANES) {
+                        if (g->loop_count == 0) {
+                            g->loop_edit = y;
+                            g->loop_first = x;
+                            g->loop_last = -1;
+                        }
+                        else {
+                            g->loop_last = x;
+                            pat->script_lstart[g->loop_edit] = g->loop_first;
+                            pat->script_lend[g->loop_edit] = x;
+                        }
+                        g->loop_count++;
+                    }
+                    else if (!z && g->loop_edit == y) {
+                        if (g->loop_count > 0) g->loop_count--;
+                        if (g->loop_count == 0 && g->loop_last == -1) {
+                            // single tap = one-step loop on that lane
+                            pat->script_lstart[g->loop_edit] = g->loop_first;
+                            pat->script_lend[g->loop_edit] = g->loop_first;
+                        }
+                    }
+                    break;
+                case KR_MOD_TIME:
+                    if (z && y < KRIA_SCRIPT_LANES)
+                        pat->script_tmul[y] = x + 1;  // per-lane divider
+                    break;
+                default: break;
+            }
+            break;
+        }
 
         case KR_MODE_SCALE:
             if (z) {

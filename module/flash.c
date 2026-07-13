@@ -28,7 +28,11 @@
 // -> 0x2D: MP moved from a per-scene mp_config_t to a global 8-slot preset bank
 // (f.mp_slots + f.mp_current); nvram_scene_t.mp dropped.
 // -> 0x2E: global per-output CV tuning bank (f.tuning_table + f.tuning_fresh).
-#define FIRSTRUN_KEY 0x2E
+// -> 0x2F: kria/MP/ES global banks added to nvram_data_t.
+// -> 0x30: force a clean reseed (kria/MP/ES layout).
+// -> 0x31: Kria per-pattern script-trigger sequencer (script_* fields in
+// kria_pattern_t; per-lane loop/divider arrays enlarge kria_config_t).
+#define FIRSTRUN_KEY 0x31
 
 // Independent version tag for the global scale bank. The scale bank has no
 // load-time validity check (unlike the kria/mp configs, which self-repair via
@@ -59,25 +63,24 @@ u8 is_flash_fresh() {
     return f.fresh != FIRSTRUN_KEY;
 }
 
-// First-run seeding helpers. Each holds an ~18 KB staging buffer (scene_state_t
-// / kria_config_t). They are kept as separate non-inlined functions so their
-// frames never coexist -- inlined into flash_prepare they would sum to ~37 KB
-// and overflow the 8 KB stack.
-static __attribute__((noinline)) void flash_seed_blank_scenes(void) {
-    scene_state_t scene;
-    ss_init(&scene);
+// Seed all scene slots blank. A scene_state_t is ~18 KB, which overflows the
+// 8 KB stack (hard fault), so the caller passes in an existing buffer to reuse
+// -- main.c hands us its live `scene_state` global (reinitialised here; main.c
+// reloads it from flash right after flash_prepare(), so this is harmless). The
+// small text buffer stays on the stack.
+static void flash_seed_blank_scenes(scene_state_t* scene) {
+    ss_init(scene);
 
     char text[SCENE_TEXT_LINES][SCENE_TEXT_CHARS];
     memset(text, 0, SCENE_TEXT_LINES * SCENE_TEXT_CHARS);
 
-    for (uint8_t i = 0; i < SCENE_SLOTS; i++) { flash_write(i, &scene, &text); }
+    for (uint8_t i = 0; i < SCENE_SLOTS; i++) { flash_write(i, scene, &text); }
 }
 
-static __attribute__((noinline)) void flash_seed_kria_bank(void) {
-    kria_config_t kcfg;
-    kria_engine_set_defaults(&kcfg);
-    flashc_memcpy((void*)&f.kria, &kcfg, sizeof(kcfg), true);
-}
+// (No first-run seeding for the Kria bank: kria_config_t is ~20 KB and would
+// overflow the stack, and it is unnecessary -- km_init_once() self-repairs via
+// kria_engine_config_valid()/kria_engine_set_defaults() when the stored config
+// is invalid, e.g. on a fresh flash. Same self-heal applies to the MP bank.)
 
 // MP global preset bank defaults: every slot gets the default config and a
 // blank glyph; the current slot is 0. Written slot-by-slot so the staging
@@ -115,32 +118,25 @@ static void flash_seed_tuning(void) {
                   true);
 }
 
-void flash_prepare() {
+void flash_prepare(scene_state_t* scene) {
     // if it's not empty return
     if (f.fresh != FIRSTRUN_KEY) {
-        int confirm = 1;
-        uint32_t counter = 0;
-        int toggle = 0;
-#define TIMEOUT 100000
-        while (confirm == 1 && (++counter < TIMEOUT)) {
-            confirm = gpio_get_pin_value(NMI);
-            if ((counter % 1000) == 0) {
-                if (++toggle % 2)
-                    gpio_set_pin_low(B11);
-                else
-                    gpio_set_pin_high(B11);
-            }
-            print_dbg_ulong(confirm);
-        }
-        gpio_set_pin_low(B11);
-        if (counter >= TIMEOUT) return;
-
+        // Fresh flash: FIRSTRUN_KEY changed, so the persisted layout changed and
+        // the existing scenes are already incompatible -> reseed unconditionally.
+        //
+        // This previously busy-waited for a front-panel (NMI) press to confirm
+        // the wipe, calling print_dbg_ulong() every iteration. With nothing
+        // draining the debug UART that call blocks on a full TX buffer, so the
+        // loop could stall *inside* the print and never re-sample the button: the
+        // confirmation screen stayed up, a front-panel press did nothing, and the
+        // key was never written -> every boot re-prompted. A key bump already
+        // implies a wipe, so just reseed.
         print_dbg("\r\n:::: first run, clearing flash");
         print_dbg("\r\nflash size: ");
         print_dbg_ulong(sizeof(f));
 
         // blank scenes (large stack frame, see helper note above)
-        flash_seed_blank_scenes();
+        flash_seed_blank_scenes(scene);
 
         cal_data_t blank_cal_data;
         init_cal_data(&blank_cal_data);
@@ -171,8 +167,9 @@ void flash_prepare() {
             flashc_memcpy((void*)&f.earthsea.p[p], &es_pattern_default,
                           sizeof(es_pattern_default), true);
 
-        // Kria global song/config bank defaults (large stack frame, see helper)
-        flash_seed_kria_bank();
+        // (Kria bank is not seeded here: it self-repairs on load -- see the note
+        // by flash_seed_blank_scenes -- and a full kria_config_t staging buffer
+        // would overflow the stack.)
 
         // MP global 8-slot preset bank defaults (blank glyphs, current = 0)
         flash_seed_mp_bank();

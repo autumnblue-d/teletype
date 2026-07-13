@@ -4,9 +4,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-// Trigger input (0-indexed) that carries the external clock when enabled (A3).
-// 0 = the first trigger input. Revisit alongside external-clock validation.
+// Trigger inputs (0-indexed) driving MP when the external clock is enabled:
+// jack 1 (index 0) = clock, jack 2 (index 1) = reset.
 #define MP_EXT_CLOCK_INPUT 0
+#define MP_EXT_RESET_INPUT 1
 
 // Native Meadowphysics mode shell: owns the engine + clock instances, drives
 // the dedicated clock timer, binds output, and renders the OLED. See
@@ -54,6 +55,10 @@ void meadowphysics_metro_off(void);
 // active and external clock enabled), so the caller can skip the script; false
 // otherwise (input is handled normally).
 bool meadowphysics_external_clock(uint8_t level);
+
+// Reset edge from handler_Trigger for MP_EXT_RESET_INPUT; `level` is the pin
+// state. Returns true if MP consumed the edge (running + external clock on).
+bool meadowphysics_external_reset(uint8_t level);
 
 // Output ownership: true when a script write to CV/TR channel `ch` (0-3) must
 // be suppressed -- MP is playing and uses `ch` in the current voice mode.

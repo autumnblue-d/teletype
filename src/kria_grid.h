@@ -24,6 +24,8 @@
 // (mTr..mGlide); 7/8 are the scale/pattern pages.
 #define KR_MODE_SCALE 7
 #define KR_MODE_PATTERN 8
+// Second sub-tab of the DUR page: the 6-lane script-trigger sequencer.
+#define KR_MODE_SCRIPTSEQ 9
 
 // Mod-mode overlays.
 #define KR_MOD_NONE 0

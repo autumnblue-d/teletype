@@ -31,6 +31,7 @@
 #include "region.h"
 #include "screen.h"
 #include "timers.h"
+#include "uhi_hub.h" // USB hub debug string (uhi_hub_debug_get) for the OLED
 #include "util.h"
 
 // this
@@ -518,6 +519,14 @@ void handler_Trigger(int32_t data) {
     if (input == ES_PLAY_INPUT &&
         es_play_trigger(gpio_get_pin_value(A00 + data)))
         return;
+    // reset (jack 2): route to MP/Kria when they own the external clock; a
+    // consumed edge skips the normal script dispatch (as the clock does).
+    if (input == MP_EXT_RESET_INPUT &&
+        meadowphysics_external_reset(gpio_get_pin_value(A00 + data)))
+        return;
+    if (input == KR_EXT_RESET_INPUT &&
+        kria_external_reset(gpio_get_pin_value(A00 + data)))
+        return;
     if (!ss_get_mute(&scene_state, input)) {
         bool tr_state = gpio_get_pin_value(A00 + data);
         if (tr_state) {
@@ -553,13 +562,46 @@ void handler_ScreenRefresh(int32_t data) {
         case M_EARTHSEA: screen_dirty = screen_refresh_earthsea(); break;
     }
 
+    u8 hub_dbg_active = 0;
+#if defined(USB_HOST_HUB_SUPPORT) && UHI_HUB_DEBUG_OLED
+    const char* hub_dbg = uhi_hub_debug_get();
+    hub_dbg_active = (hub_dbg && hub_dbg[0]) ? 1 : 0;
+#endif
+
     u8 grid = 0;
     for (size_t i = 0; i < 8; i++)
         if (screen_dirty & (1 << i)) {
             grid = 1;
+            // While the hub-debug overlay owns the top line, don't paint the
+            // mode's line 0 — that would alternate mode content with the overlay
+            // and flicker. The overlay draws line 0 itself, below.
+            if (i == 0 && hub_dbg_active) continue;
             if (ss_counter < SS_TIMEOUT) region_draw(&line[i]);
         }
     if (grid_control_mode && grid) scene_state.grid.grid_dirty = 1;
+
+#if defined(USB_HOST_HUB_SUPPORT) && UHI_HUB_DEBUG_OLED
+    // USB hub debug overlay on the top line (a debugging aid for the
+    // low-speed-behind-hub work; enable with -DUHI_HUB_DEBUG_OLED=1). Redraw
+    // ONLY when the text changed, or when the mode just tried to repaint line 0
+    // — redrawing every frame flickers.
+    if (hub_dbg_active && ss_counter < SS_TIMEOUT) {
+        static char hub_dbg_last[24] = { 0 };
+        u8 changed = 0;
+        size_t i = 0;
+        for (; hub_dbg[i] && i < sizeof(hub_dbg_last) - 1; i++) {
+            if (hub_dbg_last[i] != hub_dbg[i]) changed = 1;
+            hub_dbg_last[i] = hub_dbg[i];
+        }
+        if (hub_dbg_last[i] != 0) changed = 1;
+        hub_dbg_last[i] = 0;
+        if (changed || (screen_dirty & 1)) {
+            region_fill(&line[0], 0);
+            font_string_region_clip(&line[0], hub_dbg, 0, 0, 0xf, 0);
+            region_draw(&line[0]);
+        }
+    }
+#endif
 
 #ifdef TELETYPE_PROFILE
     profile_update(&prof_ScreenRefresh);
@@ -1374,32 +1416,40 @@ void initialize_module(void) {
     // screen init
     render_init();
 
-    if (is_flash_fresh()) {
+    u8 flash_was_fresh = is_flash_fresh();
+    if (flash_was_fresh) {
+        // First run after a layout change (FIRSTRUN_KEY bump): flash_prepare()
+        // reseeds automatically now — no button confirmation. Show a brief
+        // notice; it is cleared below once the reseed completes.
         char s[36];
-        strcpy(s, "SCENES WILL BE OVERWRITTEN!");
+        strcpy(s, "FIRST RUN");
         region_fill(&line[4], 0);
         font_string_region_clip(&line[4], s, 0, 0, 0x4, 0);
         region_draw(&line[4]);
 
-        strcpy(s, "PRESS ONLY IF YOU ARE");
+        strcpy(s, "SCENES WILL BE RESET");
         region_fill(&line[5], 0);
         font_string_region_clip(&line[5], s, 0, 0, 0x4, 0);
         region_draw(&line[5]);
 
-        strcpy(s, "UPDATING FIRMWARE");
+        strcpy(s, "PLEASE WAIT...");
         region_fill(&line[6], 0);
         font_string_region_clip(&line[6], s, 0, 0, 0x4, 0);
         region_draw(&line[6]);
-
-        strcpy(s, "DO NOT PRESS OTHERWISE!");
-        region_fill(&line[7], 0);
-        font_string_region_clip(&line[7], s, 0, 0, 0x4, 0);
-        region_draw(&line[7]);
-        ignore_front_press = 1;
     }
 
-    // prepare flash (if needed)
-    flash_prepare();
+    // prepare flash (reseeds unconditionally when fresh). Reuses the live
+    // scene_state as the seeding buffer (an on-stack scene_state_t overflows the
+    // 8 KB stack); it is reloaded from flash below, so this is safe.
+    flash_prepare(&scene_state);
+
+    // clear the first-run notice now that the reseed is done
+    if (flash_was_fresh) {
+        for (size_t i = 0; i < 8; i++) {
+            region_fill(&line[i], 0);
+            region_draw(&line[i]);
+        }
+    }
 
     // load device config
     flash_get_device_config(&device_config);

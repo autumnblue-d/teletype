@@ -302,6 +302,12 @@ bool meadowphysics_external_clock(uint8_t level) {
     return true;
 }
 
+bool meadowphysics_external_reset(uint8_t level) {
+    if (!mp_running || !mp_clk.external) return false;
+    if (level) mp_engine_reset(&mp_eng);
+    return true;
+}
+
 // Fires in ISR context; defer the actual off-edge to the event loop.
 static void mpMetroOff_callback(void* o) {
     (void)o;

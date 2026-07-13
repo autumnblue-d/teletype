@@ -267,6 +267,16 @@ static void run_clock(uint8_t phase) {
     writing = true;
     kria_engine_clock(&eng, phase);
     writing = false;
+    // Fire native scripts 3-8 for any script-lane trigger points that landed on
+    // this clock. The engine only flags them (rt.script_fired); scene_state and
+    // run_script live here in the shell (mirrors Meadowphysics' MP_SCRIPT).
+    if (phase && eng.rt.script_fired) {
+        uint8_t fired = eng.rt.script_fired;
+        eng.rt.script_fired = 0;
+        for (uint8_t lane = 0; lane < KRIA_SCRIPT_LANES; lane++)
+            if (fired & (1u << lane))
+                run_script(&scene_state, KRIA_SCRIPT_BASE + lane);
+    }
     dirty = true;
 }
 
@@ -394,6 +404,19 @@ bool kria_external_clock(uint8_t level) {
     if (!kria_running || !clk.external) return false;
     uint8_t phase;
     if (grid_clock_external_edge(&clk, level, &phase)) run_clock(phase);
+    return true;
+}
+
+// Reset edge from handler_Trigger for KR_EXT_RESET_INPUT (jack 2). Only active
+// -- and only consumes the edge -- while the external clock is enabled; resets
+// the sequencer (tracks + script lanes) on the rising edge.
+bool kria_external_reset(uint8_t level) {
+    if (!kria_running || !clk.external) return false;
+    if (level) {
+        kria_engine_reset(&eng);
+        scene_state.grid.grid_dirty = 1;
+        dirty = true;
+    }
     return true;
 }
 
@@ -825,9 +848,10 @@ void process_kria_keys(uint8_t key, uint8_t mod_key, bool is_held_key) {
 #define KM_S_VALUE 12
 #define KM_S_TITLE 15
 
-static const char* const km_page_name[9] = { "TRIG",  "NOTE",  "OCT",
-                                             "DUR",   "RPT",   "ALT",
-                                             "GLIDE", "SCALE", "PATT" };
+static const char* const km_page_name[10] = { "TRIG",  "NOTE",   "OCT",
+                                              "DUR",   "RPT",    "ALT",
+                                              "GLIDE", "SCALE",  "PATT",
+                                              "SCRIPT" };
 static const char* const km_view_name[5] = { "SEQ", "TIME", "CONFIG", "I2C",
                                              "TUNING" };
 
@@ -1036,7 +1060,7 @@ uint8_t screen_refresh_kria(void) {
     mode_draw_num(3, 42, kgrid.track, KM_S_VALUE);
     font_string_region_clip(&line[3], "PAGE", 66, 0, KM_S_LABEL, 0);
     font_string_region_clip(&line[3],
-                            kgrid.mode < 9 ? km_page_name[kgrid.mode] : "?",
+                            kgrid.mode < 10 ? km_page_name[kgrid.mode] : "?",
                             102, 0, KM_S_VALUE, 0);
 
     font_string_region_clip(&line[7], "1SEQ 2TIME 3CFG 4I2C  SPACE:RUN S:SAVE",

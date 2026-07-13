@@ -273,6 +273,17 @@ void kria_engine_reset(kria_engine_t* e) {
     e->rt.cue_pat_next = 0;
     e->rt.pos_reset = false;
     e->rt.meta_reset = false;
+
+    // Script sequencer: arm each lane so the next clock advances to its
+    // script_lstart and fires (mirrors the tracks' pos=lend / pos_mul=tmul).
+    {
+        kria_pattern_t* pat = &e->cfg.p[e->cfg.pattern];
+        for (uint8_t lane = 0; lane < KRIA_SCRIPT_LANES; lane++) {
+            e->rt.script_step[lane] = pat->script_lend[lane];
+            e->rt.script_div_count[lane] = pat->script_tmul[lane];
+        }
+        e->rt.script_fired = 0;
+    }
 }
 
 void kria_engine_init(kria_engine_t* e, const kria_output_t* out,
@@ -338,10 +349,43 @@ void kria_engine_clock(kria_engine_t* e, uint8_t phase) {
         e->rt.cue_count = 0;
         e->rt.cue_sub_count = 0;
         e->rt.pos_reset = false;
+        for (uint8_t l = 0; l < KRIA_SCRIPT_LANES; l++) {
+            e->rt.script_step[l] = e->cfg.p[e->cfg.pattern].script_lend[l];
+            e->rt.script_div_count[l] = e->cfg.p[e->cfg.pattern].script_tmul[l];
+        }
     }
 
     for (uint8_t i = 0; i < KRIA_NUM_TRACKS; i++) {
         if (!e->cfg.p[e->cfg.pattern].t[i].tt_clocked) clock_kria_track(e, i);
+    }
+
+    // ---- script-trigger sequencer (6 lanes -> scripts 3-8) ----
+    // One shared 16-step playhead, advanced once per clock divided by
+    // script_tmul, looping forward within [script_lstart, script_lend] (wrap
+    // handled as in kria_next_step). Flags fired lanes in rt.script_fired; the
+    // mode shell calls run_script() for each (the engine has no scene_state).
+    {
+        kria_pattern_t* pat = &e->cfg.p[e->cfg.pattern];
+        e->rt.script_fired = 0;
+        for (uint8_t lane = 0; lane < KRIA_SCRIPT_LANES; lane++) {
+            uint8_t tm = pat->script_tmul[lane] ? pat->script_tmul[lane] : 1;
+            if (++e->rt.script_div_count[lane] < tm) continue;
+            e->rt.script_div_count[lane] = 0;
+            if (e->rt.script_step[lane] == pat->script_lend[lane])
+                e->rt.script_step[lane] = pat->script_lstart[lane];
+            else if (++e->rt.script_step[lane] > 15)
+                e->rt.script_step[lane] = 0;
+            uint8_t st = e->rt.script_step[lane];
+            if (!(pat->script_lanes[lane] & (1u << st))) continue;
+            bool fire;
+            switch (pat->script_prob[lane][st]) {
+                case 0: fire = false; break;
+                case 1: fire = (e->rnd(e->rnd_ctx) & 0xff) > 192; break;  // ~25%
+                case 2: fire = (e->rnd(e->rnd_ctx) & 0xff) > 128; break;  // ~50%
+                default: fire = true; break;
+            }
+            if (fire) e->rt.script_fired |= (uint8_t)(1u << lane);
+        }
     }
 }
 
@@ -393,6 +437,12 @@ void kria_engine_set_defaults(kria_config_t* cfg) {
     for (uint8_t p = 0; p < KRIA_NUM_PATTERNS; p++) {
         for (uint8_t tr = 0; tr < KRIA_NUM_TRACKS; tr++) cfg->p[p].t[tr] = t0;
         cfg->p[p].scale = 0;
+        // script sequencer: no steps armed, all probabilities 3 (100%), full
+        // 16-step loop, no clock division. (lanes already 0 from the memset.)
+        memset(cfg->p[p].script_prob, 3, sizeof(cfg->p[p].script_prob));
+        memset(cfg->p[p].script_lstart, 0, KRIA_SCRIPT_LANES);
+        memset(cfg->p[p].script_lend, 15, KRIA_SCRIPT_LANES);
+        memset(cfg->p[p].script_tmul, 1, KRIA_SCRIPT_LANES);
     }
 
     cfg->pattern = 0;
@@ -430,6 +480,16 @@ bool kria_engine_config_valid(const kria_config_t* cfg) {
             for (uint8_t s = 0; s < 16; s++)
                 if (t->rpt[s] == 0)
                     return false;  // downstream dur/rpt div guard
+        }
+        // script sequencer: per-lane loop bounds in range, divider >= 1,
+        // per-step prob 0..3
+        for (uint8_t l = 0; l < KRIA_SCRIPT_LANES; l++) {
+            if (cfg->p[p].script_lstart[l] > 15 ||
+                cfg->p[p].script_lend[l] > 15)
+                return false;
+            if (cfg->p[p].script_tmul[l] == 0) return false;
+            for (uint8_t s = 0; s < 16; s++)
+                if (cfg->p[p].script_prob[l][s] > 3) return false;
         }
     }
 

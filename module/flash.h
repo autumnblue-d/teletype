@@ -71,7 +71,7 @@ typedef struct {
 } nvram_data_t;
 
 u8 is_flash_fresh(void);
-void flash_prepare(void);
+void flash_prepare(scene_state_t* scene);
 void flash_read(uint8_t preset_no, scene_state_t* scene,
                 char (*text)[SCENE_TEXT_LINES][SCENE_TEXT_CHARS],
                 uint8_t init_pattern, uint8_t init_grid,

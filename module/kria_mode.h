@@ -10,8 +10,10 @@
 // clock timer and the per-track note-off/repeat/blink timers, binds output, and
 // renders the OLED. See KRIA_PORT_PLAN.md §5-§7.
 
-// Trigger input (0-indexed) carrying Kria's external clock when enabled.
-#define KR_EXT_CLOCK_INPUT 1
+// Trigger inputs (0-indexed) driving Kria when the external clock is enabled:
+// jack 1 (index 0) = clock, jack 2 (index 1) = reset.
+#define KR_EXT_CLOCK_INPUT 0
+#define KR_EXT_RESET_INPUT 1
 
 // handler_AppCustom event codes: our ISR timers post these, main.c dispatches
 // them. Single values plus per-track ranges [BASE, BASE+KRIA_NUM_TRACKS).
@@ -48,6 +50,10 @@ void kria_service_pattern_copy(void);
 // External-clock edge from handler_Trigger for KR_EXT_CLOCK_INPUT; `level` is
 // the pin state. Returns true if Kria consumed the edge.
 bool kria_external_clock(uint8_t level);
+
+// Reset edge from handler_Trigger for KR_EXT_RESET_INPUT; `level` is the pin
+// state. Returns true if Kria consumed the edge (running + external clock on).
+bool kria_external_reset(uint8_t level);
 
 // Output ownership: true when a script write to CV/TR channel `ch` (0-3) must
 // be suppressed (Kria playing, ch is an un-muted track, not our own write).
