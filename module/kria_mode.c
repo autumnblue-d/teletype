@@ -13,12 +13,13 @@
 
 // kria engine + clock + grid (src/)
 #include "grid_led.h"  // GRID_L0/1/2 ramp + grid_led_finalize
-#include "helpers.h"   // note_to_cv (shared ET semitone mapping)
+#include "helpers.h"   // note_to_cv (plain ET, for the i2c fan-out)
 #include "kria_clock.h"
 #include "kria_engine.h"
 #include "kria_grid.h"
 #include "kria_i2c.h"       // follower output
 #include "kria_i2c_oled.h"  // MIDI-follower OLED editor
+#include "tuning.h"         // per-channel tuning table + editor helpers
 
 // libavr32
 #include "events.h"
@@ -76,9 +77,26 @@ static uint32_t clock_delta = KR_CLOCK_PERIOD_DEFAULT;
 #define KM_VIEW_TIME 1
 #define KM_VIEW_CONFIG 2
 #define KM_VIEW_I2C 3
+#define KM_VIEW_TUNING 4  // Ansible advanced "tuning" grid editor
 static uint8_t km_view = KM_VIEW_SEQ;
 static uint8_t km_rough = 0;
 static uint8_t km_fine = 0;
+
+// ---- tuning-view state (Ansible ansible_grid.c view_tuning) ----
+// Edits the global tuning_table[] RAM copy live; persisted only on the explicit
+// save gestures below. Note preview drives the selected slot(s) to the module
+// CV/TR outs so a tuner/scope can read them.
+static uint8_t tun_track = 0;   // selected channel (0..3)
+static uint8_t tun_octave = 0;  // selected octave bank (0..9)
+static uint8_t tun_offset[4] = { 0, 0, 0, 0 };  // per-track note within octave
+static bool tun_note_on[4] = { true, true, true, true };
+static bool tun_mod = false;  // row4/col0 held: fine edits hit all slots
+// Row-5 utility keys use short/long-press (Ansible grid_keytimer). Timed on
+// release from get_ticks() rather than a hold timer, to keep flash writes in
+// the grid event-loop context.
+#define KM_TUNING_HOLD_MS 400
+static uint8_t tun_hold_x = 0xff;  // row-5 utility key currently held
+static uint32_t tun_hold_start = 0;
 
 // Persist the Kria song bank (+ shared scale bank) and i2c follower bank if
 // dirty. The single save path -- used by mode exit, the S key, and a scene
@@ -97,6 +115,8 @@ bool kria_flush_if_dirty(void) {
 }
 
 static void km_set_period(uint16_t p);  // defined in the keyboard section
+static void km_tuning_enter(void);       // defined in the tuning-view section
+static void km_tuning_leave(void);
 
 static int imax(int a, int b) {
     return a > b ? a : b;
@@ -119,12 +139,13 @@ static void km_tr(void* c, uint8_t ch, uint8_t on) {
 }
 static void km_cv(void* c, uint8_t ch, int16_t sem) {
     (void)c;
-    int16_t cv = note_to_cv(sem);
     if (ch < KRIA_NUM_TRACKS) {
+        // i2c followers stay on the plain ET map (matches Ansible).
         kria_i2c_set_voice(ch, sem, eng.rt.dur_unscaled[ch]);
-        kria_i2c_cv(ch, cv);
+        kria_i2c_cv(ch, note_to_cv(sem));
     }
-    tele_cv(ch, cv, 1);
+    // module CV out is retuned per channel via the tuning table.
+    tele_cv(ch, note_to_cv_ch(ch, sem), 1);
 }
 static void km_slew(void* c, uint8_t ch, uint16_t s) {
     (void)c;
@@ -290,6 +311,7 @@ void kria_mode_exit(void) {
     // only when something changed; may briefly stall -- prefer saving stopped.
     kria_flush_if_dirty();  // song + scale + i2c follower bank
     kria_i2c_oled_exit();   // don't leave the MIDI editor open across mode exit
+    if (km_view == KM_VIEW_TUNING) km_tuning_leave();  // drop preview gates
     km_view = KM_VIEW_SEQ;  // next entry starts on the sequencer
     kgrid.hold_pending = 0;  // drop any in-flight pattern long-press
     hold_ticks = 0;
@@ -538,11 +560,179 @@ static void km_config_key(uint8_t x, uint8_t y, uint8_t z) {
         eng.cfg.meta_reset_all = !eng.cfg.meta_reset_all;
         cfg_dirty = true;
     }
-    // x==14 (tuning) not ported
+    else if (y == 7 && x == 14) {  // enter the tuning editor (Ansible parity)
+        km_view = KM_VIEW_TUNING;
+        km_tuning_enter();
+    }
 }
 
 // The i2c view (Ansible ii toggle + per-follower config pages) is shared with
 // the MP shell; it lives in src/kria_i2c.c (kria_i2c_view_*).
+
+// ---- Tuning view (Ansible refresh_grid_tuning / view_tuning) ----
+// A faithful port of Ansible's CV tuning editor, hosted inside Kria mode.
+// See https://monome.org/docs/ansible/advanced/#tuning.
+
+static uint16_t tun_slot(uint8_t track) {
+    return (uint16_t)tun_octave * 12 + tun_offset[track];
+}
+
+// Drive the module CV/TR outs so the edited slot(s) can be measured. writing=1
+// bypasses Kria's own output suppression (harmless if the engine is stopped,
+// which is the normal case in this config view).
+static void km_tuning_preview(void) {
+    writing = true;
+    for (uint8_t t = 0; t < 4; t++) {
+        if (tun_mod || t == tun_track)
+            tele_cv(t, (int16_t)tuning_table[t][tun_slot(t)], 0);
+        tele_tr(t, tun_note_on[t] ? 1 : 0);
+    }
+    writing = false;
+}
+
+static void km_tuning_enter(void) {
+    tun_octave = 0;
+    tun_track = 0;
+    tun_mod = false;
+    tun_hold_x = 0xff;
+    for (uint8_t t = 0; t < 4; t++) {
+        tun_note_on[t] = true;
+        tun_offset[t] = 0;
+    }
+    km_tuning_preview();
+}
+
+static void km_tuning_leave(void) {
+    writing = true;
+    for (uint8_t t = 0; t < 4; t++) tele_tr(t, 0);  // drop preview gates
+    writing = false;
+}
+
+static void km_tuning_render(void) {
+    uint8_t* led = monomeLedBuffer;
+    memset(led, 0, 128);
+
+    // rows 0-3: per-track note-on toggle (col 0) + 12 note slots (cols 2-13)
+    for (uint8_t i = 0; i < 4; i++) {
+        led[i * 16] = tun_note_on[i] ? GRID_L1 : GRID_L0;
+        for (uint8_t c = 0; c < 12; c++) led[i * 16 + 2 + c] = GRID_L0;
+        led[i * 16 + 2 + tun_offset[i]] += 4;
+        if (i == tun_track) led[i * 16 + 2 + tun_offset[i]] += 4;
+    }
+
+    // row 4: mod (fine edits apply to all slots while held)
+    led[64] = tun_mod ? GRID_L1 : GRID_L0;
+
+    // row 5: octave banks (0-9) + reload(11) / fit-offset(13) / fit-lin(14) /
+    // save(15) utility keys
+    for (uint8_t c = 0; c < 10; c++) led[80 + c] = GRID_L0;
+    led[80 + tun_octave] = GRID_L1;
+    led[80 + 11] = GRID_L1;
+    led[80 + 13] = GRID_L1;
+    led[80 + 14] = GRID_L1;
+    led[80 + 15] = GRID_L1;
+
+    // row 6: coarse DAC value of the selected slot, as a filled bar
+    uint16_t v = tuning_table[tun_track][tun_slot(tun_track)];
+    uint8_t dac_step = v >> 6;  // 14-bit -> 0..255
+    memset(led + 96, 3, dac_step / 16);
+    led[96 + dac_step / 16] = dac_step % 16;
+
+    // row 7: fine +/- steps around the selected slot
+    for (uint8_t i = 0; i < 8; i++) {
+        if ((int32_t)TUNING_DAC_MAX - v > (1 << i))
+            led[112 + 8 + i] = 2 * i + 1;
+        if (v > (1 << i)) led[112 + 7 - i] = 2 * i + 1;
+    }
+
+    km_view_finalize(led);
+}
+
+// Commit or preview the row-5 utility keys. long_press mirrors Ansible's
+// grid_keytimer (destructive/persisting), short press its immediate handler.
+static void km_tuning_util(uint8_t x, bool long_press) {
+    if (x == 11) {
+        if (long_press)
+            tuning_default();               // factory reset (equal temperament)
+        else
+            flash_get_tuning(tuning_table);  // reload last saved (panic)
+    }
+    else if (x == 13) {
+        tuning_fit(0);  // fixed offset per channel
+        if (long_press) flash_update_tuning(tuning_table);
+    }
+    else if (x == 14) {
+        tuning_fit(1);  // linear interpolation between octave waypoints
+        if (long_press) flash_update_tuning(tuning_table);
+    }
+    else if (x == 15) {
+        flash_update_tuning(tuning_table);  // save as-is
+        mode_confirm_show("SAVED");
+    }
+    km_tuning_preview();
+}
+
+static void km_tuning_key(uint8_t x, uint8_t y, uint8_t z) {
+    if (z) {
+        if (y == 4 && x == 0) { tun_mod = true; }
+        else if (y <= 3) {
+            if (x == 0) { tun_note_on[y] = !tun_note_on[y]; }
+            else if (x >= 2 && x <= 13) {
+                uint8_t offset = x - 2;
+                if (y == tun_track && offset == tun_offset[y])
+                    tun_note_on[y] = !tun_note_on[y];  // re-tap toggles note-on
+                else {
+                    tun_track = y;
+                    tun_offset[y] = offset;
+                }
+            }
+            km_tuning_preview();
+        }
+        else if (y == 5 && x <= 9) {
+            tun_octave = x;
+            km_tuning_preview();
+        }
+        else if (y == 5 && (x == 11 || x == 13 || x == 14 || x == 15)) {
+            tun_hold_x = x;  // acted on release (short) / after hold (long)
+            tun_hold_start = get_ticks();
+        }
+        else if (y == 6) {
+            tuning_set(tun_track, tun_slot(tun_track),
+                       (uint16_t)x * (TUNING_DAC_MAX / 16));
+            km_tuning_preview();
+        }
+        else if (y == 7) {
+            int16_t delta =
+                (x >= 8) ? (int16_t)(1 << (x - 8)) : -(int16_t)(1 << (8 - x));
+            uint16_t slot = tun_slot(tun_track);
+            if (tun_mod) {
+                for (uint8_t t = 0; t < 4; t++)
+                    for (uint8_t s = 0; s < TUNING_SLOTS; s++)
+                        tuning_set(t, s, tuning_get(t, s) + delta);
+            }
+            else
+                tuning_set(tun_track, slot,
+                           tuning_get(tun_track, slot) + delta);
+            km_tuning_preview();
+        }
+    }
+    else {  // release
+        if (y == 4 && x == 0) { tun_mod = false; }
+        else if (y == 5 && x == tun_hold_x) {
+            bool long_press =
+                (get_ticks() - tun_hold_start) >= KM_TUNING_HOLD_MS;
+            km_tuning_util(x, long_press);
+            tun_hold_x = 0xff;
+        }
+    }
+}
+
+// Switch the front-most grid view, dropping any preview gates the tuning view
+// raised so they don't hang when leaving it.
+static void km_switch_view(uint8_t v) {
+    if (km_view == KM_VIEW_TUNING && v != KM_VIEW_TUNING) km_tuning_leave();
+    km_view = v;
+}
 
 void kria_grid_key(uint8_t x, uint8_t y, uint8_t z) {
     if (!kria_owns_grid()) return;
@@ -553,6 +743,8 @@ void kria_grid_key(uint8_t x, uint8_t y, uint8_t z) {
     else if (active && km_view == KM_VIEW_I2C) {
         mode_i2c_view_grid_key(x, y, z);
     }
+    else if (active && km_view == KM_VIEW_TUNING)
+        km_tuning_key(x, y, z);
     else {
         kria_grid_process_key(&eng, &kgrid, x, y, z);
         if (z) cfg_dirty = true;
@@ -567,6 +759,8 @@ void kria_grid_render(void) {
         km_config_render();
     else if (active && km_view == KM_VIEW_I2C)
         kria_i2c_view_render(monomeLedBuffer, monome_is_vari());
+    else if (active && km_view == KM_VIEW_TUNING)
+        km_tuning_render();
     else
         kria_grid_refresh(&eng, &kgrid, monomeLedBuffer, monome_is_vari());
 }
@@ -604,18 +798,18 @@ void process_kria_keys(uint8_t key, uint8_t mod_key, bool is_held_key) {
         mode_confirm_show("SAVED");
     }
     else if (match_no_mod(mod_key, key, HID_1)) {  // sequencer view
-        km_view = KM_VIEW_SEQ;
+        km_switch_view(KM_VIEW_SEQ);
     }
     else if (match_no_mod(mod_key, key, HID_2)) {  // time view (Ansible Key 1)
-        km_view = KM_VIEW_TIME;
+        km_switch_view(KM_VIEW_TIME);
         km_sync_rc_from_period();
     }
     else if (match_no_mod(mod_key, key,
                           HID_3)) {  // config view (Ansible Key 2)
-        km_view = KM_VIEW_CONFIG;
+        km_switch_view(KM_VIEW_CONFIG);
     }
     else if (match_no_mod(mod_key, key, HID_4)) {  // i2c follower routing view
-        km_view = KM_VIEW_I2C;
+        km_switch_view(KM_VIEW_I2C);
         kria_i2c_view_enter();
     }
     else { return; }
@@ -634,7 +828,8 @@ void process_kria_keys(uint8_t key, uint8_t mod_key, bool is_held_key) {
 static const char* const km_page_name[9] = { "TRIG",  "NOTE",  "OCT",
                                              "DUR",   "RPT",   "ALT",
                                              "GLIDE", "SCALE", "PATT" };
-static const char* const km_view_name[4] = { "SEQ", "TIME", "CONFIG", "I2C" };
+static const char* const km_view_name[5] = { "SEQ", "TIME", "CONFIG", "I2C",
+                                             "TUNING" };
 
 
 // ---- native ops (KR.* retargeted from external-Ansible i2c to the engine)

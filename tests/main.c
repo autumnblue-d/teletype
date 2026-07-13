@@ -14,6 +14,7 @@
 #include "parser_tests.h"
 #include "process_tests.h"
 #include "serialize_scene_tests.h"
+#include "tuning_tests.h"
 #include "teletype.h"
 #include "teletype_io.h"
 #include "turtle_tests.h"
@@ -177,6 +178,7 @@ int main(int argc, char** argv) {
     RUN_SUITE(dejavu_suite);
     RUN_SUITE(beta_suite);
     RUN_SUITE(serialize_scene_suite);
+    RUN_SUITE(tuning_suite);
     RUN_SUITE(meadowphysics_suite);
     RUN_SUITE(kria_suite);
     RUN_SUITE(es_suite);

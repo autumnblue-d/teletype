@@ -8,6 +8,7 @@
 #include "kria_engine.h"
 #include "line_editor.h"
 #include "teletype.h"
+#include "tuning.h"  // TUNING_CHANNELS / TUNING_SLOTS
 
 // Reduced from 32 to 30 to reclaim ~12 KB of NVRAM: this lets the flash NVRAM
 // region shrink (see __flash_nvram_size__ in config.mk), freeing program flash
@@ -60,9 +61,13 @@ typedef struct {
     mp_slot_t mp_slots[MP_SLOTS];  // Meadowphysics global 8-slot preset bank
     uint8_t mp_current;            // last-used MP slot, reloaded on boot
     uint8_t scale_fresh;           // version tag for the scale-bank self-heal
-                                   // (see SCALE_BANK_KEY in flash.c); kept last
-                                   // so adding it doesn't shift any existing
-                                   // field's flash offset
+                                   // (see SCALE_BANK_KEY in flash.c)
+    // Global per-output CV tuning bank (Ansible "tuning" port). Edited by the
+    // Kria grid tuning view, used by all ported grid apps' module CV out.
+    uint16_t tuning_table[TUNING_CHANNELS][TUNING_SLOTS];
+    uint8_t tuning_fresh;  // version tag for the tuning-bank self-heal (see
+                           // TUNING_BANK_KEY); kept last so adding it doesn't
+                           // shift any existing field's flash offset
 } nvram_data_t;
 
 u8 is_flash_fresh(void);
@@ -86,6 +91,11 @@ void flash_update_device_config(device_config_t*);
 void flash_get_device_config(device_config_t*);
 void flash_get_scale_bank(uint8_t (*bank)[8]);
 void flash_update_scale_bank(uint8_t (*bank)[8]);
+
+// Global per-output CV tuning bank. get copies flash -> RAM, update RAM ->
+// flash (called only on an explicit save from the grid tuning view).
+void flash_get_tuning(uint16_t (*table)[TUNING_SLOTS]);
+void flash_update_tuning(uint16_t (*table)[TUNING_SLOTS]);
 
 // Global Kria song bank (single instance in nvram_data_t; not per-scene).
 void flash_get_kria(kria_config_t* dst);

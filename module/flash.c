@@ -27,7 +27,8 @@
 // -> 0x2C: SCENE_SLOTS 18->16.
 // -> 0x2D: MP moved from a per-scene mp_config_t to a global 8-slot preset bank
 // (f.mp_slots + f.mp_current); nvram_scene_t.mp dropped.
-#define FIRSTRUN_KEY 0x2D
+// -> 0x2E: global per-output CV tuning bank (f.tuning_table + f.tuning_fresh).
+#define FIRSTRUN_KEY 0x2E
 
 // Independent version tag for the global scale bank. The scale bank has no
 // load-time validity check (unlike the kria/mp configs, which self-repair via
@@ -36,6 +37,12 @@
 // self-heals on upgrade WITHOUT the scene-wiping full first-run. Bump when the
 // default scales change.
 #define SCALE_BANK_KEY 0x01
+
+// Independent version tag for the global tuning bank, same self-heal rationale
+// as SCALE_BANK_KEY: the bank is used verbatim from flash (no validity check),
+// so seed/refresh it whenever the tag mismatches. Bump when the default table
+// (equal temperament) changes.
+#define TUNING_BANK_KEY 0x01
 
 static grid_data_t grid_data;
 
@@ -96,6 +103,16 @@ static void flash_seed_scale_bank(void) {
             scale_bank[s][i + 1] = (s < 7) ? SCALE_INT[s][i] : 1;
     }
     flashc_memcpy((void*)&f.scale_bank, scale_bank, sizeof(scale_bank), true);
+}
+
+// Global tuning bank default: equal temperament on every channel.
+// tuning_default fills the RAM working copy (a static global, no stack cost);
+// copy it to flash. main.c reloads the RAM copy from flash after
+// flash_prepare, so mutating it here is harmless.
+static void flash_seed_tuning(void) {
+    tuning_default();
+    flashc_memcpy((void*)&f.tuning_table, tuning_table, sizeof(f.tuning_table),
+                  true);
 }
 
 void flash_prepare() {
@@ -183,6 +200,13 @@ void flash_prepare() {
         flash_seed_scale_bank();
         flashc_memset8((void*)&f.scale_fresh, SCALE_BANK_KEY, 1, true);
     }
+
+    // Same version-tagged self-heal for the global tuning bank (seeds it on a
+    // fresh device and on upgrade without wiping scenes).
+    if (f.tuning_fresh != TUNING_BANK_KEY) {
+        flash_seed_tuning();
+        flashc_memset8((void*)&f.tuning_fresh, TUNING_BANK_KEY, 1, true);
+    }
 }
 
 void flash_write(uint8_t preset_no, scene_state_t* scene,
@@ -263,6 +287,14 @@ void flash_get_scale_bank(uint8_t (*bank)[8]) {
 
 void flash_update_scale_bank(uint8_t (*bank)[8]) {
     flashc_memcpy((void*)&f.scale_bank, bank, sizeof(f.scale_bank), true);
+}
+
+void flash_get_tuning(uint16_t (*table)[TUNING_SLOTS]) {
+    memcpy(table, f.tuning_table, sizeof(f.tuning_table));
+}
+
+void flash_update_tuning(uint16_t (*table)[TUNING_SLOTS]) {
+    flashc_memcpy((void*)&f.tuning_table, table, sizeof(f.tuning_table), true);
 }
 
 void flash_get_kria(kria_config_t* dst) {

@@ -2,8 +2,8 @@
 
 #include "grid_binding.h"
 
-#include "helpers.h"      // note_to_cv (shared ET semitone mapping)
 #include "teletype_io.h"  // tele_tr, tele_cv
+#include "tuning.h"       // note_to_cv_ch (per-channel tuning table)
 
 void grid_bind_tr(void* ctx, uint8_t ch, uint8_t on) {
     (void)ctx;
@@ -12,5 +12,5 @@ void grid_bind_tr(void* ctx, uint8_t ch, uint8_t on) {
 
 void grid_bind_cv(void* ctx, uint8_t ch, int16_t note) {
     (void)ctx;
-    tele_cv(ch, note_to_cv(note), 0);
+    tele_cv(ch, note_to_cv_ch(ch, note), 0);
 }

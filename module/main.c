@@ -1418,6 +1418,9 @@ void initialize_module(void) {
         kria_i2c_load(km_i2c_state);
     }
 
+    // load the global per-output CV tuning bank (used by the ported grid apps)
+    flash_get_tuning(tuning_table);
+
     // load preset from flash
     preset_select = flash_last_saved_scene();
     ss_set_scene(&scene_state, preset_select);

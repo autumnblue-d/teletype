@@ -82,6 +82,7 @@ CSRCS = \
 	../src/command.c					\
 	../src/every.c					\
 	../src/helpers.c					\
+	../src/tuning.c						\
 	../src/beta.c						\
 	../src/dejavu.c						\
 	../src/drum_helpers.c					\
