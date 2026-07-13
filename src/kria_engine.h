@@ -35,9 +35,10 @@
 // ~18.5 KB; funded by SCENE_SLOTS 30 -> 20. See KRIA_PORT_PLAN.md §0.
 #define KRIA_NUM_PATTERNS 16
 
-// Script-trigger sequencer (DUR page's second sub-tab, KR_MODE_SCRIPTSEQ): 6
-// lanes of 16 shared-length steps, one shared playhead. Lane i fires native
-// Teletype script index (KRIA_SCRIPT_BASE + i) -- i.e. scripts 3-8.
+// MP-style cascade sequencer (DUR page's second sub-tab, KR_MODE_MPSEQ): 6
+// counter lanes. Lane i fires native Teletype script index (KRIA_SCRIPT_BASE +
+// i) on rollover -- i.e. scripts 3-8. The MP engine has MP_ROWS (8) counters;
+// lanes >= KRIA_SCRIPT_LANES are inert (the fire binding drops them).
 #define KRIA_SCRIPT_LANES 6
 #define KRIA_SCRIPT_BASE 2
 
@@ -126,15 +127,6 @@ typedef struct {
     kria_track_t t[KRIA_NUM_TRACKS];
     uint8_t scale;  // index into the shared scale bank
 
-    // Per-pattern script-trigger sequencer (see KRIA_SCRIPT_* above). Six lanes
-    // of 16 steps, each with its own loop + clock divider (independent lengths
-    // -> polymeter). Edited on the DUR page's second sub-tab.
-    uint16_t script_lanes[KRIA_SCRIPT_LANES];  // bit s = trigger armed at step s
-    uint8_t script_prob[KRIA_SCRIPT_LANES][16];   // per-step fire prob 0..3
-    uint8_t script_lstart[KRIA_SCRIPT_LANES];     // per-lane loop start (0..15)
-    uint8_t script_lend[KRIA_SCRIPT_LANES];       // per-lane loop end (<start=wrap)
-    uint8_t script_tmul[KRIA_SCRIPT_LANES];       // per-lane clock divider (>=1)
-
     // Per-pattern Meadowphysics-style cascade sequencer (DUR page's second
     // sub-tab; see KRIA_MPSEQ_PLAN.md). Six cascading counter lanes (rows 0-5)
     // fire scripts 3-8 (KRIA_SCRIPT_BASE + lane) on rollover. voice_mode is
@@ -206,11 +198,6 @@ typedef struct {
     uint8_t cue_pat_next;  // queued pattern change (1-based; 0 = none)
     bool pos_reset;        // re-arm all positions on next clock
     bool meta_reset;       // reset meta pointer on next clock
-
-    // script-trigger sequencer (see kria_pattern_t.script_*)
-    uint8_t script_step[KRIA_SCRIPT_LANES];       // per-lane playhead 0..15
-    uint8_t script_div_count[KRIA_SCRIPT_LANES];  // per-lane divider sub-counter
-    uint8_t script_fired;  // lanes that fired this tick (bitmask; shell reads)
 } kria_runtime_t;
 
 // Thin output interface. The engine never touches hardware directly.

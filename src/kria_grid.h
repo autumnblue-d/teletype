@@ -19,13 +19,15 @@
 #include <stdint.h>
 
 #include "kria_engine.h"
+#include "meadowphysics_grid.h"  // mp_grid_state_t + MP grid render/key (MPSEQ)
 
 // Grid modes: 0..6 are the per-step param pages and equal the KR_P_* indices
 // (mTr..mGlide); 7/8 are the scale/pattern pages.
 #define KR_MODE_SCALE 7
 #define KR_MODE_PATTERN 8
-// Second sub-tab of the DUR page: the 6-lane script-trigger sequencer.
-#define KR_MODE_SCRIPTSEQ 9
+// Second sub-tab of the DUR page: the 6-lane Meadowphysics-style cascade
+// sequencer (reuses the MP grid surface; see KRIA_MPSEQ_PLAN.md).
+#define KR_MODE_MPSEQ 9
 
 // Mod-mode overlays.
 #define KR_MOD_NONE 0
@@ -71,6 +73,13 @@ typedef struct {
     // mutable scale bank (caller-owned, 16x8); set by the shell for the scale
     // page. May be NULL (scale-interval editing then no-ops).
     uint8_t (*scale_bank)[8];
+
+    // DUR second sub-tab (KR_MODE_MPSEQ): the reused Meadowphysics grid surface.
+    // mpseq is the shell-owned working MP engine (caller-set, like scale_bank;
+    // NULL -> the MP page renders/edits nothing). mpgrid is the MP grid UI state
+    // (its positions/speed/rules view + press counters).
+    mp_engine_t* mpseq;
+    mp_grid_state_t mpgrid;
 } kria_grid_state_t;
 
 void kria_grid_state_init(kria_grid_state_t* g);

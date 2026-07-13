@@ -74,6 +74,8 @@ void kria_grid_state_init(kria_grid_state_t* g) {
     g->div_sync = 0;
     g->note_div_sync = 0;
     g->scale_bank = NULL;
+    g->mpseq = NULL;  // shell sets this to its working MP engine
+    mp_grid_state_init(&g->mpgrid);
 }
 
 // ---- loop-range math (Ansible adjust_/update_loop_*) ----
@@ -484,44 +486,17 @@ static void draw_pattern(kria_engine_t* e, kria_grid_state_t* g, uint8_t* led) {
     }
 }
 
-// Script-trigger sequencer (KR_MODE_SCRIPTSEQ): 6 lanes (rows 0-5) = scripts
-// 3-8, 16 steps, one shared playhead. Mirrors draw_tr's look: armed steps lit,
-// a swept playhead column, a dim shared loop-region band. Under KR_MOD_PROB the
-// armed cells' brightness encodes per-step probability instead.
-static void draw_scriptseq(kria_engine_t* e, kria_grid_state_t* g,
-                           uint8_t* led) {
-    uint8_t ep = edit_pat(e, g);
-    kria_pattern_t* pat = &e->cfg.p[ep];
-    int prob_view = (g->mod_mode == KR_MOD_PROB);
-    int ph = playhead_ok(e, g);
-    uint8_t add = (uint8_t)(2 + (g->mod_mode == KR_MOD_LOOP));
-    uint8_t lane, s;
-    for (lane = 0; lane < KRIA_SCRIPT_LANES; lane++) {
-        uint16_t bits = pat->script_lanes[lane];
-        // armed steps
-        for (s = 0; s < 16; s++) {
-            if (!(bits & (1u << s))) continue;
-            uint8_t idx = (uint8_t)(lane * 16 + s);
-            if (prob_view) {
-                uint8_t w = pat->script_prob[lane][s];  // 0..3
-                led[idx] = (uint8_t)(w == 0 ? 2 : 2 + w * 3);  // 2/5/8/11
-            }
-            else
-                led[idx] = 3;
-        }
-        // per-lane loop-region band (brighter while editing the loop)
-        {
-            uint8_t ls = pat->script_lstart[lane], le = pat->script_lend[lane];
-            int lswap = (le < ls);
-            for (s = 0; s < 16; s++) {
-                int in = lswap ? (s >= ls || s <= le) : (s >= ls && s <= le);
-                if (in) led[lane * 16 + s] += add;
-            }
-        }
-        // per-lane playhead
-        if (ph && e->rt.script_step[lane] < 16)
-            led[lane * 16 + e->rt.script_step[lane]] += 4;
-    }
+// Meadowphysics-style cascade sequencer (KR_MODE_MPSEQ): 6 lanes (rows 0-5)
+// fire scripts 3-8. Reuses the standalone MP grid render verbatim: render into
+// a scratch buffer (mp_grid_refresh owns the whole 128-cell buffer + finalizes
+// it), then copy only rows 0-5 over the Kria page -- leaving row 6 blank and the
+// row-7 nav bar (already drawn by draw_bottom_row) intact. The outer
+// grid_led_finalize re-runs on the copied cells, which is idempotent.
+static void draw_mpseq(kria_grid_state_t* g, uint8_t* led) {
+    if (!g->mpseq) return;
+    uint8_t scratch[GRID_LED_COUNT];
+    mp_grid_refresh(g->mpseq, &g->mpgrid, scratch, 1);  // vari=1: keep the ramp
+    memcpy(led, scratch, R6);  // rows 0-5 (indices 0..R6-1); row 6/7 untouched
 }
 
 // Mod overlay drawn before the page: returns 1 if it fully replaces the page.
@@ -529,19 +504,13 @@ static int draw_mod_overlay(kria_engine_t* e, kria_grid_state_t* g,
                             uint8_t* led) {
     uint8_t ep = edit_pat(e, g);
     uint8_t mode = g->mode, track = g->track, i;
+    // The MP-seq page ignores the LOOP/TIME/PROB mods (MP has its own col0/col1
+    // view gestures); never overlay it.
+    if (mode == KR_MODE_MPSEQ) return 0;
     switch (g->mod_mode) {
         case KR_MOD_LOOP: led[R7 + 10] = L1; return 0;
         case KR_MOD_TIME:
             led[R7 + 11] = L1;
-            if (mode == KR_MODE_SCRIPTSEQ) {
-                // per-lane divider ruler: row = lane, lit column = its tmul
-                for (uint8_t lane = 0; lane < KRIA_SCRIPT_LANES; lane++) {
-                    uint8_t tm = e->cfg.p[ep].script_tmul[lane];
-                    memset(led + lane * 16, 3, 16);
-                    if (tm >= 1 && tm <= 16) led[lane * 16 + tm - 1] = L1;
-                }
-                return 1;
-            }
             memset(led + R1, 3, 16);
             if (mode < KRIA_NUM_PARAMS) {
                 uint8_t tm = e->cfg.p[ep].t[track].tmul[mode];
@@ -552,12 +521,6 @@ static int draw_mod_overlay(kria_engine_t* e, kria_grid_state_t* g,
             }
             return 1;
         case KR_MOD_PROB:
-            // Script-seq shows probability in-place (brightness), so let the
-            // page draw underneath instead of replacing it.
-            if (mode == KR_MODE_SCRIPTSEQ) {
-                led[R7 + 12] = L1;
-                return 0;
-            }
             led[R7 + 12] = L1;
             memset(led + R5, 3, 16);
             if (mode < KRIA_NUM_PARAMS) {
@@ -582,7 +545,7 @@ static void draw_bottom_row(kria_engine_t* e, kria_grid_state_t* g,
     memset(led + R7 + 5, L0, 4);  // x=5..8
     led[R7 + 10] = L0;
     led[R7 + 11] = L0;
-    if (mode < KRIA_NUM_PARAMS || mode == KR_MODE_SCRIPTSEQ) led[R7 + 12] = L0;
+    if (mode < KRIA_NUM_PARAMS) led[R7 + 12] = L0;  // PROB selector (not on MPseq)
     led[R7 + 14] = L0;
     led[R7 + 15] =
         (e->cfg.meta && g->meta_lock && g->meta_lock_blink) ? L1 : L0;
@@ -603,7 +566,7 @@ static void draw_bottom_row(kria_engine_t* e, kria_grid_state_t* g,
         case KR_P_OCT:
         case KR_P_GLIDE: idx = R7 + 7; break;
         case KR_P_DUR:
-        case KR_MODE_SCRIPTSEQ: idx = R7 + 8; break;  // shared DUR selector
+        case KR_MODE_MPSEQ: idx = R7 + 8; break;  // shared DUR selector
         case KR_MODE_SCALE: idx = R7 + 14; break;
         case KR_MODE_PATTERN: idx = R7 + 15; break;
         default: idx = R7 + 0; break;
@@ -614,7 +577,7 @@ static void draw_bottom_row(kria_engine_t* e, kria_grid_state_t* g,
     else {
         int is_alt =
             (mode == KR_P_RPT || mode == KR_P_ALTNOTE || mode == KR_P_GLIDE ||
-             mode == KR_MODE_SCRIPTSEQ);
+             mode == KR_MODE_MPSEQ);
         led[idx] = (is_alt && g->alt_blink) ? L1 : L2;
     }
 }
@@ -631,7 +594,7 @@ void kria_grid_refresh(kria_engine_t* e, kria_grid_state_t* g, uint8_t* led,
             case KR_P_ALTNOTE: draw_note(e, g, led); break;
             case KR_P_OCT: draw_oct(e, g, led); break;
             case KR_P_DUR: draw_dur(e, g, led); break;
-            case KR_MODE_SCRIPTSEQ: draw_scriptseq(e, g, led); break;
+            case KR_MODE_MPSEQ: draw_mpseq(g, led); break;
             case KR_P_RPT: draw_rpt(e, g, led); break;
             case KR_P_GLIDE: draw_glide(e, g, led); break;
             case KR_MODE_SCALE: draw_scale(e, g, led); break;
@@ -663,16 +626,16 @@ static void key_bottom_row(kria_engine_t* e, kria_grid_state_t* g, uint8_t x,
         else if (x == 7)
             g->mode = (mode == KR_P_OCT) ? KR_P_GLIDE : KR_P_OCT;
         else if (x == 8)
-            g->mode = (mode == KR_P_DUR) ? KR_MODE_SCRIPTSEQ : KR_P_DUR;
-        else if (x == 10) {
+            g->mode = (mode == KR_P_DUR) ? KR_MODE_MPSEQ : KR_P_DUR;
+        // The MP-seq page ignores LOOP/TIME/PROB (MP has its own view gestures).
+        else if (x == 10 && mode != KR_MODE_MPSEQ) {
             g->mod_mode = KR_MOD_LOOP;
             g->loop_count = 0;
         }
-        else if (x == 11)
+        else if (x == 11 && mode != KR_MODE_MPSEQ)
             g->mod_mode = KR_MOD_TIME;
         else if (x == 12) {
-            if (mode < KRIA_NUM_PARAMS || mode == KR_MODE_SCRIPTSEQ)
-                g->mod_mode = KR_MOD_PROB;
+            if (mode < KRIA_NUM_PARAMS) g->mod_mode = KR_MOD_PROB;
         }
         else if (x == 14)
             g->mode = KR_MODE_SCALE;
@@ -889,54 +852,15 @@ void kria_grid_process_key(kria_engine_t* e, kria_grid_state_t* g, uint8_t x,
             }
             break;
 
-        case KR_MODE_SCRIPTSEQ: {
-            // Six lanes (rows 0-5) = scripts 3-8, track-independent.
-            kria_pattern_t* pat = &e->cfg.p[ep];
-            switch (mm) {
-                case KR_MOD_NONE:
-                    if (z && y < KRIA_SCRIPT_LANES)
-                        pat->script_lanes[y] ^= (uint16_t)(1u << x);
-                    break;
-                case KR_MOD_PROB:
-                    // cycle this step's fire probability 0->1->2->3->0
-                    if (z && y < KRIA_SCRIPT_LANES) {
-                        uint8_t* w = &pat->script_prob[y][x];
-                        *w = (uint8_t)(*w >= 3 ? 0 : *w + 1);
-                    }
-                    break;
-                case KR_MOD_LOOP:
-                    // per-lane two-press loop gesture; the pressed row y is the
-                    // lane being edited (loop_edit), as on the mTr page.
-                    if (z && y < KRIA_SCRIPT_LANES) {
-                        if (g->loop_count == 0) {
-                            g->loop_edit = y;
-                            g->loop_first = x;
-                            g->loop_last = -1;
-                        }
-                        else {
-                            g->loop_last = x;
-                            pat->script_lstart[g->loop_edit] = g->loop_first;
-                            pat->script_lend[g->loop_edit] = x;
-                        }
-                        g->loop_count++;
-                    }
-                    else if (!z && g->loop_edit == y) {
-                        if (g->loop_count > 0) g->loop_count--;
-                        if (g->loop_count == 0 && g->loop_last == -1) {
-                            // single tap = one-step loop on that lane
-                            pat->script_lstart[g->loop_edit] = g->loop_first;
-                            pat->script_lend[g->loop_edit] = g->loop_first;
-                        }
-                    }
-                    break;
-                case KR_MOD_TIME:
-                    if (z && y < KRIA_SCRIPT_LANES)
-                        pat->script_tmul[y] = x + 1;  // per-lane divider
-                    break;
-                default: break;
-            }
+        case KR_MODE_MPSEQ:
+            // Meadowphysics cascade seq: rows 0-5 are the six lanes (scripts
+            // 3-8), row 6 is unused, row 7 (nav) was handled above. Forward
+            // straight to the reused MP grid key handler; MP's own col0/col1
+            // hold-gestures switch its positions/speed/rules views. Mods are
+            // ignored here (blocked in key_bottom_row).
+            if (g->mpseq && y < KRIA_SCRIPT_LANES)
+                mp_grid_process_key(g->mpseq, &g->mpgrid, x, y, z);
             break;
-        }
 
         case KR_MODE_SCALE:
             if (z) {

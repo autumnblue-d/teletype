@@ -322,16 +322,6 @@ static void run_clock(uint8_t phase) {
     writing = true;
     kria_engine_clock(&eng, phase);
     writing = false;
-    // Fire native scripts 3-8 for any script-lane trigger points that landed on
-    // this clock. The engine only flags them (rt.script_fired); scene_state and
-    // run_script live here in the shell (mirrors Meadowphysics' MP_SCRIPT).
-    if (phase && eng.rt.script_fired) {
-        uint8_t fired = eng.rt.script_fired;
-        eng.rt.script_fired = 0;
-        for (uint8_t lane = 0; lane < KRIA_SCRIPT_LANES; lane++)
-            if (fired & (1u << lane))
-                run_script(&scene_state, KRIA_SCRIPT_BASE + lane);
-    }
 
     // MP-style cascade seq (DUR sub-tab). Keep the working config synced to the
     // active pattern -- meta/cue pattern changes happen inside the call above --
@@ -376,6 +366,7 @@ static void km_init_once(void) {
                     KR_CLOCK_PERIOD_DEFAULT);
     kria_grid_state_init(&kgrid);
     kgrid.scale_bank = kria_scale_bank;
+    kgrid.mpseq = &km_mp;  // MP-seq page renders/edits this working engine
     km_load_flash();
     // (i2c follower bank is global and loaded at boot in main.c)
     grid_clock_set_period(&clk, eng.cfg.clock_period ? eng.cfg.clock_period
