@@ -9,12 +9,10 @@ PYTHON := $(if $(VENV_PY),$(VENV_PY),python3)
 build: teletype.pdf teletype.html cheatsheet.pdf cheatsheet-i2c.pdf
 
 clean:
-	rm -f teletype.pdf && \
-		rm -f teletype.html && \
-		rm -f cheatsheet/cheatsheet-*.* && \
-		cd cheatsheet && \
-			latexmk -xelatex -c && \
-			rm -f cheatsheet.pdf
+	rm -f teletype.pdf teletype.html
+	rm -f cheatsheet.pdf cheatsheet-i2c.pdf
+	rm -f cheatsheet/cheatsheet-*.*
+	cd cheatsheet && latexmk -xelatex -c
 
 teletype.pdf: $(wildcard *.md ops/*.md ops/*.toml) \
 		../utils/docs.py ../CHANGELOG.md
