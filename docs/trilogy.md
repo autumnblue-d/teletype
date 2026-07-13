@@ -34,8 +34,9 @@ These behaviours are common to all three apps.
 ### Saving (`S`)
 
 Press `S` to save the current app's state; a `SAVED` banner confirms it
-briefly. Kria and Earthsea save their state **per scene**. Meadowphysics saves
-to a **global 8-slot preset bank** (`S` writes the selected slot, `L` loads it).
+briefly. Kria and Earthsea each keep a **single global store** shared across all
+Teletype scenes (not saved per scene). Meadowphysics saves to a **global 8-slot
+preset bank** (`S` writes the selected slot, `L` loads it).
 
 Saving a Teletype scene the usual way (preset-write mode, `Alt-Enter`) also
 flushes any dirty app state to flash, so you don't have to save each app
@@ -85,14 +86,14 @@ Kria is a four-track step sequencer. Each track has independent trigger, note,
 octave, duration, repeat, glide, loop, timing and probability pages.
 
 **Keys:** `1` / `2` / `3` select views; `4` opens the i2c follower view; `S`
-saves (per scene).
+saves.
 
 **Grid (16×8):** the bottom row (row 7) is the transport / page selector; rows
 0–6 render the currently selected page.
 
 - **x0–x3** — select the active track (1 of 4). Hold the LOOP column and tap
   x0–x3 to **mute** a track.
-- **x5** TRIG / RPT · **x6** NOTE · **x7** OCT / GLIDE · **x8** DUR
+- **x5** TRIG / RPT · **x6** NOTE · **x7** OCT / GLIDE · **x8** DUR / MP-SEQ
 - **x10** LOOP · **x11** TIME (per-step clock divide) · **x12** PROB
 - **x14** SCALE · **x15** PATTERN (hold for CUE)
 
@@ -100,8 +101,19 @@ The **SCALE page** (x14) edits the current slot of the global scale bank. The
 **Config view** (`3`) holds the note-sync / loop-sync / tie / meta-reset
 toggles.
 
+**MP-SEQ sub-tab (x8 again).** Tapping the DUR selector a second time switches
+the page to a **six-lane Meadowphysics-style cascade sequencer** on rows 0–5.
+Each lane is a counter that, on rollover, fires a script — lane 1 → script 3, …
+lane 6 → script 8 — driving your scripts rather than CV/TR. It rides Kria's
+clock (each lane's *speed* divides it). Editing is exactly Meadowphysics (see
+below): tap a cell to set a lane's position, tap again to set its range; hold
+**column 0** for the speed / trigger view (and to pick the lane), **column 1**
+for the rules view. Kria's LOOP / TIME / PROB mods and grid row 6 are not used
+here.
+
 **Outputs:** track *n* drives **CV *n*** and **TR *n***. A muted track frees its
-CV/TR for scripts. State is saved per scene.
+CV/TR for scripts. Kria's state is a single global song, shared across scenes;
+the MP-SEQ pattern is stored per Kria pattern, with the rest of the song.
 
 ## Meadowphysics
 
@@ -146,13 +158,16 @@ the working config. `S` saves the working config and glyph to the selected slot
 
 Meadowphysics uses the **global preset bank**, not per-scene storage.
 
+The same cascading-counter engine is also embedded in **Kria's DUR sub-tab** as a
+six-lane script sequencer (lanes → scripts 3–8) — see *Kria*, above.
+
 ## Earthsea
 
 Earthsea plays and records gestural note patterns across a fourths-layout grid
 keyboard.
 
 **Keys:** `[` / `]` select the previous / next pattern; `4` opens the i2c
-follower view; `S` saves (per scene).
+follower view; `S` saves.
 
 **Grid (16×8):** column 0 is the transport / function strip; columns 1–15 are
 the note keyboard.

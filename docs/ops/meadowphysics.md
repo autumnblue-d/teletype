@@ -22,7 +22,7 @@ runs on its own internal clock, or an external clock on trigger input 1.
 - `1` / `2` / `3` — Positions / Clock / Config views
 - `space` — play / pause (in the MP view)
 - `R` — reset (re-arm all counters)
-- `V` — cycle voice mode (`1V` `2V` `4V` `8T`)
+- `V` — cycle voice mode (`1V` `2V` `4V` `8T` `SCR` — `SCR` fires script *n*+1 per row instead of driving CV/TR)
 - `X` — toggle external clock (trigger input 1)
 - `-` / `=` — tempo down / up
 - `[` / `]` — scale (7 diatonic modes + chromatic); counter rows map to scale
