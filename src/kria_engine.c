@@ -443,6 +443,18 @@ void kria_engine_set_defaults(kria_config_t* cfg) {
         memset(cfg->p[p].script_lstart, 0, KRIA_SCRIPT_LANES);
         memset(cfg->p[p].script_lend, 15, KRIA_SCRIPT_LANES);
         memset(cfg->p[p].script_tmul, 1, KRIA_SCRIPT_LANES);
+
+        // MP-style cascade sequencer: Ansible's default_mp() ascending counters,
+        // pinned to MP_SCRIPT (each lane fires a script, no CV/voice output).
+        // Lanes 6-7 are unused (only 6 scripts, 3-8): clear their cascade masks
+        // so they can never affect the six live lanes.
+        mp_engine_set_defaults(&cfg->p[p].mpseq);
+        cfg->p[p].mpseq.voice_mode = MP_SCRIPT;
+        for (uint8_t l = KRIA_SCRIPT_LANES; l < MP_ROWS; l++) {
+            cfg->p[p].mpseq.trigger[l] = 0;
+            cfg->p[p].mpseq.toggle[l] = 0;
+            cfg->p[p].mpseq.sync[l] = 0;
+        }
     }
 
     cfg->pattern = 0;
@@ -491,6 +503,9 @@ bool kria_engine_config_valid(const kria_config_t* cfg) {
             for (uint8_t s = 0; s < 16; s++)
                 if (cfg->p[p].script_prob[l][s] > 3) return false;
         }
+        // MP-style cascade sequencer config (all fields are used as array
+        // indices / masks, so stale values must be caught before use).
+        if (!mp_engine_config_valid(&cfg->p[p].mpseq)) return false;
     }
 
     for (uint8_t i = 0; i < 64; i++)

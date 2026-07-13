@@ -32,7 +32,7 @@
 // -> 0x30: force a clean reseed (kria/MP/ES layout).
 // -> 0x31: Kria per-pattern script-trigger sequencer (script_* fields in
 // kria_pattern_t; per-lane loop/divider arrays enlarge kria_config_t).
-#define FIRSTRUN_KEY 0x31
+#define FIRSTRUN_KEY 0x32
 
 // Independent version tag for the global scale bank. The scale bank has no
 // load-time validity check (unlike the kria/mp configs, which self-repair via

@@ -19,6 +19,7 @@
 #include "kria_grid.h"
 #include "kria_i2c.h"       // follower output
 #include "kria_i2c_oled.h"  // MIDI-follower OLED editor
+#include "meadowphysics_engine.h"  // MP-style cascade seq (DUR sub-tab)
 #include "tuning.h"         // per-channel tuning table + editor helpers
 
 // libavr32
@@ -42,6 +43,16 @@
 static kria_engine_t eng;
 static grid_clock_t clk;
 static kria_grid_state_t kgrid;
+
+// MP-style cascade sequencer (DUR page's second sub-tab). The engine is a
+// separate struct from the Kria engine; its cfg is a working copy of the active
+// pattern's mpseq (mp_config_t is embedded by value, and MP rules mutate it
+// live). km_mp_pattern tracks which pattern that copy belongs to so we can write
+// it back and reload on pattern changes. See KRIA_MPSEQ_PLAN.md.
+static mp_engine_t km_mp;
+static uint8_t km_mp_pattern = 0;
+static void km_mp_writeback(void);   // defined in the output-vtable section
+static void km_mp_load_active(void);
 
 static softTimer_t kriaClockTimer = { .next = NULL, .prev = NULL };
 static softTimer_t auxTimer[KRIA_NUM_TRACKS];     // note-off
@@ -104,6 +115,9 @@ static uint32_t tun_hold_start = 0;
 // written.
 bool kria_flush_if_dirty(void) {
     bool wrote = false;
+    // Capture the working MP-seq config into the active pattern so its (possibly
+    // rule-evolved / edited) state is included in the flash write.
+    km_mp_writeback();
     if (cfg_dirty) {
         flash_update_kria(&eng.cfg);
         flash_update_scale_bank(kria_scale_bank);
@@ -155,6 +169,43 @@ static void km_slew(void* c, uint8_t ch, uint16_t s) {
 static const kria_output_t KM_OUT = {
     .tr = km_tr, .cv = km_cv, .cv_slew = km_slew, .ctx = NULL
 };
+
+// ---- MP-seq output vtable: each lane's rising edge fires a native script ----
+// voice_mode is pinned to MP_SCRIPT, so the engine only calls tr() (never
+// cv()/cv_gate()). Lane n -> script KRIA_SCRIPT_BASE + n (scripts 3-8); the
+// unused lanes 6-7 are dropped here. Off-edges (on == 0) are momentary and
+// ignored, exactly as the standalone MP mode's MP_SCRIPT binding.
+static void km_mp_tr(void* c, uint8_t ch, uint8_t on) {
+    (void)c;
+    if (on && ch < KRIA_SCRIPT_LANES) run_script(&scene_state, KRIA_SCRIPT_BASE + ch);
+}
+static void km_mp_cv(void* c, uint8_t ch, int16_t note) {
+    (void)c;
+    (void)ch;
+    (void)note;
+}
+static void km_mp_cv_gate(void* c, uint8_t ch, uint8_t on) {
+    (void)c;
+    (void)ch;
+    (void)on;
+}
+static const mp_output_t KM_MP_OUT = {
+    .tr = km_mp_tr, .cv = km_mp_cv, .cv_gate = km_mp_cv_gate, .ctx = NULL
+};
+
+// Copy the working MP config back into the pattern it belongs to (so evolved
+// rule state / edits are captured before a flush or a pattern reload).
+static void km_mp_writeback(void) {
+    if (km_mp_pattern < KRIA_NUM_PATTERNS)
+        eng.cfg.p[km_mp_pattern].mpseq = km_mp.cfg;
+}
+
+// Load the active pattern's MP config into the working engine and re-arm it.
+static void km_mp_load_active(void) {
+    km_mp_pattern = eng.cfg.pattern;
+    km_mp.cfg = eng.cfg.p[km_mp_pattern].mpseq;
+    mp_engine_reset(&km_mp);
+}
 
 // ---- ISR-context timer callbacks: post events / clear flags only ----
 
@@ -264,6 +315,10 @@ static void run_clock(uint8_t phase) {
         if (last_tick_time) clock_delta = (uint32_t)(now - last_tick_time);
         last_tick_time = now;
     }
+    // Kria's own pos-reset (reset input / KR.RESET) re-arms the MP lanes too.
+    // Capture it before the engine consumes the flag.
+    bool mp_reset = phase && eng.rt.pos_reset;
+
     writing = true;
     kria_engine_clock(&eng, phase);
     writing = false;
@@ -277,6 +332,19 @@ static void run_clock(uint8_t phase) {
             if (fired & (1u << lane))
                 run_script(&scene_state, KRIA_SCRIPT_BASE + lane);
     }
+
+    // MP-style cascade seq (DUR sub-tab). Keep the working config synced to the
+    // active pattern -- meta/cue pattern changes happen inside the call above --
+    // then advance. Firing goes straight to scripts via KM_MP_OUT.
+    if (eng.cfg.pattern != km_mp_pattern) {
+        km_mp_writeback();
+        km_mp_load_active();
+    }
+    else if (mp_reset) {
+        mp_engine_reset(&km_mp);
+    }
+    mp_engine_clock(&km_mp, phase);
+
     dirty = true;
 }
 
@@ -292,12 +360,18 @@ static void km_load_flash(void) {
     if (!kria_engine_config_valid(&eng.cfg)) kria_engine_set_defaults(&eng.cfg);
     kria_engine_reset(&eng);
     km_apply_scale();
+    km_mp_load_active();  // load the active pattern's MP-seq config + re-arm
 }
 
 static void km_init_once(void) {
     if (initialized) return;
     flash_get_scale_bank(kria_scale_bank);
     kria_engine_init(&eng, &KM_OUT, &km_rnd, NULL, kria_scale_bank);
+    // MP-seq engine: bind outputs + RNG once; its cfg is loaded per-pattern by
+    // km_load_flash / km_mp_load_active below.
+    km_mp.out = KM_MP_OUT;
+    km_mp.rnd = &km_rnd;
+    km_mp.rnd_ctx = NULL;
     grid_clock_init(&clk, KR_CLOCK_PERIOD_MIN, KR_CLOCK_PERIOD_MAX,
                     KR_CLOCK_PERIOD_DEFAULT);
     kria_grid_state_init(&kgrid);

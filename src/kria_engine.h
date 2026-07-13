@@ -27,6 +27,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "meadowphysics_engine.h"  // mp_config_t (per-pattern MP-style seq)
+
 #define KRIA_NUM_TRACKS 4
 #define KRIA_NUM_PARAMS 7
 // Scenario B (Full Kria): Ansible's native 16 patterns per song. kria_config_t
@@ -132,6 +134,14 @@ typedef struct {
     uint8_t script_lstart[KRIA_SCRIPT_LANES];     // per-lane loop start (0..15)
     uint8_t script_lend[KRIA_SCRIPT_LANES];       // per-lane loop end (<start=wrap)
     uint8_t script_tmul[KRIA_SCRIPT_LANES];       // per-lane clock divider (>=1)
+
+    // Per-pattern Meadowphysics-style cascade sequencer (DUR page's second
+    // sub-tab; see KRIA_MPSEQ_PLAN.md). Six cascading counter lanes (rows 0-5)
+    // fire scripts 3-8 (KRIA_SCRIPT_BASE + lane) on rollover. voice_mode is
+    // pinned to MP_SCRIPT. Rows 6-7 of the 8-row engine are inert (the fire
+    // binding ignores lane >= KRIA_SCRIPT_LANES). Rules mutate this config live,
+    // so it doubles as the evolving playback state (mirrors Ansible MP).
+    mp_config_t mpseq;
 } kria_pattern_t;
 
 // The single global Kria "song" persisted in NVRAM (one instance, not 8).
