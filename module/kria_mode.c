@@ -14,6 +14,7 @@
 // kria engine + clock + grid (src/)
 #include "grid_led.h"  // GRID_L0/1/2 ramp + grid_led_finalize
 #include "helpers.h"   // note_to_cv (plain ET, for the i2c fan-out)
+#include "int_math.h"  // imax
 #include "kria_clock.h"
 #include "kria_engine.h"
 #include "kria_grid.h"
@@ -131,10 +132,6 @@ bool kria_flush_if_dirty(void) {
 static void km_set_period(uint16_t p);  // defined in the keyboard section
 static void km_tuning_enter(void);       // defined in the tuning-view section
 static void km_tuning_leave(void);
-
-static int imax(int a, int b) {
-    return a > b ? a : b;
-}
 
 static uint32_t km_rnd(void* ctx) {
     (void)ctx;

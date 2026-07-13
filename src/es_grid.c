@@ -7,7 +7,8 @@
 
 #include <string.h>
 
-#include "grid_led.h"  // grid_led_finalize
+#include "grid_led.h"    // grid_led_finalize
+#include "scale_util.h"  // cumulative_scale
 
 // ---- held-key bitmap ------------------------------------------------------
 
@@ -324,9 +325,7 @@ static void render_main(es_engine_t* e, es_grid_state_t* g, uint8_t* led) {
         // scale overlay: light in-scale semitones (root brighter). Cumulative
         // scale from the shared bank, matching Ansible calc_scale/cur_scale.
         uint8_t cur[8];
-        cur[0] = g->scale_bank[e->cfg.scale][0];
-        for (uint8_t i = 1; i < 8; i++)
-            cur[i] = (uint8_t)(cur[i - 1] + g->scale_bank[e->cfg.scale][i]);
+        cumulative_scale(cur, g->scale_bank[e->cfg.scale]);
 
         for (uint8_t x = 1; x < 16; x++)
             for (uint8_t y = ystart; y < 8; y++) {

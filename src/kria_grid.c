@@ -16,6 +16,7 @@
 #include <string.h>
 
 #include "grid_led.h"  // GRID_L0/1/2 ramp + grid_led_finalize
+#include "int_math.h"  // imin/imax/sum_clip
 
 // Brightness levels (Ansible L0/L1/L2) -- shared ramp, local aliases.
 #define L0 GRID_L0
@@ -29,16 +30,6 @@
 #define R5 80
 #define R6 96
 #define R7 112
-
-static inline int imin(int a, int b) {
-    return a < b ? a : b;
-}
-static inline int imax(int a, int b) {
-    return a > b ? a : b;
-}
-static inline int sum_clip(int l, int r, int clip) {
-    return imin(clip, imax(0, l + r));
-}
 
 // Effective edit pattern: when meta-locked, the stored edit_pattern; otherwise
 // it follows the playing pattern (Ansible's edit_pattern = k.pattern default).
@@ -858,8 +849,21 @@ void kria_grid_process_key(kria_engine_t* e, kria_grid_state_t* g, uint8_t x,
             // straight to the reused MP grid key handler; MP's own col0/col1
             // hold-gestures switch its positions/speed/rules views. Mods are
             // ignored here (blocked in key_bottom_row).
-            if (g->mpseq && y < KRIA_SCRIPT_LANES)
-                mp_grid_process_key(g->mpseq, &g->mpgrid, x, y, z);
+            if (g->mpseq && y < KRIA_SCRIPT_LANES) {
+                // In the rules view MP picks the rule by ROW (rules[er] = y),
+                // which needs rows 6/7 -- rows Kria doesn't own -- so POLE(6)
+                // and STOP(7) are unreachable. Select the rule by COLUMN
+                // instead: cols 8-15 map to rules 0-7, all reachable in the
+                // 6-lane window. Col 7 (MP's stray rule-select edge) is
+                // dropped so it can't set a row-based rule. Dest/target
+                // (cols 4-6) and the col0/col1 holds still forward to MP.
+                if (g->mpgrid.edit_mode == MP_GRID_RULES && x >= 7) {
+                    if (z && x >= 8)
+                        g->mpseq->cfg.rules[g->mpgrid.edit_row] = x - 8;
+                }
+                else
+                    mp_grid_process_key(g->mpseq, &g->mpgrid, x, y, z);
+            }
             break;
 
         case KR_MODE_SCALE:

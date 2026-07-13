@@ -7,17 +7,8 @@
 
 #include <string.h>
 
-// ---- small helpers (mirror Ansible min/max/sum_clip) ----
-
-static inline int imin(int a, int b) {
-    return a < b ? a : b;
-}
-static inline int imax(int a, int b) {
-    return a > b ? a : b;
-}
-static inline int sum_clip(int l, int r, int clip) {
-    return imin(clip, imax(0, l + r));
-}
+#include "int_math.h"   // imin/imax/sum_clip
+#include "scale_util.h"  // cumulative_scale
 
 static void calc_scale_index(kria_engine_t* e, uint8_t s) {
     if (!e->scale_data) return;
@@ -192,9 +183,7 @@ static void clock_kria_track(kria_engine_t* e, uint8_t t) {
 // ---- public API ----
 
 void kria_engine_calc_scale(kria_engine_t* e, const uint8_t intervals[8]) {
-    e->rt.cur_scale[0] = intervals[0];
-    for (uint8_t i = 1; i < 8; i++)
-        e->rt.cur_scale[i] = e->rt.cur_scale[i - 1] + intervals[i];
+    cumulative_scale(e->rt.cur_scale, intervals);
 }
 
 void kria_engine_change_pattern(kria_engine_t* e, uint8_t pattern) {

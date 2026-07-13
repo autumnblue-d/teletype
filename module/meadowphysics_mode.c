@@ -15,6 +15,7 @@
 // meadowphysics engine + output binding + clock + grid (src/)
 #include "helpers.h"  // note_to_cv (shared ET semitone mapping)
 #include "meadowphysics_binding.h"
+#include "scale_util.h"  // cumulative_scale
 #include "meadowphysics_clock.h"
 #include "meadowphysics_engine.h"
 #include "meadowphysics_grid.h"
@@ -570,9 +571,9 @@ int16_t meadowphysics_op_ladder_get(int16_t slot, int16_t degree) {
     // Return the cumulative note offset (sum of rungs 0..degree) -- the actual
     // semitone the engine plays for this degree -- not the raw per-rung delta.
     // Mirrors mp_engine_calc_scale. (The setter still writes a single delta.)
-    int16_t note = 0;
-    for (int16_t i = 0; i <= degree; i++) note += mp_scale_bank[slot][i];
-    return note;
+    uint8_t cur[8];
+    cumulative_scale(cur, mp_scale_bank[slot]);
+    return cur[degree];
 }
 
 void meadowphysics_op_ladder_set(int16_t slot, int16_t degree, int16_t val) {

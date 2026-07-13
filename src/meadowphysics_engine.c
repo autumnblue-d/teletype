@@ -9,6 +9,8 @@
 
 #include <stdlib.h>  // abs
 
+#include "scale_util.h"  // cumulative_scale
+
 // ---- output helpers (set_tr/clr_tr/set_cv_note/dac_set_value) ----
 
 static inline void out_tr(mp_engine_t* e, uint8_t ch, uint8_t on) {
@@ -310,9 +312,7 @@ void mp_engine_clock(mp_engine_t* e, uint8_t phase) {
 // ---- scale (Ansible calc_scale) ----
 
 void mp_engine_calc_scale(mp_engine_t* e, const uint8_t intervals[8]) {
-    e->rt.cur_scale[0] = intervals[0];
-    for (uint8_t i1 = 1; i1 < 8; i1++)
-        e->rt.cur_scale[i1] = e->rt.cur_scale[i1 - 1] + intervals[i1];
+    cumulative_scale(e->rt.cur_scale, intervals);
 }
 
 // ---- setup / transport ----
