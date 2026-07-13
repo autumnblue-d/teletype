@@ -410,6 +410,17 @@ void es_op_pattern(int16_t p) {
     dirty = true;
 }
 
+// Readbacks (ES.PATTERN / ES.RUN get forms).
+int16_t es_op_pattern_get(void) {
+    em_init_once();
+    return eng.cfg.p_select;  // active pattern 0-15
+}
+
+int16_t es_op_run_get(void) {
+    em_init_once();
+    return eng.rt.mode == es_playing ? 1 : 0;
+}
+
 void es_op_clock(int16_t d) {
     (void)d;  // Ansible's ES_CLOCK ignores its argument too
     em_init_once();

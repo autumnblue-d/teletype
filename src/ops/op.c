@@ -141,6 +141,7 @@ const tele_op_t *tele_ops[E_OP__LENGTH] = {
     // meadowphysics
     &op_MP_PRESET, &op_MP_RESET, &op_MP_STOP, &op_MP_RUN, &op_MP_SYNC,
     &op_MP_CLK, &op_MP_VOICE, &op_MP_PERIOD, &op_MP_SCALE, &op_MP_SCL,
+    &op_MP_CFG, &op_MP_CV,
 
     // earthsea
     &op_ES_PRESET, &op_ES_MODE, &op_ES_CLOCK, &op_ES_RESET, &op_ES_PATTERN,
@@ -157,7 +158,9 @@ const tele_op_t *tele_ops[E_OP__LENGTH] = {
     &op_ANS_APP, &op_KR_PRE, &op_KR_PAT, &op_KR_SCALE, &op_KR_PERIOD,
     &op_KR_POS, &op_KR_L_ST, &op_KR_L_LEN, &op_KR_RES, &op_KR_CV, &op_KR_MUTE,
     &op_KR_TMUTE, &op_KR_CLK, &op_KR_PG, &op_KR_CUE, &op_KR_DIR, &op_KR_DUR,
-    &op_KR_RUN, &op_KR_II, &op_ME_PRE, &op_ME_RES, &op_ME_STOP, &op_ME_SCALE,
+    &op_KR_RUN, &op_KR_II, &op_KR_TMUL, &op_KR_MP, &op_KR_MP_POS,
+    &op_KR_MP_MUTE, &op_KR_MP_SCR, &op_ME_PRE, &op_ME_RES, &op_ME_STOP,
+    &op_ME_SCALE,
     &op_ME_PERIOD, &op_ME_CV, &op_LV_PRE, &op_LV_RES, &op_LV_POS, &op_LV_L_ST,
     &op_LV_L_LEN, &op_LV_L_DIR, &op_LV_CV, &op_CY_PRE, &op_CY_RES, &op_CY_POS,
     &op_CY_REV, &op_CY_CV, &op_MID_SHIFT, &op_MID_SLEW, &op_ARP_STY,
@@ -331,7 +334,8 @@ const tele_op_t *tele_ops[E_OP__LENGTH] = {
     &op_MO_CH, &op_MO_PORT, &op_MO_N, &op_MO_N_POUND, &op_MO_NO,
     &op_MO_NO_POUND, &op_MO_CC, &op_MO_CC_POUND, &op_MO_PB, &op_MO_PRG,
     &op_MO_CLK, &op_MO_START, &op_MO_STOP, &op_MO_CONT, &op_MO_NG,
-    &op_MO_NG_POUND, &op_MO_TR, &op_MO_TR_POUND, &op_MO_NALL, &op_MO_TR_TIME
+    &op_MO_NG_POUND, &op_MO_TR, &op_MO_TR_POUND, &op_MO_NALL, &op_MO_TR_TIME,
+    &op_MO_AT, &op_MO_PANIC, &op_MO_SPP
 };
 
 /////////////////////////////////////////////////////////////////

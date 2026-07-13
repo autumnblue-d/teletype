@@ -13,5 +13,7 @@ extern const tele_op_t op_MP_VOICE;
 extern const tele_op_t op_MP_PERIOD;
 extern const tele_op_t op_MP_SCALE;
 extern const tele_op_t op_MP_SCL;
+extern const tele_op_t op_MP_CFG;
+extern const tele_op_t op_MP_CV;
 
 #endif

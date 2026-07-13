@@ -602,6 +602,33 @@ void meadowphysics_op_preset_set(int16_t slot) {
     dirty = true;
 }
 
+// MP.CFG row field [val] -- generic indexed cascade config accessor over the
+// standalone engine's 8 rows, mirroring KR.MP (shared mp_config_field helper).
+// Edits are live; they persist to flash when the slot is saved (like grid
+// edits), so this only marks the screen dirty.
+int16_t meadowphysics_op_cfg(int16_t row, int16_t field, int16_t set,
+                             int16_t val) {
+    mp_init_once();
+    if (row < 0 || row >= MP_ROWS) return 0;
+    if (field < 0 || field > 11) return 0;
+    int16_t ret = mp_config_field(&mp_eng.cfg, (uint8_t)row, (uint8_t)field,
+                                  set ? 1 : 0, val, 0xFF, MP_ROWS - 1);
+    if (set) dirty = true;
+    return ret;
+}
+
+// MP.CV row -- the CV/pitch a row plays (row 1-8, 1-indexed like the other
+// *.CV ops). Returns note_to_cv of the row's scale note, matching mp_out_cv,
+// so it can be written straight to a CV output.
+int16_t meadowphysics_op_cv(int16_t row) {
+    mp_init_once();
+    if (row < 1 || row > MP_ROWS) return 0;
+    uint8_t deg = 7 - (uint8_t)(row - 1);  // Ansible row -> scale-degree mapping
+    int16_t note =
+        (int16_t)((int)mp_eng.rt.cur_scale[deg] + mp_eng.rt.scale_adj[deg]);
+    return note_to_cv(note);
+}
+
 void process_meadowphysics_keys(uint8_t key, uint8_t mod_key,
                                 bool is_held_key) {
     if (is_held_key) return;

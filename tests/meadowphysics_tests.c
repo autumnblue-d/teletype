@@ -124,6 +124,41 @@ TEST config_validity(void) {
     PASS();
 }
 
+// The shared indexed accessor behind KR.MP / MP.CFG: writes clamp to the
+// engine's valid ranges, masks confine to the live lanes, and reads return the
+// stored value. lane_mask 0xff / max_dest 7 = the standalone MP flavor.
+TEST config_field_accessor(void) {
+    mp_config_t c;
+    mp_engine_set_defaults(&c);
+
+    // set + read-back for a scalar field (count, 0-15)
+    ASSERT_EQ(9, mp_config_field(&c, 2, 0, 1, 9, 0xff, 7));
+    ASSERT_EQ(9, c.count[2]);
+    ASSERT_EQ(9, mp_config_field(&c, 2, 0, 0, 0, 0xff, 7));  // get doesn't write
+
+    // clamps mirror mp_engine_config_valid: count->15, speed->7, rule->STOP,
+    // rule_dest->max_dest, target->3, smin/smax->7
+    ASSERT_EQ(15, mp_config_field(&c, 0, 0, 1, 99, 0xff, 7));
+    ASSERT_EQ(7, mp_config_field(&c, 0, 1, 1, 99, 0xff, 7));  // speed
+    ASSERT_EQ(MP_RULE_STOP, mp_config_field(&c, 0, 4, 1, 99, 0xff, 7));
+    ASSERT_EQ(7, mp_config_field(&c, 0, 5, 1, 99, 0xff, 7));  // rule_dest->max
+    ASSERT_EQ(3, mp_config_field(&c, 0, 9, 1, 99, 0xff, 7));  // target
+    ASSERT_EQ(7, mp_config_field(&c, 0, 10, 1, 99, 0xff, 7));  // smin
+    ASSERT_EQ(0, mp_config_field(&c, 0, 1, 1, -5, 0xff, 7));   // floor at 0
+
+    // mask fields are confined to lane_mask (Kria's 6 lanes = 0x3f)
+    ASSERT_EQ(0x3f, mp_config_field(&c, 1, 6, 1, 0xff, 0x3f, 5));  // trigger
+    ASSERT_EQ(0x3f, c.trigger[1]);
+    ASSERT_EQ(0xff, mp_config_field(&c, 1, 7, 1, 0xff, 0xff, 7));  // toggle 8-wide
+
+    // unknown field is a no-op returning 0
+    ASSERT_EQ(0, mp_config_field(&c, 0, 12, 1, 5, 0xff, 7));
+
+    // every write kept the config valid
+    ASSERT(mp_engine_config_valid(&c));
+    PASS();
+}
+
 TEST defaults_match_ansible(void) {
     mp_config_t c;
     mp_engine_set_defaults(&c);
@@ -637,6 +672,7 @@ TEST grid_scale_editor(void) {
 
 SUITE(meadowphysics_suite) {
     RUN_TEST(config_validity);
+    RUN_TEST(config_field_accessor);
     RUN_TEST(defaults_match_ansible);
     RUN_TEST(countdown_period);
     RUN_TEST(speed_divides);

@@ -94,11 +94,16 @@ extern void meadowphysics_op_ladder_set(int16_t slot, int16_t degree,
 // preset bank: get = current slot, set = load slot (0 to MP_SLOTS-1)
 extern int16_t meadowphysics_op_preset_get(void);
 extern void meadowphysics_op_preset_set(int16_t slot);
+// generic indexed cascade config accessor (row 0-7, field 0-11); mirrors KR.MP
+extern int16_t meadowphysics_op_cfg(int16_t row, int16_t field, int16_t set,
+                                    int16_t val);
+// the CV a row plays (row 1-8, 1-indexed); note_to_cv of its scale note
+extern int16_t meadowphysics_op_cv(int16_t row);
 
 // kria ops (native engine). For get/set pairs, `set` != 0 writes `val`; all
 // return the current value. track/param are 0-indexed.
 extern void kria_op_run(int16_t on);  // 1 = play, 0 = stop
-extern void kria_op_reset(void);
+extern void kria_op_reset(int16_t track);  // track <= 0 = all, 1..N = 1-indexed
 extern int16_t kria_op_pattern(int16_t set, int16_t val);
 extern int16_t kria_op_scale(int16_t set, int16_t val);
 extern int16_t kria_op_period(int16_t set, int16_t val);
@@ -113,15 +118,30 @@ extern int16_t kria_op_loop_start(int16_t track, int16_t param, int16_t set,
                                   int16_t val);
 extern int16_t kria_op_loop_len(int16_t track, int16_t param, int16_t set,
                                 int16_t val);
+// per-param clock divider (grid TIME page); 1-16
+extern int16_t kria_op_tmul(int16_t track, int16_t param, int16_t set,
+                            int16_t val);
 extern int16_t kria_op_cv(int16_t track);
 extern int16_t kria_op_dur(int16_t track);
 // enable/disable an i2c follower (0-5: JF/TXo/ER301/Disting/WSYN/Crow)
 extern int16_t kria_op_ii(int16_t follower, int16_t set, int16_t val);
+// MP-seq (DUR sub-tab) cascade config for lane 0-5. field: 0 count, 1 speed,
+// 2 min, 3 max, 4 rule, 5 rule-dest. `set` != 0 writes clamped `val`.
+extern int16_t kria_op_mp(int16_t lane, int16_t field, int16_t set, int16_t val);
+// MP-seq lane current countdown position (-1 = stopped); set forces it.
+extern int16_t kria_op_mp_pos(int16_t lane, int16_t set, int16_t val);
+// MP-seq per-lane fire mute (1 = lane's script suppressed); runtime only.
+extern int16_t kria_op_mp_mute(int16_t lane, int16_t set, int16_t val);
+// MP-seq script base: 1-based script that lane 0 fires (lane i -> base + i);
+// runtime only.
+extern int16_t kria_op_mp_scr(int16_t set, int16_t val);
 
 // earthsea ops (native engine). Semantics mirror Ansible's ii_es handlers;
 // see EARTHSEA_PORT_PLAN.md §8. voice is 0-indexed.
 extern void es_op_run(int16_t on);     // 1 = play pattern, 0 = stop + silence
-extern void es_op_pattern(int16_t p);  // select pattern 0-15
+extern void es_op_pattern(int16_t p);   // select pattern 0-15
+extern int16_t es_op_pattern_get(void); // active pattern 0-15
+extern int16_t es_op_run_get(void);     // 1 = playing, 0 = stopped
 extern void es_op_clock(int16_t d);    // step next chord group (d unused)
 extern void es_op_reset(int16_t pos);  // (re)start playback at pos/16 (0-15)
 extern void es_op_stop(void);

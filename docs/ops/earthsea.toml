@@ -34,10 +34,11 @@ of its total length; 0 starts from the beginning.
 """
 
 ["ES.PATTERN"]
-prototype = "ES.PATTERN x"
-short = "Select pattern (0-15)"
+prototype = "ES.PATTERN"
+prototype_set = "ES.PATTERN x"
+short = "get the active pattern, or select pattern `x` (0-15)"
 description = """
-Select pattern (0-15). Does not start playback (use `ES.RESET` / `ES.RUN`).
+Get the active pattern, or select pattern (0-15). Does not start playback (use `ES.RESET` / `ES.RUN`).
 """
 
 ["ES.TRANS"]
@@ -78,8 +79,9 @@ prototype = "ES.CV x"
 short = "Get the current CV (pitch) value for voice `x` (1-4)"
 
 ["ES.RUN"]
-prototype = "ES.RUN x"
-short = "Play (`x` != 0) or stop + silence (`x` = 0) the current pattern"
+prototype = "ES.RUN"
+prototype_set = "ES.RUN x"
+short = "get play state (1 = playing, 0 = stopped), or play (`x` != 0) / stop + silence (`x` = 0) the current pattern"
 description = """
 `x` non-zero starts playback of the current pattern from the beginning (it
 keeps playing in the background across mode changes). `x` = 0 stops playback

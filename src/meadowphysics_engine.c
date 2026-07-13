@@ -9,6 +9,7 @@
 
 #include <stdlib.h>  // abs
 
+#include "int_math.h"    // imin, imax
 #include "scale_util.h"  // cumulative_scale
 
 // ---- output helpers (set_tr/clr_tr/set_cv_note/dac_set_value) ----
@@ -357,6 +358,58 @@ bool mp_engine_config_valid(const mp_config_t* cfg) {
         // trigger/toggle/sync are bitmasks -- any value is valid.
     }
     return true;
+}
+
+// Generic indexed config accessor shared by the KR.MP and MP.CFG script ops.
+// `row` is a lane/row index (caller bounds it to the live count); `field`
+// selects a mp_config_t parameter (0 count .. 11 smax). When `set` != 0 the
+// clamped `val` is written; the resulting field value is always returned.
+// `lane_mask` confines the trigger/toggle/sync bitmask fields to the live lanes
+// (0x3f for Kria's 6, 0xff for standalone MP's 8); `max_dest` bounds the rule
+// destination row. Clamps mirror mp_engine_config_valid so a scripted config
+// never fails validation on reload. Returns 0 for an unknown field.
+int16_t mp_config_field(mp_config_t* cfg, uint8_t row, uint8_t field,
+                        uint8_t set, int16_t val, uint8_t lane_mask,
+                        uint8_t max_dest) {
+    switch (field) {
+        case 0:  // count (loop length / countdown start)
+            if (set) cfg->count[row] = (uint8_t)imax(0, imin(15, val));
+            return cfg->count[row];
+        case 1:  // speed (extra ticks per step; 0 = fastest)
+            if (set) cfg->speed[row] = (int8_t)imax(0, imin(7, val));
+            return cfg->speed[row];
+        case 2:  // range min (for rules)
+            if (set) cfg->min[row] = (uint8_t)imax(0, imin(15, val));
+            return cfg->min[row];
+        case 3:  // range max (for rules)
+            if (set) cfg->max[row] = (uint8_t)imax(0, imin(15, val));
+            return cfg->max[row];
+        case 4:  // rule (MP_RULE_*)
+            if (set) cfg->rules[row] = (uint8_t)imax(0, imin(MP_RULE_STOP, val));
+            return cfg->rules[row];
+        case 5:  // rule destination row
+            if (set) cfg->rule_dests[row] = (uint8_t)imax(0, imin(max_dest, val));
+            return cfg->rule_dests[row];
+        case 6:  // trigger mask: rows gated high on rollover
+            if (set) cfg->trigger[row] = (uint8_t)(val & lane_mask);
+            return cfg->trigger[row];
+        case 7:  // toggle mask: rows flipped on rollover
+            if (set) cfg->toggle[row] = (uint8_t)(val & lane_mask);
+            return cfg->toggle[row];
+        case 8:  // reset mask: rows re-armed on rollover (the sync[] field)
+            if (set) cfg->sync[row] = (uint8_t)(val & lane_mask);
+            return cfg->sync[row];
+        case 9:  // rule target: 1 = count, 2 = speed, 3 = both
+            if (set) cfg->rule_dest_targets[row] = (uint8_t)imax(0, imin(3, val));
+            return cfg->rule_dest_targets[row];
+        case 10:  // speed range min (for rules)
+            if (set) cfg->smin[row] = (uint8_t)imax(0, imin(7, val));
+            return cfg->smin[row];
+        case 11:  // speed range max (for rules)
+            if (set) cfg->smax[row] = (uint8_t)imax(0, imin(7, val));
+            return cfg->smax[row];
+        default: return 0;
+    }
 }
 
 void mp_engine_reset(mp_engine_t* e) {

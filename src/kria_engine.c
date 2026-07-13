@@ -232,27 +232,36 @@ void kria_engine_set_loop_len(kria_engine_t* e, uint8_t track, uint8_t param,
     }
 }
 
-void kria_engine_reset(kria_engine_t* e) {
-    for (uint8_t t = 0; t < KR_NUM_TRACKS; t++) {
-        kria_track_t* track = &e->cfg.p[e->cfg.pattern].t[t];
-        for (uint8_t p = 0; p < KR_NUM_PARAMS; p++) {
-            // pos = lend and pos_mul = tmul so the next clock advances straight
-            // to lstart (Ansible pos_reset semantics).
-            e->rt.pos[t][p] = track->lend[p];
-            e->rt.pos_mul[t][p] = track->tmul[p];
-            e->rt.tmul_live[t][p] = track->tmul[p];
-        }
-        e->rt.note[t] = 0;
-        e->rt.oct[t] = 0;
-        e->rt.alt_note[t] = 0;
-        e->rt.glide[t] = 0;
-        e->rt.dur_unscaled[t] = 0;
-        e->rt.rpt[t] = 1;
-        e->rt.rptBits[t] = 1;
-        e->rt.activeRpt[t] = 0;
-        e->rt.repeats[t] = 0;
-        e->rt.tr[t] = 0;
+// Re-arm one track's playback: positions to lend + tmul so the next clock
+// advances straight to lstart (Ansible pos_reset semantics), runtime cleared.
+static void kria_reset_track(kria_engine_t* e, uint8_t t) {
+    kria_track_t* track = &e->cfg.p[e->cfg.pattern].t[t];
+    for (uint8_t p = 0; p < KR_NUM_PARAMS; p++) {
+        e->rt.pos[t][p] = track->lend[p];
+        e->rt.pos_mul[t][p] = track->tmul[p];
+        e->rt.tmul_live[t][p] = track->tmul[p];
     }
+    e->rt.note[t] = 0;
+    e->rt.oct[t] = 0;
+    e->rt.alt_note[t] = 0;
+    e->rt.glide[t] = 0;
+    e->rt.dur_unscaled[t] = 0;
+    e->rt.rpt[t] = 1;
+    e->rt.rptBits[t] = 1;
+    e->rt.activeRpt[t] = 0;
+    e->rt.repeats[t] = 0;
+    e->rt.tr[t] = 0;
+}
+
+// Reset a single track to its loop start (KR.RES track). Song-level counters
+// (clock/cue/meta) are left untouched -- only that track's playback re-arms.
+void kria_engine_reset_track(kria_engine_t* e, uint8_t t) {
+    if (t >= KR_NUM_TRACKS) return;
+    kria_reset_track(e, t);
+}
+
+void kria_engine_reset(kria_engine_t* e) {
+    for (uint8_t t = 0; t < KR_NUM_TRACKS; t++) kria_reset_track(e, t);
     e->rt.clock_count = 0;
     e->rt.cue_count = 0;
     e->rt.cue_sub_count = 0;

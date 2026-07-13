@@ -104,8 +104,15 @@ int16_t meadowphysics_op_preset_get(void) {
     return 0;
 }
 void meadowphysics_op_preset_set(int16_t slot) {}
+int16_t meadowphysics_op_cfg(int16_t row, int16_t field, int16_t set,
+                             int16_t val) {
+    return 0;
+}
+int16_t meadowphysics_op_cv(int16_t row) {
+    return 0;
+}
 void kria_op_run(int16_t on) {}
-void kria_op_reset(void) {}
+void kria_op_reset(int16_t track) {}
 int16_t kria_op_pattern(int16_t set, int16_t val) {
     return 0;
 }
@@ -142,6 +149,9 @@ int16_t kria_op_loop_len(int16_t track, int16_t param, int16_t set,
                          int16_t val) {
     return 0;
 }
+int16_t kria_op_tmul(int16_t track, int16_t param, int16_t set, int16_t val) {
+    return 0;
+}
 int16_t kria_op_cv(int16_t track) {
     return 0;
 }
@@ -151,8 +161,26 @@ int16_t kria_op_dur(int16_t track) {
 int16_t kria_op_ii(int16_t follower, int16_t set, int16_t val) {
     return 0;
 }
+int16_t kria_op_mp(int16_t lane, int16_t field, int16_t set, int16_t val) {
+    return 0;
+}
+int16_t kria_op_mp_pos(int16_t lane, int16_t set, int16_t val) {
+    return 0;
+}
+int16_t kria_op_mp_mute(int16_t lane, int16_t set, int16_t val) {
+    return 0;
+}
+int16_t kria_op_mp_scr(int16_t set, int16_t val) {
+    return 0;
+}
 void es_op_run(int16_t on) {}
 void es_op_pattern(int16_t p) {}
+int16_t es_op_pattern_get(void) {
+    return 0;
+}
+int16_t es_op_run_get(void) {
+    return 0;
+}
 void es_op_clock(int16_t d) {}
 void es_op_reset(int16_t pos) {}
 void es_op_stop(void) {}

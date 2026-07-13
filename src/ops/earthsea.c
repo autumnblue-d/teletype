@@ -21,6 +21,8 @@ static void op_ES_RESET_get(const void* data, scene_state_t* ss,
                             exec_state_t* es, command_state_t* cs);
 static void op_ES_PATTERN_get(const void* data, scene_state_t* ss,
                               exec_state_t* es, command_state_t* cs);
+static void op_ES_PATTERN_set(const void* data, scene_state_t* ss,
+                              exec_state_t* es, command_state_t* cs);
 static void op_ES_TRANS_get(const void* data, scene_state_t* ss,
                             exec_state_t* es, command_state_t* cs);
 static void op_ES_STOP_get(const void* data, scene_state_t* ss,
@@ -31,19 +33,21 @@ static void op_ES_CV_get(const void* data, scene_state_t* ss, exec_state_t* es,
                          command_state_t* cs);
 static void op_ES_RUN_get(const void* data, scene_state_t* ss, exec_state_t* es,
                           command_state_t* cs);
+static void op_ES_RUN_set(const void* data, scene_state_t* ss, exec_state_t* es,
+                          command_state_t* cs);
 
 // clang-format off
 const tele_op_t op_ES_PRESET  = MAKE_SIMPLE_I2C_OP(ES.PRESET, ES_PRESET);
 const tele_op_t op_ES_MODE    = MAKE_GET_OP(ES.MODE   , op_ES_MODE_get   , 1, false);
 const tele_op_t op_ES_CLOCK   = MAKE_GET_OP(ES.CLOCK  , op_ES_CLOCK_get  , 1, false);
 const tele_op_t op_ES_RESET   = MAKE_GET_OP(ES.RESET  , op_ES_RESET_get  , 1, false);
-const tele_op_t op_ES_PATTERN = MAKE_GET_OP(ES.PATTERN, op_ES_PATTERN_get, 1, false);
+const tele_op_t op_ES_PATTERN = MAKE_GET_SET_OP(ES.PATTERN, op_ES_PATTERN_get, op_ES_PATTERN_set, 0, true);
 const tele_op_t op_ES_TRANS   = MAKE_GET_OP(ES.TRANS  , op_ES_TRANS_get  , 1, false);
 const tele_op_t op_ES_STOP    = MAKE_GET_OP(ES.STOP   , op_ES_STOP_get   , 1, false);
 const tele_op_t op_ES_TRIPLE  = MAKE_SIMPLE_I2C_OP(ES.TRIPLE, ES_TRIPLE);
 const tele_op_t op_ES_MAGIC   = MAKE_GET_OP(ES.MAGIC  , op_ES_MAGIC_get  , 1, false);
 const tele_op_t op_ES_CV      = MAKE_GET_OP(ES.CV     , op_ES_CV_get     , 1, true);
-const tele_op_t op_ES_RUN     = MAKE_GET_OP(ES.RUN    , op_ES_RUN_get    , 1, false);
+const tele_op_t op_ES_RUN     = MAKE_GET_SET_OP(ES.RUN, op_ES_RUN_get, op_ES_RUN_set, 0, true);
 // clang-format on
 
 static void op_ES_MODE_get(const void* NOTUSED(data),
@@ -65,6 +69,12 @@ static void op_ES_RESET_get(const void* NOTUSED(data),
 }
 
 static void op_ES_PATTERN_get(const void* NOTUSED(data),
+                              scene_state_t* NOTUSED(ss),
+                              exec_state_t* NOTUSED(es), command_state_t* cs) {
+    cs_push(cs, es_op_pattern_get());
+}
+
+static void op_ES_PATTERN_set(const void* NOTUSED(data),
                               scene_state_t* NOTUSED(ss),
                               exec_state_t* NOTUSED(es), command_state_t* cs) {
     es_op_pattern(cs_pop(cs));
@@ -96,6 +106,11 @@ static void op_ES_CV_get(const void* NOTUSED(data), scene_state_t* NOTUSED(ss),
 }
 
 static void op_ES_RUN_get(const void* NOTUSED(data), scene_state_t* NOTUSED(ss),
+                          exec_state_t* NOTUSED(es), command_state_t* cs) {
+    cs_push(cs, es_op_run_get());
+}
+
+static void op_ES_RUN_set(const void* NOTUSED(data), scene_state_t* NOTUSED(ss),
                           exec_state_t* NOTUSED(es), command_state_t* cs) {
     es_op_run(cs_pop(cs));
 }

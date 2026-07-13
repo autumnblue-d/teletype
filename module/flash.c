@@ -32,7 +32,10 @@
 // -> 0x30: force a clean reseed (kria/MP/ES layout).
 // -> 0x31: Kria per-pattern script-trigger sequencer (script_* fields in
 // kria_pattern_t; per-lane loop/divider arrays enlarge kria_config_t).
-#define FIRSTRUN_KEY 0x32
+// -> 0x32: Kria DUR sub-tab replaced with the MP-style cascade seq (mpseq).
+// -> 0x33: NVRAM reserve lowered 132K -> 128K (flash-recovery pass); the
+// nvram_data_t base address shifts, so old flash must be treated as stale.
+#define FIRSTRUN_KEY 0x33
 
 // Independent version tag for the global scale bank. The scale bank has no
 // load-time validity check (unlike the kria/mp configs, which self-repair via

@@ -53,6 +53,14 @@ static kria_grid_state_t kgrid;
 // it back and reload on pattern changes. See KRIA_MPSEQ_PLAN.md.
 static mp_engine_t km_mp;
 static uint8_t km_mp_pattern = 0;
+// Per-lane fire-mute mask (bit i suppresses lane i's script). Runtime only,
+// like Kria's track mutes (eng.rt.mutes); set/read via KR.MP.MUTE.
+static uint8_t km_mp_mute = 0;
+// Base script index for lane firing (lane i -> script km_mp_script_base + i).
+// Runtime only (default KR_SCRIPT_BASE = scripts 3-8); set via KR.MP.SCR, e.g.
+// from the INIT script, to move the 6-lane window within scripts 1-8. Lanes
+// whose mapped index lands outside the regular scripts are silently dropped.
+static uint8_t km_mp_script_base = KR_SCRIPT_BASE;
 static void km_mp_writeback(void);   // defined in the output-vtable section
 static void km_mp_load_active(void);
 
@@ -175,7 +183,9 @@ static const kria_output_t KM_OUT = {
 // ignored, exactly as the standalone MP mode's MP_SCRIPT binding.
 static void km_mp_tr(void* c, uint8_t ch, uint8_t on) {
     (void)c;
-    if (on && ch < KR_SCRIPT_LANES) run_script(&scene_state, KR_SCRIPT_BASE + ch);
+    if (!on || ch >= KR_SCRIPT_LANES || (km_mp_mute & (1 << ch))) return;
+    uint8_t script = km_mp_script_base + ch;
+    if (script < REGULAR_SCRIPT_COUNT) run_script(&scene_state, script);
 }
 static void km_mp_cv(void* c, uint8_t ch, int16_t note) {
     (void)c;
@@ -928,9 +938,14 @@ void kria_op_run(int16_t on) {
         kria_toggle_run();
 }
 
-void kria_op_reset(void) {
+// KR.RES track -- track <= 0 resets all (song counters too); 1..KR_NUM_TRACKS
+// re-arms that one track (1-indexed, matching MP.RESET / ME.RES / CY.RES).
+void kria_op_reset(int16_t track) {
     km_init_once();
-    kria_engine_reset(&eng);
+    if (track <= 0)
+        kria_engine_reset(&eng);
+    else if (track <= KR_NUM_TRACKS)
+        kria_engine_reset_track(&eng, (uint8_t)(track - 1));
     dirty = true;
 }
 
@@ -1059,6 +1074,23 @@ int16_t kria_op_loop_len(int16_t track, int16_t param, int16_t set,
     return eng.cfg.p[eng.cfg.pattern].t[track].llen[param];
 }
 
+// KR.TMUL track param [val] -- per-param clock divider (the grid TIME page).
+// >= 1; the engine re-reads tmul every clock, so a live edit takes effect
+// without a reset. Grid range is 1-16.
+int16_t kria_op_tmul(int16_t track, int16_t param, int16_t set, int16_t val) {
+    km_init_once();
+    if (track < 0 || track >= KR_NUM_TRACKS || param < 0 ||
+        param >= KR_NUM_PARAMS)
+        return 0;
+    kria_track_t* t = &eng.cfg.p[eng.cfg.pattern].t[track];
+    if (set) {
+        t->tmul[param] = (uint8_t)imax(1, imin(16, val));
+        cfg_dirty = true;
+        dirty = true;
+    }
+    return t->tmul[param];
+}
+
 int16_t kria_op_cv(int16_t track) {
     km_init_once();
     if (track < 0 || track >= KR_NUM_TRACKS) return 0;
@@ -1086,6 +1118,63 @@ int16_t kria_op_ii(int16_t follower, int16_t set, int16_t val) {
         dirty = true;
     }
     return kria_i2c_follower((uint8_t)follower)->active;
+}
+
+// MP-seq cascade config for one lane (0..KR_SCRIPT_LANES-1). Edits the working
+// engine's cfg (a copy of the active pattern's mpseq); cfg_dirty ensures the
+// flush path (which writes back first) persists it. Clamps mirror
+// mp_engine_config_valid so a scripted config never fails validation on reload.
+int16_t kria_op_mp(int16_t lane, int16_t field, int16_t set, int16_t val) {
+    km_init_once();
+    if (lane < 0 || lane >= KR_SCRIPT_LANES) return 0;
+    if (field < 0 || field > 11) return 0;
+    int16_t ret = mp_config_field(&km_mp.cfg, (uint8_t)lane, (uint8_t)field,
+                                  set ? 1 : 0, val, KR_MP_LANE_MASK,
+                                  KR_SCRIPT_LANES - 1);
+    if (set) {
+        cfg_dirty = true;
+        dirty = true;
+    }
+    return ret;
+}
+
+// MP-seq lane countdown position (-1 = stopped). Get reads the live playhead;
+// set jumps it (clamped to the step range).
+int16_t kria_op_mp_pos(int16_t lane, int16_t set, int16_t val) {
+    km_init_once();
+    if (lane < 0 || lane >= KR_SCRIPT_LANES) return 0;
+    if (set) {
+        km_mp.rt.position[lane] = (int8_t)imax(-1, imin(15, val));
+        dirty = true;
+    }
+    return km_mp.rt.position[lane];
+}
+
+// MP-seq per-lane fire mute (1 = lane's script suppressed at km_mp_tr).
+int16_t kria_op_mp_mute(int16_t lane, int16_t set, int16_t val) {
+    km_init_once();
+    if (lane < 0 || lane >= KR_SCRIPT_LANES) return 0;
+    if (set) {
+        if (val)
+            km_mp_mute |= (uint8_t)(1 << lane);
+        else
+            km_mp_mute &= (uint8_t)~(1 << lane);
+        dirty = true;
+    }
+    return (km_mp_mute >> lane) & 1;
+}
+
+// MP-seq script base (1-based script number that lane 0 fires; lane i fires
+// base + i). Runtime only. Clamped so lane 0 lands on a regular script (1-8);
+// higher lanes that overflow are dropped at km_mp_tr.
+int16_t kria_op_mp_scr(int16_t set, int16_t val) {
+    km_init_once();
+    if (set) {
+        km_mp_script_base =
+            (uint8_t)imax(0, imin(REGULAR_SCRIPT_COUNT - 1, val - 1));
+        dirty = true;
+    }
+    return km_mp_script_base + 1;
 }
 
 uint8_t screen_refresh_kria(void) {

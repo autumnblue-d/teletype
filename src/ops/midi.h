@@ -55,6 +55,9 @@ extern const tele_op_t op_MO_TR;
 extern const tele_op_t op_MO_TR_POUND;
 extern const tele_op_t op_MO_NALL;
 extern const tele_op_t op_MO_TR_TIME;
+extern const tele_op_t op_MO_AT;
+extern const tele_op_t op_MO_PANIC;
+extern const tele_op_t op_MO_SPP;
 
 // Service the MIDI-out scheduled-Note-Off pool. mo_process_note_offs() is
 // called each tick (time = ms elapsed); mo_flush_note_offs() releases all held

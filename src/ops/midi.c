@@ -113,6 +113,12 @@ static void op_MO_STOP_get(const void *data, scene_state_t *ss,
                            exec_state_t *es, command_state_t *cs);
 static void op_MO_CONT_get(const void *data, scene_state_t *ss,
                            exec_state_t *es, command_state_t *cs);
+static void op_MO_AT_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                         command_state_t *cs);
+static void op_MO_PANIC_get(const void *data, scene_state_t *ss,
+                            exec_state_t *es, command_state_t *cs);
+static void op_MO_SPP_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                          command_state_t *cs);
 static void op_MO_NG_get(const void *data, scene_state_t *ss, exec_state_t *es,
                          command_state_t *cs);
 static void op_MO_NG_POUND_get(const void *data, scene_state_t *ss,
@@ -182,6 +188,9 @@ const tele_op_t op_MO_TR       = MAKE_GET_OP(MO.TR,     op_MO_TR_get,       2, f
 const tele_op_t op_MO_TR_POUND = MAKE_GET_OP(MO.TR#,    op_MO_TR_POUND_get, 3, false);
 const tele_op_t op_MO_NALL     = MAKE_GET_OP(MO.NALL,   op_MO_NALL_get,     0, false);
 const tele_op_t op_MO_TR_TIME  = MAKE_GET_SET_OP(MO.TR.TIME, op_MO_TR_TIME_get, op_MO_TR_TIME_set, 0, true);
+const tele_op_t op_MO_AT       = MAKE_GET_OP(MO.AT,    op_MO_AT_get,       1, false);
+const tele_op_t op_MO_PANIC    = MAKE_GET_OP(MO.PANIC, op_MO_PANIC_get,    0, false);
+const tele_op_t op_MO_SPP      = MAKE_GET_OP(MO.SPP,   op_MO_SPP_get,      1, false);
 
 // clang-format on
 
@@ -652,6 +661,36 @@ static void op_MO_CONT_get(const void *NOTUSED(data),
                            exec_state_t *NOTUSED(es),
                            command_state_t *NOTUSED(cs)) {
     mo_send(0xFB, 0, 0);
+}
+
+// MO.AT x -- channel pressure (aftertouch) on the default channel (2-byte).
+static void op_MO_AT_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
+                         exec_state_t *NOTUSED(es), command_state_t *cs) {
+    u16 pressure = cs_pop(cs);
+    if (pressure > 127) pressure = 127;
+    mo_send(0xD0 + midi_out_channel, pressure, 0);
+}
+
+// MO.PANIC -- kill every sounding/stuck note: All Sound Off (CC 120) + All
+// Notes Off (CC 123) on all 16 channels, plus flush notes this module is
+// tracking. Broader than MO.NALL, which only releases TT-scheduled notes.
+static void op_MO_PANIC_get(const void *NOTUSED(data), scene_state_t *ss,
+                            exec_state_t *NOTUSED(es),
+                            command_state_t *NOTUSED(cs)) {
+    for (u8 ch = 0; ch < 16; ch++) {
+        mo_send(0xB0 + ch, 120, 0);  // All Sound Off
+        mo_send(0xB0 + ch, 123, 0);  // All Notes Off
+    }
+    mo_flush_note_offs(ss);
+}
+
+// MO.SPP x -- Song Position Pointer, 14-bit position in MIDI beats (0..16383),
+// LSB then MSB. Pairs with MO.CLK/START/STOP/CONT for full clock-master sync.
+static void op_MO_SPP_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
+                          exec_state_t *NOTUSED(es), command_state_t *cs) {
+    u16 pos = cs_pop(cs);
+    if (pos > 16383) pos = 16383;
+    mo_send(0xF2, pos & 0x7F, (pos >> 7) & 0x7F);
 }
 
 static void op_MO_NG_get(const void *NOTUSED(data), scene_state_t *ss,

@@ -82,6 +82,26 @@ static void op_KR_II_get(const void *data, scene_state_t *ss, exec_state_t *es,
                          command_state_t *cs);
 static void op_KR_II_set(const void *data, scene_state_t *ss, exec_state_t *es,
                          command_state_t *cs);
+static void op_KR_TMUL_get(const void *data, scene_state_t *ss,
+                           exec_state_t *es, command_state_t *cs);
+static void op_KR_TMUL_set(const void *data, scene_state_t *ss,
+                           exec_state_t *es, command_state_t *cs);
+static void op_KR_MP_get(const void *data, scene_state_t *ss, exec_state_t *es,
+                         command_state_t *cs);
+static void op_KR_MP_set(const void *data, scene_state_t *ss, exec_state_t *es,
+                         command_state_t *cs);
+static void op_KR_MP_POS_get(const void *data, scene_state_t *ss,
+                             exec_state_t *es, command_state_t *cs);
+static void op_KR_MP_POS_set(const void *data, scene_state_t *ss,
+                             exec_state_t *es, command_state_t *cs);
+static void op_KR_MP_MUTE_get(const void *data, scene_state_t *ss,
+                              exec_state_t *es, command_state_t *cs);
+static void op_KR_MP_MUTE_set(const void *data, scene_state_t *ss,
+                              exec_state_t *es, command_state_t *cs);
+static void op_KR_MP_SCR_get(const void *data, scene_state_t *ss,
+                             exec_state_t *es, command_state_t *cs);
+static void op_KR_MP_SCR_set(const void *data, scene_state_t *ss,
+                             exec_state_t *es, command_state_t *cs);
 static void op_ME_PRE_get(const void *data, scene_state_t *ss, exec_state_t *es,
                           command_state_t *cs);
 static void op_ME_PRE_set(const void *data, scene_state_t *ss, exec_state_t *es,
@@ -196,6 +216,11 @@ const tele_op_t op_KR_DIR      = MAKE_GET_SET_OP(KR.DIR     , op_KR_DIR_get     
 const tele_op_t op_KR_DUR      = MAKE_GET_OP    (KR.DUR     , op_KR_DUR_get                           , 1, true);
 const tele_op_t op_KR_RUN      = MAKE_GET_OP    (KR.RUN     , op_KR_RUN_get                           , 1, false);
 const tele_op_t op_KR_II       = MAKE_GET_SET_OP(KR.II      , op_KR_II_get       , op_KR_II_set       , 1, true);
+const tele_op_t op_KR_TMUL     = MAKE_GET_SET_OP(KR.TMUL    , op_KR_TMUL_get     , op_KR_TMUL_set     , 2, true);
+const tele_op_t op_KR_MP       = MAKE_GET_SET_OP(KR.MP      , op_KR_MP_get       , op_KR_MP_set       , 2, true);
+const tele_op_t op_KR_MP_POS   = MAKE_GET_SET_OP(KR.MP.POS  , op_KR_MP_POS_get   , op_KR_MP_POS_set   , 1, true);
+const tele_op_t op_KR_MP_MUTE  = MAKE_GET_SET_OP(KR.MP.MUTE , op_KR_MP_MUTE_get  , op_KR_MP_MUTE_set  , 1, true);
+const tele_op_t op_KR_MP_SCR   = MAKE_GET_SET_OP(KR.MP.SCR  , op_KR_MP_SCR_get   , op_KR_MP_SCR_set   , 0, true);
 
 const tele_op_t op_ME_PRE      = MAKE_GET_SET_OP(ME.PRE     , op_ME_PRE_get      , op_ME_PRE_set      , 0, true);
 const tele_op_t op_ME_RES      = MAKE_GET_OP    (ME.RES     , op_ME_RES_get                           , 1, false);
@@ -463,9 +488,9 @@ static void op_KR_L_LEN_get(const void *NOTUSED(data),
 
 static void op_KR_RES_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
                           exec_state_t *NOTUSED(es), command_state_t *cs) {
-    cs_pop(cs);  // (track, arg) accepted for compat; native reset is global
-    cs_pop(cs);
-    kria_op_reset();
+    cs_pop(cs);  // 2nd arg (param) kept for arg-count compat; ignored
+    int16_t track = cs_pop(cs);  // 1st arg: 0 = all tracks, 1..N = that track
+    kria_op_reset(track);
 }
 
 static void op_KR_CV_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
@@ -550,6 +575,76 @@ static void op_KR_II_set(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
     int16_t val = cs_pop(cs);
     int16_t f = cs_pop(cs);
     kria_op_ii(f, 1, val);
+}
+
+static void op_KR_TMUL_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
+                           exec_state_t *NOTUSED(es), command_state_t *cs) {
+    int16_t param = cs_pop(cs);
+    int16_t track = cs_pop(cs);
+    cs_push(cs, kria_op_tmul(track, param, 0, 0));
+}
+
+static void op_KR_TMUL_set(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
+                           exec_state_t *NOTUSED(es), command_state_t *cs) {
+    int16_t val = cs_pop(cs);
+    int16_t param = cs_pop(cs);
+    int16_t track = cs_pop(cs);
+    kria_op_tmul(track, param, 1, val);
+}
+
+static void op_KR_MP_get(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
+                         exec_state_t *NOTUSED(es), command_state_t *cs) {
+    int16_t field = cs_pop(cs);
+    int16_t lane = cs_pop(cs);
+    cs_push(cs, kria_op_mp(lane, field, 0, 0));
+}
+
+static void op_KR_MP_set(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),
+                         exec_state_t *NOTUSED(es), command_state_t *cs) {
+    int16_t val = cs_pop(cs);
+    int16_t field = cs_pop(cs);
+    int16_t lane = cs_pop(cs);
+    kria_op_mp(lane, field, 1, val);
+}
+
+static void op_KR_MP_POS_get(const void *NOTUSED(data),
+                             scene_state_t *NOTUSED(ss),
+                             exec_state_t *NOTUSED(es), command_state_t *cs) {
+    cs_push(cs, kria_op_mp_pos(cs_pop(cs), 0, 0));
+}
+
+static void op_KR_MP_POS_set(const void *NOTUSED(data),
+                             scene_state_t *NOTUSED(ss),
+                             exec_state_t *NOTUSED(es), command_state_t *cs) {
+    int16_t val = cs_pop(cs);
+    int16_t lane = cs_pop(cs);
+    kria_op_mp_pos(lane, 1, val);
+}
+
+static void op_KR_MP_MUTE_get(const void *NOTUSED(data),
+                              scene_state_t *NOTUSED(ss),
+                              exec_state_t *NOTUSED(es), command_state_t *cs) {
+    cs_push(cs, kria_op_mp_mute(cs_pop(cs), 0, 0));
+}
+
+static void op_KR_MP_MUTE_set(const void *NOTUSED(data),
+                              scene_state_t *NOTUSED(ss),
+                              exec_state_t *NOTUSED(es), command_state_t *cs) {
+    int16_t val = cs_pop(cs);
+    int16_t lane = cs_pop(cs);
+    kria_op_mp_mute(lane, 1, val);
+}
+
+static void op_KR_MP_SCR_get(const void *NOTUSED(data),
+                             scene_state_t *NOTUSED(ss),
+                             exec_state_t *NOTUSED(es), command_state_t *cs) {
+    cs_push(cs, kria_op_mp_scr(0, 0));
+}
+
+static void op_KR_MP_SCR_set(const void *NOTUSED(data),
+                             scene_state_t *NOTUSED(ss),
+                             exec_state_t *NOTUSED(es), command_state_t *cs) {
+    kria_op_mp_scr(1, cs_pop(cs));
 }
 
 static void op_ME_PRE_set(const void *NOTUSED(data), scene_state_t *NOTUSED(ss),

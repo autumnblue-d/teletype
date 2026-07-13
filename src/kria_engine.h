@@ -41,6 +41,9 @@
 // lanes >= KR_SCRIPT_LANES are inert (the fire binding drops them).
 #define KR_SCRIPT_LANES 6
 #define KR_SCRIPT_BASE 2
+// Bitmask of the live MP-seq lanes (0-5); cascade masks (trigger/toggle/sync)
+// are confined to it so the inert lanes 6-7 stay clear (see kria_op_mp).
+#define KR_MP_LANE_MASK ((1 << KR_SCRIPT_LANES) - 1)
 
 // Per-track parameter loop indices (Ansible kria_modes_t, the 7 looped params).
 #define KR_P_TR 0
@@ -245,6 +248,9 @@ void kria_engine_calc_scale(kria_engine_t* e, const uint8_t intervals[8]);
 // Re-arm all positions to loop-end (so the next clock lands on loop-start) and
 // clear cue/clock counters. Mirrors Ansible's pos_reset handling.
 void kria_engine_reset(kria_engine_t* e);
+
+// Re-arm a single track to its loop start; leaves song-level counters intact.
+void kria_engine_reset_track(kria_engine_t* e, uint8_t t);
 
 // Advance the sequencer one clock. Acts only on the rising edge (phase != 0),
 // matching Ansible clock_kria(): cue/meta bookkeeping, pending resets, then

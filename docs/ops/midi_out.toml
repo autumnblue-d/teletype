@@ -87,3 +87,15 @@ short = "send MIDI Stop message"
 ["MO.CONT"]
 prototype = "MO.CONT"
 short = "send MIDI Continue message"
+
+["MO.AT"]
+prototype = "MO.AT x"
+short = "send MIDI Channel Pressure (aftertouch) `x` (0..127) on the default channel"
+
+["MO.PANIC"]
+prototype = "MO.PANIC"
+short = "kill all sound: send All Sound Off (CC 120) + All Notes Off (CC 123) on all 16 channels and release every note held by MO.NG/MO.TR"
+
+["MO.SPP"]
+prototype = "MO.SPP x"
+short = "send MIDI Song Position Pointer `x` (0..16383, in 16th-note beats); pairs with MO.CLK/START/STOP/CONT to drive a DAW's transport"

@@ -123,6 +123,14 @@ void mp_engine_set_defaults(mp_config_t* cfg);
 // defaults before use to prevent out-of-bounds indexing.
 bool mp_engine_config_valid(const mp_config_t* cfg);
 
+// Generic indexed config accessor for the KR.MP / MP.CFG script ops. See the
+// definition for the field map (0 count .. 11 smax); clamps keep the config
+// valid. `lane_mask` confines the mask fields to the live lanes, `max_dest`
+// bounds the rule destination. Returns the resulting field value.
+int16_t mp_config_field(mp_config_t* cfg, uint8_t row, uint8_t field,
+                        uint8_t set, int16_t val, uint8_t lane_mask,
+                        uint8_t max_dest);
+
 // Initialize the engine: bind outputs + RNG, load defaults, arm all rows.
 void mp_engine_init(mp_engine_t* e, const mp_output_t* out,
                     uint32_t (*rnd)(void* ctx), void* rnd_ctx);

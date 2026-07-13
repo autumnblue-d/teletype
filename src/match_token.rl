@@ -401,6 +401,10 @@
         "MP.PERIOD"   => { MATCH_OP(E_OP_MP_PERIOD); };
         "MP.SCALE"    => { MATCH_OP(E_OP_MP_SCALE); };
         "MP.SCL"      => { MATCH_OP(E_OP_MP_SCL); };
+        "MP.CFG"      => { MATCH_OP(E_OP_MP_CFG); };
+        "MP.CV"       => { MATCH_OP(E_OP_MP_CV); };
+        "MP.CFG"      => { MATCH_OP(E_OP_MP_CFG); };
+        "MP.CV"       => { MATCH_OP(E_OP_MP_CV); };
 
         # earthsea
         "ES.PRESET"   => { MATCH_OP(E_OP_ES_PRESET); };
@@ -458,6 +462,16 @@
         "KR.DUR"      => { MATCH_OP(E_OP_KR_DUR); };
         "KR.RUN"      => { MATCH_OP(E_OP_KR_RUN); };
         "KR.II"       => { MATCH_OP(E_OP_KR_II); };
+        "KR.TMUL"     => { MATCH_OP(E_OP_KR_TMUL); };
+        "KR.MP"       => { MATCH_OP(E_OP_KR_MP); };
+        "KR.MP.POS"   => { MATCH_OP(E_OP_KR_MP_POS); };
+        "KR.MP.MUTE"  => { MATCH_OP(E_OP_KR_MP_MUTE); };
+        "KR.MP.SCR"   => { MATCH_OP(E_OP_KR_MP_SCR); };
+        "KR.TMUL"     => { MATCH_OP(E_OP_KR_TMUL); };
+        "KR.MP"       => { MATCH_OP(E_OP_KR_MP); };
+        "KR.MP.POS"   => { MATCH_OP(E_OP_KR_MP_POS); };
+        "KR.MP.MUTE"  => { MATCH_OP(E_OP_KR_MP_MUTE); };
+        "KR.MP.SCR"   => { MATCH_OP(E_OP_KR_MP_SCR); };
         "ME.PRE"      => { MATCH_OP(E_OP_ME_PRE); };
         "ME.RES"      => { MATCH_OP(E_OP_ME_RES); };
         "ME.STOP"     => { MATCH_OP(E_OP_ME_STOP); };
@@ -1087,6 +1101,12 @@
         "MO.START"    => { MATCH_OP(E_OP_MO_START); };
         "MO.STOP"     => { MATCH_OP(E_OP_MO_STOP); };
         "MO.CONT"     => { MATCH_OP(E_OP_MO_CONT); };
+        "MO.AT"       => { MATCH_OP(E_OP_MO_AT); };
+        "MO.PANIC"    => { MATCH_OP(E_OP_MO_PANIC); };
+        "MO.SPP"      => { MATCH_OP(E_OP_MO_SPP); };
+        "MO.AT"       => { MATCH_OP(E_OP_MO_AT); };
+        "MO.PANIC"    => { MATCH_OP(E_OP_MO_PANIC); };
+        "MO.SPP"      => { MATCH_OP(E_OP_MO_SPP); };
 
         # MODS
         # controlflow

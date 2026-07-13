@@ -43,3 +43,38 @@ short = "active scale-bank slot (`0-15`)"
 prototype = "MP.SCL slot degree"
 prototype_set = "MP.SCL slot degree x"
 short = "scale ladder rung: `slot` `0-15`, `degree` `0-7` (`0` = base). Get returns the cumulative note offset (summed rungs) the engine plays for that degree; set writes the per-rung semitone delta `x`, clamped `0-7`"
+
+["MP.CFG"]
+prototype = "MP.CFG row field"
+prototype_set = "MP.CFG row field x"
+short = "get/set a cascade parameter for `row` (0-7), `field` (set to `x`)"
+description = """
+Get or set a per-row parameter of the Meadowphysics cascade for `row` (0-7).
+`field` selects the parameter; `x` is clamped to the field's valid range:
+
+ - `0` = count (loop length / countdown start, 0-15)
+ - `1` = speed (extra ticks per step; 0 = fastest, 0-7)
+ - `2` = range min, used by rules (0-15)
+ - `3` = range max, used by rules (0-15)
+ - `4` = rule (`0` none, `1` inc, `2` dec, `3` max, `4` min, `5` rnd, `6` pole, `7` stop)
+ - `5` = rule destination row (0-7)
+ - `6` = trigger mask: bitmask of rows gated high on rollover
+ - `7` = toggle mask: bitmask of rows flipped on rollover
+ - `8` = reset mask: bitmask of rows re-armed on rollover (distinct from `MP.SYNC`, which selects the clock source)
+ - `9` = rule target: `1` count, `2` speed, `3` both
+ - `10` = speed range min, used by rules (0-7)
+ - `11` = speed range max, used by rules (0-7)
+
+This is the same accessor as `KR.MP` (which drives the Kria DUR-page cascade),
+here targeting the standalone Meadowphysics engine's 8 rows. Edits are live and
+persist when the preset slot is saved.
+"""
+
+["MP.CV"]
+prototype = "MP.CV row"
+short = "get the CV (pitch) that `row` (1-8) plays"
+description = """
+Get the CV value the given `row` (1-8) plays -- its scale note run through the
+same `note_to_cv` mapping the engine uses for its outputs, so it can be written
+straight to a CV output (e.g. `CV 1 MP.CV 1`). Mirrors `KR.CV` / `ES.CV`.
+"""

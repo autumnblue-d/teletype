@@ -88,9 +88,31 @@ prototype = "KR.L.LEN x y"
 prototype_set = "KR.L.LEN x y z"
 short = "get/set loop length for track `x`, parameter `y` (set to `z`, 1-16)"
 
+["KR.TMUL"]
+prototype = "KR.TMUL x y"
+prototype_set = "KR.TMUL x y z"
+short = "get/set the clock divider for track `x` (0-3), parameter `y` (0-6), set to `z` (1-16)"
+description = """
+Get or set the per-parameter clock divider (the grid TIME page) for track `x`
+(0-3) and parameter `y` (same indices as `KR.POS`: 0 trigger, 1 note, 2 octave,
+3 duration, 4 repeat, 5 alt note, 6 glide). `z` is the divider (1-16): that
+parameter advances once every `z` clocks, so different parameters/tracks drift
+into polymeter. Takes effect on the next clock; persisted with the song.
+"""
+
 ["KR.RES"]
 prototype = "KR.RES x y"
-short = "reset all tracks to their loop start (args accepted for compatibility)"
+short = "reset Kria playback to loop start: `x` = 0 all tracks, `1`-`4` that track (1-indexed). `y` is ignored (kept for arg-count compatibility)"
+description = """
+Reset Kria playback to the loop start. `x` selects the target, matching the
+`MP.RESET` / `ME.RES` / `CY.RES` convention:
+
+ - `0` = all tracks (also clears the song clock/cue/meta counters)
+ - `1`-`4` = re-arm just that track (1-indexed), leaving the song counters intact
+
+`y` is ignored; it is accepted only so existing two-argument `KR.RES x y` scripts
+still parse.
+"""
 
 ["KR.CV"]
 prototype = "KR.CV x"
@@ -153,6 +175,55 @@ persisted. Followers:
  - `3` = Disting EX
  - `4` = W/syn
  - `5` = Crow
+"""
+
+["KR.MP"]
+prototype = "KR.MP lane field"
+prototype_set = "KR.MP lane field x"
+short = "get/set an MP-seq cascade parameter for `lane` (0-5), `field` (set to `x`)"
+description = """
+Get or set a parameter of the DUR-page Meadowphysics-style cascade sequencer
+(the second DUR sub-tab) for `lane` (0-5, firing scripts 3-8). `field` selects
+the parameter; `x` is clamped to the field's valid range:
+
+ - `0` = count (loop length / countdown start, 0-15)
+ - `1` = speed (extra ticks per step; 0 = fastest, 0-7)
+ - `2` = range min, used by rules (0-15)
+ - `3` = range max, used by rules (0-15)
+ - `4` = rule (`0` none, `1` inc, `2` dec, `3` max, `4` min, `5` rnd, `6` pole, `7` stop)
+ - `5` = rule destination lane (0-5)
+ - `6` = trigger mask: bitmask of lanes gated high on rollover (bits 0-5)
+ - `7` = toggle mask: bitmask of lanes flipped on rollover (bits 0-5)
+ - `8` = reset mask: bitmask of lanes re-armed on rollover (bits 0-5). This is the cascade reset field, distinct from `MP.SYNC` (which selects the native Meadowphysics clock source)
+ - `9` = rule target: `1` count, `2` speed, `3` both
+ - `10` = speed range min, used by rules (0-7)
+ - `11` = speed range max, used by rules (0-7)
+
+Edits apply to the active Kria pattern's cascade and are persisted with the song.
+"""
+
+["KR.MP.POS"]
+prototype = "KR.MP.POS lane"
+prototype_set = "KR.MP.POS lane x"
+short = "get/set the current countdown position of MP-seq `lane` (0-5); `-1` = stopped"
+
+["KR.MP.MUTE"]
+prototype = "KR.MP.MUTE lane"
+prototype_set = "KR.MP.MUTE lane x"
+short = "get/set the fire mute for MP-seq `lane` (0-5): `x` = 1 suppresses that lane's script, 0 re-enables"
+
+["KR.MP.SCR"]
+prototype = "KR.MP.SCR"
+prototype_set = "KR.MP.SCR x"
+short = "get/set the base script (1-8) that MP-seq lane 0 fires; lane `i` fires script `x + i`"
+description = """
+Get or set the base script number the MP-seq lanes fire: lane 0 fires script
+`x` (1-8), lane 1 fires `x + 1`, and so on for the six lanes. The default is `3`
+(lanes fire scripts 3-8), matching the fixed mapping before this op existed.
+Setting it lets a scene move the six-lane window within scripts 1-8 -- e.g.
+`KR.MP.SCR 1` frees scripts 7-8 for other use, `KR.MP.SCR 3` frees 1-2. Lanes
+whose mapped script would exceed 8 are silently dropped. This is a runtime
+setting (not saved with the song); set it from the INIT script.
 """
 
 ["ME.PRE"]

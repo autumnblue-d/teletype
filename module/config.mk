@@ -297,7 +297,14 @@ CPPFLAGS = -D BOARD=USER_BOARD -D UHD_ENABLE
 # SCENE_SLOTS 18 -> 16 (frees ~2 scene slots of NVRAM). nvram_data_t is 0x226b4
 # (~138 KB) at 18 slots, so 16 slots is ~2 slots smaller -> 132K reservation
 # fits it and frees ~10 KB of program flash. Re-verify .flash_nvram in the map.
-LDFLAGS = -Wl,-e,_trampoline,--defsym=__flash_nvram_size__=132K
+#
+# Flash-recovery pass (2026-07-13): nvram_data_t measured at 0x1fc98 (130200 B),
+# so the 132K (135168 B) reserve had ~4.9 KB of slack. Lowered to 128K (131072 B)
+# -- still fits nvram_data_t with ~872 B to spare -- to free 4 KB of program
+# flash for the KR.MP-era op work. Bump FIRSTRUN_KEY (flash.c) on this change.
+# The linker's ".data overflowed into .nvram!" ASSERT also fails if nvram_data_t
+# ever exceeds this reserve, so a too-small value is caught at link time.
+LDFLAGS = -Wl,-e,_trampoline,--defsym=__flash_nvram_size__=128K
 
 # Pre- and post-build commands
 PREBUILD_CMD =

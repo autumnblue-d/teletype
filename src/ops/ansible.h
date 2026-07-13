@@ -28,6 +28,11 @@ extern const tele_op_t op_KR_DIR;
 extern const tele_op_t op_KR_DUR;
 extern const tele_op_t op_KR_RUN;
 extern const tele_op_t op_KR_II;
+extern const tele_op_t op_KR_TMUL;
+extern const tele_op_t op_KR_MP;
+extern const tele_op_t op_KR_MP_POS;
+extern const tele_op_t op_KR_MP_MUTE;
+extern const tele_op_t op_KR_MP_SCR;
 
 extern const tele_op_t op_ME_PRE;
 extern const tele_op_t op_ME_RES;

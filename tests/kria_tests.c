@@ -197,6 +197,24 @@ TEST loop_bounds_are_respected(void) {
     PASS();
 }
 
+TEST reset_track_rearms_only_that_track(void) {
+    fixture_single_track(0, 3);  // track 0 loops 0..3
+    set_loop(1, 0, 3);           // give track 1 the same loop
+    set_all_triggers(1);
+    kria_engine_reset(&E);  // re-arm both from their loops
+    clocks(2);              // advance both off loop-end
+    ASSERT(E.rt.pos[0][KR_P_TR] != 3);
+    int16_t t1_pos = E.rt.pos[1][KR_P_TR];
+
+    kria_engine_reset_track(&E, 0);  // reset track 0 only
+    ASSERT_EQ(3, E.rt.pos[0][KR_P_TR]);       // re-armed to lend
+    ASSERT_EQ(t1_pos, E.rt.pos[1][KR_P_TR]);  // track 1 untouched
+
+    kria_engine_reset_track(&E, KR_NUM_TRACKS);  // out-of-range: no-op, no crash
+    ASSERT_EQ(t1_pos, E.rt.pos[1][KR_P_TR]);
+    PASS();
+}
+
 TEST reverse_direction_counts_down(void) {
     fixture_single_track(0, 3);
     E.cfg.p[0].t[0].direction = KR_DIR_REVERSE;
@@ -627,6 +645,7 @@ SUITE(kria_suite) {
     RUN_TEST(forward_stepping_fires_each_clock);
     RUN_TEST(tmul_divides_the_clock);
     RUN_TEST(loop_bounds_are_respected);
+    RUN_TEST(reset_track_rearms_only_that_track);
     RUN_TEST(reverse_direction_counts_down);
     RUN_TEST(random_direction_is_deterministic_with_fixed_rng);
     RUN_TEST(mute_suppresses_output);

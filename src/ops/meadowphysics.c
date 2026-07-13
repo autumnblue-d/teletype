@@ -107,8 +107,34 @@ static void op_MP_SCL_set(const void* NOTUSED(data), scene_state_t* NOTUSED(ss),
     meadowphysics_op_ladder_set(slot, degree, val);
 }
 
+// MP.CFG row field [val] -- generic indexed cascade config accessor over the
+// 8 rows (0 count, 1 speed, 2 min, 3 max, 4 rule, 5 rule-dest, 6 trigger mask,
+// 7 toggle mask, 8 reset mask, 9 rule target, 10 smin, 11 smax). Mirrors KR.MP.
+static void op_MP_CFG_get(const void* NOTUSED(data), scene_state_t* NOTUSED(ss),
+                          exec_state_t* NOTUSED(es), command_state_t* cs) {
+    int16_t field = cs_pop(cs);
+    int16_t row = cs_pop(cs);
+    cs_push(cs, meadowphysics_op_cfg(row, field, 0, 0));
+}
+static void op_MP_CFG_set(const void* NOTUSED(data), scene_state_t* NOTUSED(ss),
+                          exec_state_t* NOTUSED(es), command_state_t* cs) {
+    int16_t val = cs_pop(cs);
+    int16_t field = cs_pop(cs);
+    int16_t row = cs_pop(cs);
+    meadowphysics_op_cfg(row, field, 1, val);
+}
+
+// MP.CV row -- the CV a row (1-8) plays; note_to_cv of its scale note.
+static void op_MP_CV_get(const void* NOTUSED(data), scene_state_t* NOTUSED(ss),
+                         exec_state_t* NOTUSED(es), command_state_t* cs) {
+    cs_push(cs, meadowphysics_op_cv(cs_pop(cs)));
+}
+
 const tele_op_t op_MP_PRESET =
     MAKE_GET_SET_OP(MP.PRESET, op_MP_PRESET_get, op_MP_PRESET_set, 0, true);
+const tele_op_t op_MP_CFG =
+    MAKE_GET_SET_OP(MP.CFG, op_MP_CFG_get, op_MP_CFG_set, 2, true);
+const tele_op_t op_MP_CV = MAKE_GET_OP(MP.CV, op_MP_CV_get, 1, true);
 const tele_op_t op_MP_RESET = MAKE_GET_OP(MP.RESET, op_MP_RESET_get, 1, false);
 const tele_op_t op_MP_STOP = MAKE_GET_OP(MP.STOP, op_MP_STOP_get, 1, false);
 const tele_op_t op_MP_RUN = MAKE_GET_OP(MP.RUN, op_MP_RUN_get, 1, false);
