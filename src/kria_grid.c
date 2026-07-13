@@ -641,6 +641,13 @@ static void key_bottom_row(kria_engine_t* e, kria_grid_state_t* g, uint8_t x,
         else if (x == 15)
             g->cue = 0;
     }
+
+    // Leaving the MP-seq page mid-hold (a nav press while holding the col0/col1
+    // positions/speed/rules gesture) orphans the MP release events, stranding
+    // mpgrid in a held sub-view -- the page then "hangs" on return. Reset the
+    // MP grid hold state on any exit from the MP-seq page.
+    if (mode == KR_MODE_MPSEQ && g->mode != KR_MODE_MPSEQ)
+        mp_grid_state_init(&g->mpgrid);
 }
 
 void kria_grid_process_key(kria_engine_t* e, kria_grid_state_t* g, uint8_t x,

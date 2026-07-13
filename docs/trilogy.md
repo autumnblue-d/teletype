@@ -108,8 +108,11 @@ lane 6 → script 8 — driving your scripts rather than CV/TR. It rides Kria's
 clock (each lane's *speed* divides it). Editing is exactly Meadowphysics (see
 below): tap a cell to set a lane's position, tap again to set its range; hold
 **column 0** for the speed / trigger view (and to pick the lane), **column 1**
-for the rules view. Kria's LOOP / TIME / PROB mods and grid row 6 are not used
-here.
+for the rules view. In the rules view the eight rules are laid across **columns
+8–15** (col 8 = *none* … col 15 = *stop*) — one press each — rather than
+Meadowphysics' one-rule-per-row selection, which the six-lane window can't
+reach; this is what makes *pole* and *stop* selectable here. Kria's
+LOOP / TIME / PROB mods and grid row 6 are not used here.
 
 **Outputs:** track *n* drives **CV *n*** and **TR *n***. A muted track frees its
 CV/TR for scripts. Kria's state is a single global song, shared across scenes;
