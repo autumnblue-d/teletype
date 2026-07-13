@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "kria_engine.h"  // KRIA_NUM_TRACKS (AppCustom range widths)
+#include "kria_engine.h"  // KR_NUM_TRACKS (AppCustom range widths)
 
 // Native Kria mode shell: owns the engine + clock + grid instances, drives the
 // clock timer and the per-track note-off/repeat/blink timers, binds output, and
@@ -16,7 +16,7 @@
 #define KR_EXT_RESET_INPUT 1
 
 // handler_AppCustom event codes: our ISR timers post these, main.c dispatches
-// them. Single values plus per-track ranges [BASE, BASE+KRIA_NUM_TRACKS).
+// them. Single values plus per-track ranges [BASE, BASE+KR_NUM_TRACKS).
 #define KR_APPEVT_CLOCK 2          // internal clock tick
 #define KR_APPEVT_PATTERN_COPY 4   // mPattern long-press hold elapsed -> copy
 #define KR_APPEVT_NOTEOFF_BASE 10  // + track -> note-off

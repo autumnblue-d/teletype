@@ -1,6 +1,6 @@
 // Kria i2c follower output -- faithful port of Ansible's ansible_ii_leader.c.
 // See kria_i2c.h. i2c_leader_tx -> tele_ii_tx; outputs[t].semitones ->
-// kri2c_sem[t]; aux_param[0][t] -> kri2c_aux[t]; ET[] via music.h (clamped).
+// kria_i2c_sem[t]; aux_param[0][t] -> kria_i2c_aux[t]; ET[] via music.h (clamped).
 
 #include "kria_i2c.h"
 
@@ -12,8 +12,8 @@
 #include "teletype_io.h"  // tele_ii_tx
 
 // current pitch (semitone index) + aux (duration) per track, set by the shell
-static int16_t kri2c_sem[KRIA_NUM_TRACKS];
-static uint16_t kri2c_aux[KRIA_NUM_TRACKS];
+static int16_t kria_i2c_sem[KR_NUM_TRACKS];
+static uint16_t kria_i2c_aux[KR_NUM_TRACKS];
 static uint8_t view_dirty = 0;  // a follower setting changed since last flush
 
 static uint16_t et(int idx) {
@@ -51,9 +51,9 @@ static void ii_init_jf(i2c_follower_t* f, uint8_t track, uint8_t state) {
 static void ii_tr_jf(i2c_follower_t* f, uint8_t track, uint8_t state) {
     uint8_t d[6] = { 0 };
     uint8_t l = 0;
-    uint16_t pitch = et(kri2c_sem[track]);
+    uint16_t pitch = et(kria_i2c_sem[track]);
     if (state) {
-        uint16_t vel = aux_to_vel(kri2c_aux[track]);
+        uint16_t vel = aux_to_vel(kria_i2c_aux[track]);
         switch (f->active_mode) {
             case 0:  // polyphonically allocated
                 d[0] = JF_NOTE;
@@ -300,7 +300,7 @@ static void ii_mode_disting_ex(i2c_follower_t* f, uint8_t track, uint8_t mode) {
 
 static void ii_tr_disting_ex(i2c_follower_t* f, uint8_t track, uint8_t state) {
     uint8_t d[4] = { 0 };
-    int note = kri2c_sem[track] + 12 * (4 + f->oct);
+    int note = kria_i2c_sem[track] + 12 * (4 + f->oct);
     switch (f->active_mode) {
         case 0:  // SD Multisample / triggers, allocated voices
             if (note < 0)
@@ -368,7 +368,7 @@ static void ii_cv_disting_ex(i2c_follower_t* f, uint8_t track,
                              uint16_t dac_value) {
     (void)dac_value;
     uint8_t d[4] = { 0 };
-    int note = kri2c_sem[track] + 12 * (4 + f->oct);
+    int note = kria_i2c_sem[track] + 12 * (4 + f->oct);
     uint16_t pitch = et(note) - et(36);
     d[2] = pitch >> 8;
     d[3] = pitch;
@@ -407,8 +407,8 @@ static void ii_init_wsyn(i2c_follower_t* f, uint8_t track, uint8_t state) {
 static void ii_tr_wsyn(i2c_follower_t* f, uint8_t track, uint8_t state) {
     uint8_t d[6] = { 0 };
     uint8_t l = 0;
-    uint16_t pitch = et(kri2c_sem[track] + (3 + f->oct) * 12);
-    uint16_t vel = state ? aux_to_vel(kri2c_aux[track]) : 0;
+    uint16_t pitch = et(kria_i2c_sem[track] + (3 + f->oct) * 12);
+    uint16_t vel = state ? aux_to_vel(kria_i2c_aux[track]) : 0;
     switch (f->active_mode) {
         case 0:  // polyphonically allocated
             d[0] = WS_S_NOTE;
@@ -460,8 +460,8 @@ static void ii_mode_crow(i2c_follower_t* f, uint8_t track, uint8_t mode) {
 
 static void ii_tr_crow(i2c_follower_t* f, uint8_t track, uint8_t state) {
     uint8_t d[7];
-    uint16_t pitch = et(kri2c_sem[track]);
-    uint16_t vel = state ? aux_to_vel(kri2c_aux[track]) : 0;
+    uint16_t pitch = et(kria_i2c_sem[track]);
+    uint16_t vel = state ? aux_to_vel(kria_i2c_aux[track]) : 0;
     d[0] = 6;  // CROW call3
     d[1] = 0;
     d[2] = track + 1;
@@ -496,15 +496,15 @@ static void ii_u16_nop(i2c_follower_t* f, uint8_t track, uint16_t v) {
 #define KR_MIDI_VEL 100  // fixed note velocity (velocity-from-duration = TODO)
 
 // General MIDI drum map for the 8T fixed-note defaults (kick/snare/hats/...).
-static const uint8_t GM_DRUM[KRIA_I2C_TRACKS] = {
+static const uint8_t GM_DRUM[KR_I2C_TRACKS] = {
     36, 38, 42, 46, 39, 45, 49, 51
 };
 
 // pitched note for a track (modes 0/1): Kria semitone + base 4 octaves +
 // offset, matching the Disting-EX MIDI modes.
 static int midi_pitched_note(i2c_follower_t* f, uint8_t track) {
-    uint8_t t = track < KRIA_NUM_TRACKS ? track : KRIA_NUM_TRACKS - 1;
-    return kri2c_sem[t] + 12 * (4 + f->oct);
+    uint8_t t = track < KR_NUM_TRACKS ? track : KR_NUM_TRACKS - 1;
+    return kria_i2c_sem[t] + 12 * (4 + f->oct);
 }
 
 // Resolve (channel, note) for a track given the follower's MIDI mode. Returns 0
@@ -512,7 +512,7 @@ static int midi_pitched_note(i2c_follower_t* f, uint8_t track) {
 static uint8_t midi_resolve(i2c_follower_t* f, uint8_t track, uint8_t* ch_out,
                             uint8_t* note_out) {
     uint8_t chmax = f->ops->chan_max ? f->ops->chan_max : 16;
-    uint8_t g = track & (KRIA_I2C_TRACKS - 1);
+    uint8_t g = track & (KR_I2C_TRACKS - 1);
     int note, ch;
     switch (f->active_mode) {
         case KR_MIDI_PITCH_SINGLE:
@@ -622,12 +622,12 @@ static void ii_tr_mo(i2c_follower_t* f, uint8_t track, uint8_t state) {
 static void ii_mute_i2m(i2c_follower_t* f, uint8_t track, uint8_t mode) {
     (void)track;
     (void)mode;
-    for (uint8_t t = 0; t < KRIA_I2C_TRACKS; t++) ii_tr_i2m(f, t, 0);
+    for (uint8_t t = 0; t < KR_I2C_TRACKS; t++) ii_tr_i2m(f, t, 0);
 }
 static void ii_mute_mo(i2c_follower_t* f, uint8_t track, uint8_t mode) {
     (void)track;
     (void)mode;
-    for (uint8_t t = 0; t < KRIA_I2C_TRACKS; t++) ii_tr_mo(f, t, 0);
+    for (uint8_t t = 0; t < KR_I2C_TRACKS; t++) ii_tr_mo(f, t, 0);
 }
 
 static void ii_init_midi(i2c_follower_t* f, uint8_t track, uint8_t state) {
@@ -670,7 +670,7 @@ static const i2c_ops_t mo_ops = {
     ii_s8_nop,    ii_u16_nop, KR_MIDI_MODE_CT, 1,          16
 };
 
-static i2c_follower_t followers[KRIA_I2C_FOLLOWERS] = {
+static i2c_follower_t followers[KR_I2C_FOLLOWERS] = {
     { JF_ADDR, 0, 0x0f, 0, 0, &jf_ops },
     { TELEXO_0, 0, 0x0f, 0, 0, &txo_ops },
     { ER301_1, 0, 0x0f, 0, 1, &er301_ops },
@@ -684,25 +684,25 @@ static i2c_follower_t followers[KRIA_I2C_FOLLOWERS] = {
 // ---- driving the followers ----
 
 void kria_i2c_set_voice(uint8_t track, int16_t semitones, uint16_t aux) {
-    if (track >= KRIA_NUM_TRACKS) return;
-    kri2c_sem[track] = semitones;
-    kri2c_aux[track] = aux;
+    if (track >= KR_NUM_TRACKS) return;
+    kria_i2c_sem[track] = semitones;
+    kria_i2c_aux[track] = aux;
 }
 
 void kria_i2c_cv(uint8_t track, uint16_t dac_value) {
-    for (uint8_t i = 0; i < KRIA_I2C_FOLLOWERS; i++)
+    for (uint8_t i = 0; i < KR_I2C_FOLLOWERS; i++)
         if (followers[i].active && (followers[i].track_en & (1 << track)))
             followers[i].ops->cv(&followers[i], track, dac_value);
 }
 
 void kria_i2c_tr(uint8_t track, uint8_t on) {
-    for (uint8_t i = 0; i < KRIA_I2C_FOLLOWERS; i++)
+    for (uint8_t i = 0; i < KR_I2C_FOLLOWERS; i++)
         if (followers[i].active && (followers[i].track_en & (1 << track)))
             followers[i].ops->tr(&followers[i], track, on);
 }
 
 void kria_i2c_slew(uint8_t track, uint16_t slew) {
-    for (uint8_t i = 0; i < KRIA_I2C_FOLLOWERS; i++)
+    for (uint8_t i = 0; i < KR_I2C_FOLLOWERS; i++)
         if (followers[i].active && (followers[i].track_en & (1 << track)))
             followers[i].ops->slew(&followers[i], track, slew);
 }
@@ -719,11 +719,11 @@ static void follower_change_octave(i2c_follower_t* f, int8_t param) {
 }
 
 i2c_follower_t* kria_i2c_follower(uint8_t index) {
-    return index < KRIA_I2C_FOLLOWERS ? &followers[index] : &followers[0];
+    return index < KR_I2C_FOLLOWERS ? &followers[index] : &followers[0];
 }
 
 void kria_i2c_toggle_active(uint8_t index) {
-    if (index >= KRIA_I2C_FOLLOWERS) return;
+    if (index >= KR_I2C_FOLLOWERS) return;
     i2c_follower_t* f = &followers[index];
     f->active = !f->active;
     f->ops->init(f, 0, f->active);
@@ -735,20 +735,20 @@ void kria_i2c_toggle_active(uint8_t index) {
 }
 
 void kria_i2c_toggle_track(uint8_t index, uint8_t track) {
-    if (index >= KRIA_I2C_FOLLOWERS || track >= KRIA_I2C_TRACKS) return;
+    if (index >= KR_I2C_FOLLOWERS || track >= KR_I2C_TRACKS) return;
     followers[index].track_en ^= (1 << track);
     view_dirty = 1;
 }
 
 void kria_i2c_set_octave(uint8_t index, int8_t oct) {
-    if (index >= KRIA_I2C_FOLLOWERS) return;
+    if (index >= KR_I2C_FOLLOWERS) return;
     followers[index].oct = oct;
     follower_change_octave(&followers[index], oct);
     view_dirty = 1;
 }
 
 void kria_i2c_set_mode(uint8_t index, uint8_t mode) {
-    if (index >= KRIA_I2C_FOLLOWERS) return;
+    if (index >= KR_I2C_FOLLOWERS) return;
     if (followers[index].ops->midi) {  // no per-track i2c setup; just latch it
         if (mode < KR_MIDI_MODE_CT) followers[index].active_mode = mode;
         view_dirty = 1;
@@ -760,11 +760,11 @@ void kria_i2c_set_mode(uint8_t index, uint8_t mode) {
 // ---- MIDI follower (I2M/MO) config accessors ----
 
 uint8_t kria_i2c_is_midi(uint8_t index) {
-    return index < KRIA_I2C_FOLLOWERS && followers[index].ops->midi;
+    return index < KR_I2C_FOLLOWERS && followers[index].ops->midi;
 }
 
 uint8_t kria_i2c_chan_max(uint8_t index) {
-    if (index >= KRIA_I2C_FOLLOWERS) return 16;
+    if (index >= KR_I2C_FOLLOWERS) return 16;
     uint8_t m = followers[index].ops->chan_max;
     return m ? m : 16;
 }
@@ -783,20 +783,20 @@ void kria_i2c_set_port(uint8_t index, uint8_t port) {
 }
 
 void kria_i2c_set_note(uint8_t index, uint8_t slot, uint8_t note) {
-    if (!kria_i2c_is_midi(index) || slot >= KRIA_I2C_TRACKS) return;
+    if (!kria_i2c_is_midi(index) || slot >= KR_I2C_TRACKS) return;
     followers[index].notes[slot] = note > 127 ? 127 : note;
     view_dirty = 1;
 }
 
 void kria_i2c_set_chan_slot(uint8_t index, uint8_t slot, uint8_t chan) {
-    if (!kria_i2c_is_midi(index) || slot >= KRIA_I2C_TRACKS) return;
+    if (!kria_i2c_is_midi(index) || slot >= KR_I2C_TRACKS) return;
     uint8_t m = kria_i2c_chan_max(index);
     followers[index].chans[slot] = chan >= m ? m - 1 : chan;
     view_dirty = 1;
 }
 
 void kria_i2c_set_active(uint8_t index, uint8_t on) {
-    if (index >= KRIA_I2C_FOLLOWERS) return;
+    if (index >= KR_I2C_FOLLOWERS) return;
     if ((followers[index].active != 0) != (on != 0))
         kria_i2c_toggle_active(index);
 }
@@ -804,14 +804,14 @@ void kria_i2c_set_active(uint8_t index, uint8_t on) {
 // ---- persistence (global blob) ----
 
 void kria_i2c_defaults(kria_i2c_fstate_t* st) {
-    for (uint8_t i = 0; i < KRIA_I2C_FOLLOWERS; i++) {
+    for (uint8_t i = 0; i < KR_I2C_FOLLOWERS; i++) {
         st[i].active = 0;
         st[i].track_en = 0x0f;
         st[i].oct = 0;
         st[i].mode = 0;
         st[i].chan = 0;
         st[i].port = 0;
-        for (uint8_t j = 0; j < KRIA_I2C_TRACKS; j++) {
+        for (uint8_t j = 0; j < KR_I2C_TRACKS; j++) {
             st[i].notes[j] = GM_DRUM[j];  // 8T fixed-note defaults
             st[i].chans[j] = j;           // 8T.CHANS: gate n -> channel n
         }
@@ -821,8 +821,8 @@ void kria_i2c_defaults(kria_i2c_fstate_t* st) {
 }
 
 void kria_i2c_load(const kria_i2c_fstate_t* st) {
-    kria_i2c_fstate_t def[KRIA_I2C_FOLLOWERS];
-    for (uint8_t i = 0; i < KRIA_I2C_FOLLOWERS; i++) {
+    kria_i2c_fstate_t def[KR_I2C_FOLLOWERS];
+    for (uint8_t i = 0; i < KR_I2C_FOLLOWERS; i++) {
         // sanitize an erased blob (0xFF after chip erase) -> defaults. track_en
         // is now 8-bit (can be 0xff), so the erased sentinel is active > 1.
         if (st[i].active > 1) {
@@ -831,28 +831,28 @@ void kria_i2c_load(const kria_i2c_fstate_t* st) {
             break;
         }
     }
-    for (uint8_t i = 0; i < KRIA_I2C_FOLLOWERS; i++) {
+    for (uint8_t i = 0; i < KR_I2C_FOLLOWERS; i++) {
         followers[i].active = st[i].active;
         followers[i].track_en = st[i].track_en;
         followers[i].oct = st[i].oct;
         followers[i].active_mode = st[i].mode;
         followers[i].chan = st[i].chan;
         followers[i].port = st[i].port;
-        memcpy(followers[i].notes, st[i].notes, KRIA_I2C_TRACKS);
-        memcpy(followers[i].chans, st[i].chans, KRIA_I2C_TRACKS);
+        memcpy(followers[i].notes, st[i].notes, KR_I2C_TRACKS);
+        memcpy(followers[i].chans, st[i].chans, KR_I2C_TRACKS);
     }
 }
 
 void kria_i2c_save(kria_i2c_fstate_t* st) {
-    for (uint8_t i = 0; i < KRIA_I2C_FOLLOWERS; i++) {
+    for (uint8_t i = 0; i < KR_I2C_FOLLOWERS; i++) {
         st[i].active = followers[i].active;
         st[i].track_en = followers[i].track_en;
         st[i].oct = followers[i].oct;
         st[i].mode = followers[i].active_mode;
         st[i].chan = followers[i].chan;
         st[i].port = followers[i].port;
-        memcpy(st[i].notes, followers[i].notes, KRIA_I2C_TRACKS);
-        memcpy(st[i].chans, followers[i].chans, KRIA_I2C_TRACKS);
+        memcpy(st[i].notes, followers[i].notes, KR_I2C_TRACKS);
+        memcpy(st[i].chans, followers[i].chans, KR_I2C_TRACKS);
     }
 }
 
@@ -890,14 +890,14 @@ uint8_t kria_i2c_take_dirty(void) {
 static int8_t view_at(uint8_t x, uint8_t y) {
     if (y < 2 || y > 5) return -1;
     int8_t f = (x == 5) ? (y - 2) : (x == 6) ? (y - 2 + 4) : -1;
-    return (f >= 0 && f < KRIA_I2C_FOLLOWERS) ? f : -1;
+    return (f >= 0 && f < KR_I2C_FOLLOWERS) ? f : -1;
 }
 
 void kria_i2c_view_render(uint8_t* led, uint8_t vari) {
     uint8_t i;
     memset(led, 0, 128);
 
-    for (i = 0; i < KRIA_I2C_FOLLOWERS; i++) {
+    for (i = 0; i < KR_I2C_FOLLOWERS; i++) {
         uint8_t cell = 5 + (i / 4) + (2 + i % 4) * 16;
         if (view_sel >= 0)
             led[cell] = (i == view_sel) ? KM_LB : KM_LD;
@@ -908,7 +908,7 @@ void kria_i2c_view_render(uint8_t* led, uint8_t vari) {
 
     if (view_sel >= 0) {
         i2c_follower_t* f = &followers[view_sel];
-        for (i = 0; i < KRIA_NUM_TRACKS; i++)  // per-track routing (row 7)
+        for (i = 0; i < KR_NUM_TRACKS; i++)  // per-track routing (row 7)
             led[112 + i] = (f->track_en & (1 << i)) ? KM_LB : KM_LD;
         memset(led, KM_LD, 7);  // octave selector (row 0, cols 0-6)
         led[f->oct + 3] = KM_LB;
@@ -953,7 +953,7 @@ void kria_i2c_view_key(uint8_t x, uint8_t y, uint8_t z) {
             kria_i2c_set_mode(view_sel, x - 12);
             view_dirty = 1;
         }
-        else if (y == 7 && x < KRIA_NUM_TRACKS) {
+        else if (y == 7 && x < KR_NUM_TRACKS) {
             kria_i2c_toggle_track(view_sel, x);
             view_dirty = 1;
         }

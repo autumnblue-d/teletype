@@ -81,7 +81,7 @@ static const uint8_t MAJOR[8] = { 0, 2, 2, 1, 2, 2, 2, 1 };
 
 // Set every param loop of track `t` to [lstart,lend].
 static void set_loop(uint8_t t, uint8_t lstart, uint8_t lend) {
-    for (uint8_t p = 0; p < KRIA_NUM_PARAMS; p++) {
+    for (uint8_t p = 0; p < KR_NUM_PARAMS; p++) {
         E.cfg.p[0].t[t].lstart[p] = lstart;
         E.cfg.p[0].t[t].lend[p] = lend;
     }
@@ -125,7 +125,7 @@ TEST config_valid_rejects_bad(void) {
     kria_config_t cfg;
 
     kria_engine_set_defaults(&cfg);
-    cfg.pattern = KRIA_NUM_PATTERNS;  // out of range
+    cfg.pattern = KR_NUM_PATTERNS;  // out of range
     ASSERT_FALSE(kria_engine_config_valid(&cfg));
 
     kria_engine_set_defaults(&cfg);
@@ -145,7 +145,7 @@ TEST config_valid_rejects_bad(void) {
     ASSERT_FALSE(kria_engine_config_valid(&cfg));
 
     kria_engine_set_defaults(&cfg);
-    cfg.meta_pat[5] = KRIA_NUM_PATTERNS;  // meta target out of range
+    cfg.meta_pat[5] = KR_NUM_PATTERNS;  // meta target out of range
     ASSERT_FALSE(kria_engine_config_valid(&cfg));
 
     PASS();
@@ -545,11 +545,11 @@ static const mp_output_t T_MP_OUT = {
 
 TEST mpseq_defaults_are_script_mode(void) {
     kria_engine_set_defaults(&E.cfg);
-    for (uint8_t p = 0; p < KRIA_NUM_PATTERNS; p++) {
+    for (uint8_t p = 0; p < KR_NUM_PATTERNS; p++) {
         ASSERT_EQ(MP_SCRIPT, E.cfg.p[p].mpseq.voice_mode);
         ASSERT(mp_engine_config_valid(&E.cfg.p[p].mpseq));
         // lanes 6-7 (no matching script) have their cascade masks cleared
-        for (uint8_t l = KRIA_SCRIPT_LANES; l < MP_ROWS; l++) {
+        for (uint8_t l = KR_SCRIPT_LANES; l < MP_ROWS; l++) {
             ASSERT_EQ(0, E.cfg.p[p].mpseq.trigger[l]);
             ASSERT_EQ(0, E.cfg.p[p].mpseq.toggle[l]);
             ASSERT_EQ(0, E.cfg.p[p].mpseq.sync[l]);

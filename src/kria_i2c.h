@@ -11,7 +11,7 @@
 
 #include <stdint.h>
 
-#include "kria_engine.h"  // kria_config_t, KRIA_I2C_FOLLOWERS, kria_i2c_fstate_t
+#include "kria_engine.h"  // kria_config_t, KR_I2C_FOLLOWERS, kria_i2c_fstate_t
 
 typedef struct i2c_follower i2c_follower_t;
 
@@ -45,15 +45,15 @@ struct i2c_follower {
     // MIDI-only state (I2M / MO); ignored by CV followers.
     uint8_t chan;                    // base MIDI channel (0-based)
     uint8_t port;                    // MO USB cable (0=A, 1=B)
-    uint8_t notes[KRIA_I2C_TRACKS];  // 8T fixed notes
-    uint8_t chans[KRIA_I2C_TRACKS];  // 8T.CHANS per-gate channels
+    uint8_t notes[KR_I2C_TRACKS];  // 8T fixed notes
+    uint8_t chans[KR_I2C_TRACKS];  // 8T.CHANS per-gate channels
     // Per-voice sounding-note ledger for the MIDI followers (MO / I2M). mo_on
     // is a bitmask of voices currently holding a note; mo_note/mo_ch are what
     // was actually sent. Guarantees a note-off before every retrigger or
     // voice-steal so MIDI notes never stick or drop. Zero-init = all silent.
     uint8_t mo_on;
-    uint8_t mo_note[KRIA_I2C_TRACKS];
-    uint8_t mo_ch[KRIA_I2C_TRACKS];
+    uint8_t mo_note[KR_I2C_TRACKS];
+    uint8_t mo_ch[KR_I2C_TRACKS];
 };
 
 // Set the current pitch (semitone index) + aux (duration, for velocity) for a
@@ -72,7 +72,7 @@ void kria_i2c_save(kria_i2c_fstate_t* st);
 void kria_i2c_defaults(kria_i2c_fstate_t* st);
 
 // Config accessors.
-i2c_follower_t* kria_i2c_follower(uint8_t index);  // 0..KRIA_I2C_FOLLOWERS-1
+i2c_follower_t* kria_i2c_follower(uint8_t index);  // 0..KR_I2C_FOLLOWERS-1
 void kria_i2c_toggle_active(uint8_t index);
 void kria_i2c_set_active(uint8_t index, uint8_t on);  // for KR.II
 void kria_i2c_toggle_track(uint8_t index, uint8_t track);

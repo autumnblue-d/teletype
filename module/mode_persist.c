@@ -54,7 +54,7 @@ bool mode_confirm_tick(void) {
 
 bool mode_flush_i2c_if_dirty(void) {
     if (kria_i2c_take_dirty()) {
-        kria_i2c_fstate_t t[KRIA_I2C_FOLLOWERS];
+        kria_i2c_fstate_t t[KR_I2C_FOLLOWERS];
         kria_i2c_save(t);
         flash_update_kria_i2c(t);
         return true;

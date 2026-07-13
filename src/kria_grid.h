@@ -62,7 +62,7 @@ typedef struct {
     // blink flags, toggled by the shell's 100 ms timers
     uint8_t alt_blink;
     uint8_t meta_lock_blink;
-    uint8_t blinks[KRIA_NUM_TRACKS];  // per-track trigger blink
+    uint8_t blinks[KR_NUM_TRACKS];  // per-track trigger blink
 
     // edit-behavior flags (Ansible kria_state_t; defaults in state_init)
     uint8_t note_sync;      // couple tr<->note editing + loops

@@ -3,11 +3,11 @@
 
 // Kria sequencer engine, ported from Ansible (src/ansible_grid.c).
 //
-// Four independent tracks. Each track has KRIA_NUM_PARAMS parameter "loops"
+// Four independent tracks. Each track has KR_NUM_PARAMS parameter "loops"
 // (trigger, note, octave, duration, repeat, alt-note, glide), each an
 // independent up-to-16-step loop with its own start/end/length and per-param
 // clock divider (tmul). A pattern = 4 tracks + a scale; a "song" holds
-// KRIA_NUM_PATTERNS patterns plus a meta-sequencer that chains them.
+// KR_NUM_PATTERNS patterns plus a meta-sequencer that chains them.
 //
 // This engine is hardware-abstract and self-contained (no globals, no libavr32
 // dependencies): all persistent data lives in kria_config_t, all ephemeral
@@ -29,18 +29,18 @@
 
 #include "meadowphysics_engine.h"  // mp_config_t (per-pattern MP-style seq)
 
-#define KRIA_NUM_TRACKS 4
-#define KRIA_NUM_PARAMS 7
+#define KR_NUM_TRACKS 4
+#define KR_NUM_PARAMS 7
 // Scenario B (Full Kria): Ansible's native 16 patterns per song. kria_config_t
 // ~18.5 KB; funded by SCENE_SLOTS 30 -> 20. See KRIA_PORT_PLAN.md §0.
-#define KRIA_NUM_PATTERNS 16
+#define KR_NUM_PATTERNS 16
 
 // MP-style cascade sequencer (DUR page's second sub-tab, KR_MODE_MPSEQ): 6
-// counter lanes. Lane i fires native Teletype script index (KRIA_SCRIPT_BASE +
+// counter lanes. Lane i fires native Teletype script index (KR_SCRIPT_BASE +
 // i) on rollover -- i.e. scripts 3-8. The MP engine has MP_ROWS (8) counters;
-// lanes >= KRIA_SCRIPT_LANES are inert (the fire binding drops them).
-#define KRIA_SCRIPT_LANES 6
-#define KRIA_SCRIPT_BASE 2
+// lanes >= KR_SCRIPT_LANES are inert (the fire binding drops them).
+#define KR_SCRIPT_LANES 6
+#define KR_SCRIPT_BASE 2
 
 // Per-track parameter loop indices (Ansible kria_modes_t, the 7 looped params).
 #define KR_P_TR 0
@@ -66,7 +66,7 @@
 // matches Ansible's grid_KR_ii layout: col 5 = JF/TXo/ER301/Disting (rows 2-5),
 // col 6 = WSYN/Crow (rows 2-3). I2M + MO are appended MIDI followers (OLED-
 // configured) -- see KRIA_I2C_PLAN.md.
-#define KRIA_I2C_FOLLOWERS 8
+#define KR_I2C_FOLLOWERS 8
 #define KR_F_JF 0
 #define KR_F_TXO 1
 #define KR_F_ER301 2
@@ -78,7 +78,7 @@
 
 // Number of gate/track slots a follower can be routed to. Kria uses 0-3; MP 8T
 // uses 0-7 (TR rows 0-3 + CV-gate rows 4-7). track_en is an 8-bit mask.
-#define KRIA_I2C_TRACKS 8
+#define KR_I2C_TRACKS 8
 
 // Persisted per-follower state (mirrors Ansible i2c_follower_t's mutable bits).
 // The MIDI fields (chan/port/notes/chans) are only used by I2M + MO.
@@ -90,9 +90,9 @@ typedef struct {
     uint8_t chan;      // MIDI: base channel (0-based)
     uint8_t port;      // MIDI (MO): USB cable, 0=A 1=B
     uint8_t
-        notes[KRIA_I2C_TRACKS];  // MIDI 8T: fixed note per gate (GM defaults)
+        notes[KR_I2C_TRACKS];  // MIDI 8T: fixed note per gate (GM defaults)
     uint8_t
-        chans[KRIA_I2C_TRACKS];  // MIDI 8T.CHANS: channel per gate (0-based)
+        chans[KR_I2C_TRACKS];  // MIDI 8T.CHANS: channel per gate (0-based)
 } kria_i2c_fstate_t;
 
 typedef struct {
@@ -105,40 +105,40 @@ typedef struct {
     uint8_t alt_note[16];
     uint8_t glide[16];
 
-    uint8_t p[KRIA_NUM_PARAMS][16];  // per-step probability 0..3
+    uint8_t p[KR_NUM_PARAMS][16];  // per-step probability 0..3
 
     uint8_t dur_mul;
     uint8_t direction;  // KR_DIR_*, stored as u8 to pin the size to 1 byte
     uint8_t
-        advancing[KRIA_NUM_PARAMS];  // triangle-mode direction latch (mutated)
+        advancing[KR_NUM_PARAMS];  // triangle-mode direction latch (mutated)
     uint8_t octshift;
 
-    uint8_t lstart[KRIA_NUM_PARAMS];
-    uint8_t lend[KRIA_NUM_PARAMS];
-    uint8_t llen[KRIA_NUM_PARAMS];
-    uint8_t lswap[KRIA_NUM_PARAMS];  // engine-unused (UI/loop-edit only)
-    uint8_t tmul[KRIA_NUM_PARAMS];   // per-param clock divider (>=1)
+    uint8_t lstart[KR_NUM_PARAMS];
+    uint8_t lend[KR_NUM_PARAMS];
+    uint8_t llen[KR_NUM_PARAMS];
+    uint8_t lswap[KR_NUM_PARAMS];  // engine-unused (UI/loop-edit only)
+    uint8_t tmul[KR_NUM_PARAMS];   // per-param clock divider (>=1)
 
     uint8_t tt_clocked;  // advanced by TT/i2c KR.CLK instead of internal clock
     uint8_t trigger_clocked;  // value params advance only when a trigger fires
 } kria_track_t;
 
 typedef struct {
-    kria_track_t t[KRIA_NUM_TRACKS];
+    kria_track_t t[KR_NUM_TRACKS];
     uint8_t scale;  // index into the shared scale bank
 
     // Per-pattern Meadowphysics-style cascade sequencer (DUR page's second
     // sub-tab; see KRIA_MPSEQ_PLAN.md). Six cascading counter lanes (rows 0-5)
-    // fire scripts 3-8 (KRIA_SCRIPT_BASE + lane) on rollover. voice_mode is
+    // fire scripts 3-8 (KR_SCRIPT_BASE + lane) on rollover. voice_mode is
     // pinned to MP_SCRIPT. Rows 6-7 of the 8-row engine are inert (the fire
-    // binding ignores lane >= KRIA_SCRIPT_LANES). Rules mutate this config live,
+    // binding ignores lane >= KR_SCRIPT_LANES). Rules mutate this config live,
     // so it doubles as the evolving playback state (mirrors Ansible MP).
     mp_config_t mpseq;
 } kria_pattern_t;
 
 // The single global Kria "song" persisted in NVRAM (one instance, not 8).
 typedef struct {
-    kria_pattern_t p[KRIA_NUM_PATTERNS];
+    kria_pattern_t p[KR_NUM_PATTERNS];
     uint8_t pattern;  // active pattern index
     uint8_t meta_pat[64];
     uint8_t meta_steps[64];
@@ -164,25 +164,25 @@ typedef struct {
 
 // Ephemeral runtime state -- never serialized.
 typedef struct {
-    uint8_t pos[KRIA_NUM_TRACKS][KRIA_NUM_PARAMS];  // current step per param
-    uint8_t pos_mul[KRIA_NUM_TRACKS][KRIA_NUM_PARAMS];    // divider sub-counter
-    uint8_t tmul_live[KRIA_NUM_TRACKS][KRIA_NUM_PARAMS];  // live divider target
+    uint8_t pos[KR_NUM_TRACKS][KR_NUM_PARAMS];  // current step per param
+    uint8_t pos_mul[KR_NUM_TRACKS][KR_NUM_PARAMS];    // divider sub-counter
+    uint8_t tmul_live[KR_NUM_TRACKS][KR_NUM_PARAMS];  // live divider target
 
     // latched per-step values (updated when their param advances)
-    uint8_t note[KRIA_NUM_TRACKS];
-    uint8_t oct[KRIA_NUM_TRACKS];
-    uint8_t alt_note[KRIA_NUM_TRACKS];
-    uint8_t glide[KRIA_NUM_TRACKS];
-    uint16_t dur_unscaled[KRIA_NUM_TRACKS];  // (dur[step]+1)*(dur_mul<<2)
-    uint8_t rpt[KRIA_NUM_TRACKS];
-    uint8_t rptBits[KRIA_NUM_TRACKS];
-    uint8_t tr[KRIA_NUM_TRACKS];  // current gate state (for UI / edge)
+    uint8_t note[KR_NUM_TRACKS];
+    uint8_t oct[KR_NUM_TRACKS];
+    uint8_t alt_note[KR_NUM_TRACKS];
+    uint8_t glide[KR_NUM_TRACKS];
+    uint16_t dur_unscaled[KR_NUM_TRACKS];  // (dur[step]+1)*(dur_mul<<2)
+    uint8_t rpt[KR_NUM_TRACKS];
+    uint8_t rptBits[KR_NUM_TRACKS];
+    uint8_t tr[KR_NUM_TRACKS];  // current gate state (for UI / edge)
 
     // repeat bookkeeping (shell schedules the timing; engine tracks the count)
-    uint8_t activeRpt[KRIA_NUM_TRACKS];
-    int16_t repeats[KRIA_NUM_TRACKS];
+    uint8_t activeRpt[KR_NUM_TRACKS];
+    int16_t repeats[KR_NUM_TRACKS];
 
-    uint8_t mutes[KRIA_NUM_TRACKS];
+    uint8_t mutes[KR_NUM_TRACKS];
 
     // derived scale (rebuilt by kria_engine_calc_scale)
     uint8_t cur_scale[8];

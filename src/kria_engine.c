@@ -187,20 +187,20 @@ void kria_engine_calc_scale(kria_engine_t* e, const uint8_t intervals[8]) {
 }
 
 void kria_engine_change_pattern(kria_engine_t* e, uint8_t pattern) {
-    if (pattern >= KRIA_NUM_PATTERNS) return;
+    if (pattern >= KR_NUM_PATTERNS) return;
     e->cfg.pattern = pattern;
     e->rt.pos_reset = true;
     calc_scale_index(e, e->cfg.p[pattern].scale);
 }
 
 void kria_engine_set_mute(kria_engine_t* e, uint8_t track, uint8_t mute) {
-    if (track >= KRIA_NUM_TRACKS) return;
+    if (track >= KR_NUM_TRACKS) return;
     e->rt.mutes[track] = mute ? 1 : 0;
 }
 
 void kria_engine_set_loop_start(kria_engine_t* e, uint8_t track, uint8_t param,
                                 uint8_t start) {
-    if (track >= KRIA_NUM_TRACKS || param >= KRIA_NUM_PARAMS) return;
+    if (track >= KR_NUM_TRACKS || param >= KR_NUM_PARAMS) return;
     kria_track_t* t = &e->cfg.p[e->cfg.pattern].t[track];
     t->lstart[param] = start & 0x0f;
     int end = (int)t->lstart[param] + (int)t->llen[param] - 1;
@@ -216,7 +216,7 @@ void kria_engine_set_loop_start(kria_engine_t* e, uint8_t track, uint8_t param,
 
 void kria_engine_set_loop_len(kria_engine_t* e, uint8_t track, uint8_t param,
                               uint8_t len) {
-    if (track >= KRIA_NUM_TRACKS || param >= KRIA_NUM_PARAMS) return;
+    if (track >= KR_NUM_TRACKS || param >= KR_NUM_PARAMS) return;
     if (len < 1) len = 1;
     if (len > 16) len = 16;
     kria_track_t* t = &e->cfg.p[e->cfg.pattern].t[track];
@@ -233,9 +233,9 @@ void kria_engine_set_loop_len(kria_engine_t* e, uint8_t track, uint8_t param,
 }
 
 void kria_engine_reset(kria_engine_t* e) {
-    for (uint8_t t = 0; t < KRIA_NUM_TRACKS; t++) {
+    for (uint8_t t = 0; t < KR_NUM_TRACKS; t++) {
         kria_track_t* track = &e->cfg.p[e->cfg.pattern].t[t];
-        for (uint8_t p = 0; p < KRIA_NUM_PARAMS; p++) {
+        for (uint8_t p = 0; p < KR_NUM_PARAMS; p++) {
             // pos = lend and pos_mul = tmul so the next clock advances straight
             // to lstart (Ansible pos_reset semantics).
             e->rt.pos[t][p] = track->lend[p];
@@ -319,8 +319,8 @@ void kria_engine_clock(kria_engine_t* e, uint8_t phase) {
 
     if (e->rt.pos_reset) {
         e->rt.clock_count = 0;
-        for (uint8_t i1 = 0; i1 < KRIA_NUM_TRACKS; i1++)
-            for (uint8_t i2 = 0; i2 < KRIA_NUM_PARAMS; i2++) {
+        for (uint8_t i1 = 0; i1 < KR_NUM_TRACKS; i1++)
+            for (uint8_t i2 = 0; i2 < KR_NUM_PARAMS; i2++) {
                 e->rt.pos[i1][i2] = e->cfg.p[e->cfg.pattern].t[i1].lend[i2];
                 e->rt.pos_mul[i1][i2] = e->cfg.p[e->cfg.pattern].t[i1].tmul[i2];
             }
@@ -329,7 +329,7 @@ void kria_engine_clock(kria_engine_t* e, uint8_t phase) {
         e->rt.pos_reset = false;
     }
 
-    for (uint8_t i = 0; i < KRIA_NUM_TRACKS; i++) {
+    for (uint8_t i = 0; i < KR_NUM_TRACKS; i++) {
         if (!e->cfg.p[e->cfg.pattern].t[i].tt_clocked) clock_kria_track(e, i);
     }
     // The DUR sub-tab's MP-style cascade sequencer is a separate engine advanced
@@ -337,7 +337,7 @@ void kria_engine_clock(kria_engine_t* e, uint8_t phase) {
 }
 
 void kria_engine_clock_track(kria_engine_t* e, uint8_t track) {
-    if (track >= KRIA_NUM_TRACKS) return;
+    if (track >= KR_NUM_TRACKS) return;
     clock_kria_track(e, track);
 }
 
@@ -375,14 +375,14 @@ void kria_engine_set_defaults(kria_config_t* cfg) {
     // scalars
     t0.dur_mul = 4;
     t0.direction = KR_DIR_FORWARD;
-    memset(t0.advancing, 1, KRIA_NUM_PARAMS);
-    memset(t0.lend, 5, KRIA_NUM_PARAMS);
-    memset(t0.llen, 6, KRIA_NUM_PARAMS);
-    memset(t0.tmul, 1, KRIA_NUM_PARAMS);
+    memset(t0.advancing, 1, KR_NUM_PARAMS);
+    memset(t0.lend, 5, KR_NUM_PARAMS);
+    memset(t0.llen, 6, KR_NUM_PARAMS);
+    memset(t0.tmul, 1, KR_NUM_PARAMS);
     // tr/oct/note/dur/alt_note/glide/lstart/lswap/octshift/tt/trigger already 0
 
-    for (uint8_t p = 0; p < KRIA_NUM_PATTERNS; p++) {
-        for (uint8_t tr = 0; tr < KRIA_NUM_TRACKS; tr++) cfg->p[p].t[tr] = t0;
+    for (uint8_t p = 0; p < KR_NUM_PATTERNS; p++) {
+        for (uint8_t tr = 0; tr < KR_NUM_TRACKS; tr++) cfg->p[p].t[tr] = t0;
         cfg->p[p].scale = 0;
 
         // MP-style cascade sequencer: Ansible's default_mp() ascending counters,
@@ -391,7 +391,7 @@ void kria_engine_set_defaults(kria_config_t* cfg) {
         // so they can never affect the six live lanes.
         mp_engine_set_defaults(&cfg->p[p].mpseq);
         cfg->p[p].mpseq.voice_mode = MP_SCRIPT;
-        for (uint8_t l = KRIA_SCRIPT_LANES; l < MP_ROWS; l++) {
+        for (uint8_t l = KR_SCRIPT_LANES; l < MP_ROWS; l++) {
             cfg->p[p].mpseq.trigger[l] = 0;
             cfg->p[p].mpseq.toggle[l] = 0;
             cfg->p[p].mpseq.sync[l] = 0;
@@ -417,15 +417,15 @@ void kria_engine_set_defaults(kria_config_t* cfg) {
 }
 
 bool kria_engine_config_valid(const kria_config_t* cfg) {
-    if (cfg->pattern >= KRIA_NUM_PATTERNS) return false;
+    if (cfg->pattern >= KR_NUM_PATTERNS) return false;
 
-    for (uint8_t p = 0; p < KRIA_NUM_PATTERNS; p++) {
+    for (uint8_t p = 0; p < KR_NUM_PATTERNS; p++) {
         if (cfg->p[p].scale >= 16) return false;  // scale bank has 16 slots
-        for (uint8_t tr = 0; tr < KRIA_NUM_TRACKS; tr++) {
+        for (uint8_t tr = 0; tr < KR_NUM_TRACKS; tr++) {
             const kria_track_t* t = &cfg->p[p].t[tr];
             if (t->direction > KR_DIR_RANDOM) return false;
             if (t->dur_mul == 0) return false;
-            for (uint8_t i = 0; i < KRIA_NUM_PARAMS; i++) {
+            for (uint8_t i = 0; i < KR_NUM_PARAMS; i++) {
                 if (t->lstart[i] > 15 || t->lend[i] > 15) return false;
                 if (t->llen[i] > 16) return false;
                 if (t->tmul[i] == 0) return false;  // divider must be >= 1
@@ -440,7 +440,7 @@ bool kria_engine_config_valid(const kria_config_t* cfg) {
     }
 
     for (uint8_t i = 0; i < 64; i++)
-        if (cfg->meta_pat[i] >= KRIA_NUM_PATTERNS) return false;
+        if (cfg->meta_pat[i] >= KR_NUM_PATTERNS) return false;
     if (cfg->meta_start >= 64 || cfg->meta_end >= 64) return false;
 
     return true;

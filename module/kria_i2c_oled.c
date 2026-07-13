@@ -63,15 +63,15 @@ static void build_fields(void) {
     if (ed_index == KR_F_MO) fields[field_ct++] = (ol_field_t){ F_PORT, 0 };
 
     uint8_t ntr =
-        (mode >= KR_MIDI_8T_NOTES) ? KRIA_I2C_TRACKS : KRIA_NUM_TRACKS;
+        (mode >= KR_MIDI_8T_NOTES) ? KR_I2C_TRACKS : KR_NUM_TRACKS;
     for (uint8_t t = 0; t < ntr; t++)
         fields[field_ct++] = (ol_field_t){ F_TRACK, t };
 
     if (mode == KR_MIDI_8T_NOTES)
-        for (uint8_t s = 0; s < KRIA_I2C_TRACKS; s++)
+        for (uint8_t s = 0; s < KR_I2C_TRACKS; s++)
             fields[field_ct++] = (ol_field_t){ F_NOTE, s };
     else if (mode == KR_MIDI_8T_CHANS)
-        for (uint8_t s = 0; s < KRIA_I2C_TRACKS; s++)
+        for (uint8_t s = 0; s < KR_I2C_TRACKS; s++)
             fields[field_ct++] = (ol_field_t){ F_CHANSLOT, s };
 }
 

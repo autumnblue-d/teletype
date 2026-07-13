@@ -60,7 +60,7 @@ static uint32_t play_deadline = 0;
 #define EM_VIEW_I2C 1
 static uint8_t em_view = EM_VIEW_ES;
 
-static bool es_engaged(void) {
+static bool em_engaged(void) {
     return active || eng.rt.mode == es_playing;
 }
 
@@ -111,7 +111,7 @@ static void em_play_cb(void* o) {
 static void em_blink_cb(void* o) {
     (void)o;
     egrid.blinker = !egrid.blinker;
-    if (eng.rt.mode == es_recording && es_engaged()) {
+    if (eng.rt.mode == es_recording && em_engaged()) {
         scene_state.grid.grid_dirty = 1;
         dirty = true;
     }
@@ -120,7 +120,7 @@ static void em_blink_cb(void* o) {
 static void em_pos_cb(void* o) {
     (void)o;
     // keep the playback position bar moving (internal clock only)
-    if (es_engaged() && eng.rt.mode == es_playing && !eng.rt.clock_external)
+    if (em_engaged() && eng.rt.mode == es_playing && !eng.rt.clock_external)
         scene_state.grid.grid_dirty = 1;
     if (mode_confirm_tick()) dirty = true;  // erase the SAVED banner
 }
@@ -229,11 +229,11 @@ void es_service_note_off(uint8_t voice) {
     writing = true;
     es_engine_note_off_voice(&eng, voice);
     writing = false;
-    if (es_engaged()) scene_state.grid.grid_dirty = 1;
+    if (em_engaged()) scene_state.grid.grid_dirty = 1;
 }
 
 bool es_external_clock(uint8_t level) {
-    if (!es_engaged() || !eng.rt.clock_external) return false;
+    if (!em_engaged() || !eng.rt.clock_external) return false;
     if (level) {
         writing = true;
         es_engine_clock_step(&eng, get_ticks());
@@ -245,7 +245,7 @@ bool es_external_clock(uint8_t level) {
 }
 
 bool es_play_trigger(uint8_t level) {
-    if (!es_engaged()) return false;
+    if (!em_engaged()) return false;
     if (level && eng.rt.mode != es_armed && eng.rt.mode != es_recording) {
         uint32_t now = get_ticks();
         writing = true;
@@ -261,13 +261,13 @@ bool es_play_trigger(uint8_t level) {
 // ---- ownership ----
 
 bool es_suppresses_output(uint8_t ch) {
-    if (writing || ch >= ES_NUM_VOICES || !es_engaged()) return false;
+    if (writing || ch >= ES_NUM_VOICES || !em_engaged()) return false;
     uint8_t mask = eng.cfg.voices | eng.cfg.p[eng.cfg.p_select].voices;
     return (mask >> ch) & 1;
 }
 
 bool es_owns_grid(void) {
-    return es_engaged();
+    return em_engaged();
 }
 
 // ---- grid surface ----
@@ -415,7 +415,7 @@ void es_op_clock(int16_t d) {
     writing = true;
     es_engine_clock_step(&eng, get_ticks());
     writing = false;
-    if (es_engaged()) scene_state.grid.grid_dirty = 1;
+    if (em_engaged()) scene_state.grid.grid_dirty = 1;
     dirty = true;
 }
 

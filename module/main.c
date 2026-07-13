@@ -614,12 +614,12 @@ void handler_AppCustom(int32_t data) {
         return;
     }
     if (data >= KR_APPEVT_NOTEOFF_BASE &&
-        data < KR_APPEVT_NOTEOFF_BASE + KRIA_NUM_TRACKS) {
+        data < KR_APPEVT_NOTEOFF_BASE + KR_NUM_TRACKS) {
         kria_service_note_off((uint8_t)(data - KR_APPEVT_NOTEOFF_BASE));
         return;
     }
     if (data >= KR_APPEVT_REPEAT_BASE &&
-        data < KR_APPEVT_REPEAT_BASE + KRIA_NUM_TRACKS) {
+        data < KR_APPEVT_REPEAT_BASE + KR_NUM_TRACKS) {
         kria_service_repeat((uint8_t)(data - KR_APPEVT_REPEAT_BASE));
         return;
     }
@@ -1429,7 +1429,7 @@ void initialize_module(void) {
 
     // load the global i2c follower bank (shared by Kria + MP)
     {
-        kria_i2c_fstate_t km_i2c_state[KRIA_I2C_FOLLOWERS];
+        kria_i2c_fstate_t km_i2c_state[KR_I2C_FOLLOWERS];
         flash_get_kria_i2c(km_i2c_state);
         kria_i2c_load(km_i2c_state);
     }

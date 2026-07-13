@@ -56,7 +56,7 @@ typedef struct {
     device_config_t device_config;
     uint8_t scale_bank[MP_SCALE_SLOTS][8];
     kria_config_t kria;  // Kria global preset bank (single song), not per-scene
-    kria_i2c_fstate_t kria_i2c[KRIA_I2C_FOLLOWERS];  // global i2c follower bank
+    kria_i2c_fstate_t kria_i2c[KR_I2C_FOLLOWERS];  // global i2c follower bank
     es_config_t earthsea;          // Earthsea global bank (single instance)
     mp_slot_t mp_slots[MP_SLOTS];  // Meadowphysics global 8-slot preset bank
     uint8_t mp_current;            // last-used MP slot, reloaded on boot

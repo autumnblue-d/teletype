@@ -176,7 +176,7 @@ void flash_prepare(scene_state_t* scene) {
 
         // Global i2c follower bank defaults (shared by Kria + MP).
         {
-            kria_i2c_fstate_t idef[KRIA_I2C_FOLLOWERS];
+            kria_i2c_fstate_t idef[KR_I2C_FOLLOWERS];
             kria_i2c_defaults(idef);
             flashc_memcpy((void*)&f.kria_i2c, idef, sizeof(idef), true);
         }

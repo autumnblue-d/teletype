@@ -56,11 +56,11 @@ static void km_mp_writeback(void);   // defined in the output-vtable section
 static void km_mp_load_active(void);
 
 static softTimer_t kriaClockTimer = { .next = NULL, .prev = NULL };
-static softTimer_t auxTimer[KRIA_NUM_TRACKS];     // note-off
-static softTimer_t repeatTimer[KRIA_NUM_TRACKS];  // repeat retrigger
-static softTimer_t blinkTimer[KRIA_NUM_TRACKS];   // grid trigger blink
+static softTimer_t auxTimer[KR_NUM_TRACKS];     // note-off
+static softTimer_t repeatTimer[KR_NUM_TRACKS];  // repeat retrigger
+static softTimer_t blinkTimer[KR_NUM_TRACKS];   // grid trigger blink
 static softTimer_t kriaBlinkTimer = { .next = NULL, .prev = NULL };  // alt/meta
-static uint8_t km_idx[KRIA_NUM_TRACKS] = { 0, 1, 2, 3 };
+static uint8_t km_idx[KR_NUM_TRACKS] = { 0, 1, 2, 3 };
 
 static uint8_t kria_scale_bank[MP_SCALE_SLOTS]
                               [8];  // shared w/ MP (f.scale_bank)
@@ -150,7 +150,7 @@ static void km_tr(void* c, uint8_t ch, uint8_t on) {
 }
 static void km_cv(void* c, uint8_t ch, int16_t sem) {
     (void)c;
-    if (ch < KRIA_NUM_TRACKS) {
+    if (ch < KR_NUM_TRACKS) {
         // i2c followers stay on the plain ET map (matches Ansible).
         kria_i2c_set_voice(ch, sem, eng.rt.dur_unscaled[ch]);
         kria_i2c_cv(ch, note_to_cv(sem));
@@ -169,12 +169,12 @@ static const kria_output_t KM_OUT = {
 
 // ---- MP-seq output vtable: each lane's rising edge fires a native script ----
 // voice_mode is pinned to MP_SCRIPT, so the engine only calls tr() (never
-// cv()/cv_gate()). Lane n -> script KRIA_SCRIPT_BASE + n (scripts 3-8); the
+// cv()/cv_gate()). Lane n -> script KR_SCRIPT_BASE + n (scripts 3-8); the
 // unused lanes 6-7 are dropped here. Off-edges (on == 0) are momentary and
 // ignored, exactly as the standalone MP mode's MP_SCRIPT binding.
 static void km_mp_tr(void* c, uint8_t ch, uint8_t on) {
     (void)c;
-    if (on && ch < KRIA_SCRIPT_LANES) run_script(&scene_state, KRIA_SCRIPT_BASE + ch);
+    if (on && ch < KR_SCRIPT_LANES) run_script(&scene_state, KR_SCRIPT_BASE + ch);
 }
 static void km_mp_cv(void* c, uint8_t ch, int16_t note) {
     (void)c;
@@ -193,7 +193,7 @@ static const mp_output_t KM_MP_OUT = {
 // Copy the working MP config back into the pattern it belongs to (so evolved
 // rule state / edits are captured before a flush or a pattern reload).
 static void km_mp_writeback(void) {
-    if (km_mp_pattern < KRIA_NUM_PATTERNS)
+    if (km_mp_pattern < KR_NUM_PATTERNS)
         eng.cfg.p[km_mp_pattern].mpseq = km_mp.cfg;
 }
 
@@ -398,7 +398,7 @@ void kria_toggle_run(void) {
             timer_remove(&kriaClockTimer);
             timer_enabled = false;
         }
-        for (uint8_t i = 0; i < KRIA_NUM_TRACKS; i++) {
+        for (uint8_t i = 0; i < KR_NUM_TRACKS; i++) {
             timer_remove(&auxTimer[i]);
             timer_remove(&repeatTimer[i]);
             tele_tr(i, 0);  // kria_running now false -> passes the gate
@@ -427,7 +427,7 @@ void kria_clock_tick(void) {
 }
 
 void kria_service_note_off(uint8_t track) {
-    if (track >= KRIA_NUM_TRACKS) return;
+    if (track >= KR_NUM_TRACKS) return;
     writing = true;
     kria_engine_note_off(&eng, track);
     writing = false;
@@ -435,7 +435,7 @@ void kria_service_note_off(uint8_t track) {
 }
 
 void kria_service_repeat(uint8_t track) {
-    if (track >= KRIA_NUM_TRACKS) return;
+    if (track >= KR_NUM_TRACKS) return;
     in_repeat = true;
     writing = true;
     kria_engine_repeat(&eng, track);
@@ -485,7 +485,7 @@ bool kria_external_reset(uint8_t level) {
 // ---- ownership ----
 
 bool kria_suppresses_output(uint8_t ch) {
-    return kria_running && !writing && ch < KRIA_NUM_TRACKS &&
+    return kria_running && !writing && ch < KR_NUM_TRACKS &&
            !eng.rt.mutes[ch];
 }
 
@@ -937,7 +937,7 @@ int16_t kria_op_pattern(int16_t set, int16_t val) {
     km_init_once();
     if (set) {
         if (val < 0) val = 0;
-        if (val >= KRIA_NUM_PATTERNS) val = KRIA_NUM_PATTERNS - 1;
+        if (val >= KR_NUM_PATTERNS) val = KR_NUM_PATTERNS - 1;
         kria_engine_change_pattern(&eng, (uint8_t)val);
         if (!kgrid.meta_lock) kgrid.edit_pattern = (uint8_t)val;
         cfg_dirty = true;
@@ -967,7 +967,7 @@ int16_t kria_op_period(int16_t set, int16_t val) {
 
 int16_t kria_op_mute(int16_t track, int16_t set, int16_t val) {
     km_init_once();
-    if (track < 0 || track >= KRIA_NUM_TRACKS) return 0;
+    if (track < 0 || track >= KR_NUM_TRACKS) return 0;
     if (set) {
         kria_engine_set_mute(&eng, (uint8_t)track, val ? 1 : 0);
         dirty = true;
@@ -977,14 +977,14 @@ int16_t kria_op_mute(int16_t track, int16_t set, int16_t val) {
 
 void kria_op_tmute(int16_t track) {
     km_init_once();
-    if (track < 0 || track >= KRIA_NUM_TRACKS) return;
+    if (track < 0 || track >= KR_NUM_TRACKS) return;
     kria_engine_set_mute(&eng, (uint8_t)track, !eng.rt.mutes[track]);
     dirty = true;
 }
 
 void kria_op_clock(int16_t track) {
     km_init_once();
-    if (track < 0 || track >= KRIA_NUM_TRACKS) return;
+    if (track < 0 || track >= KR_NUM_TRACKS) return;
     writing = true;
     kria_engine_clock_track(&eng, (uint8_t)track);
     writing = false;
@@ -993,7 +993,7 @@ void kria_op_clock(int16_t track) {
 
 int16_t kria_op_dir(int16_t track, int16_t set, int16_t val) {
     km_init_once();
-    if (track < 0 || track >= KRIA_NUM_TRACKS) return 0;
+    if (track < 0 || track >= KR_NUM_TRACKS) return 0;
     kria_track_t* t = &eng.cfg.p[eng.cfg.pattern].t[track];
     if (set) {
         if (val < 0) val = 0;
@@ -1008,7 +1008,7 @@ int16_t kria_op_cue(int16_t set, int16_t val) {
     km_init_once();
     if (set) {
         if (val < 0) val = 0;
-        if (val >= KRIA_NUM_PATTERNS) val = KRIA_NUM_PATTERNS - 1;
+        if (val >= KR_NUM_PATTERNS) val = KR_NUM_PATTERNS - 1;
         eng.rt.cue_pat_next = (uint8_t)(val + 1);
         dirty = true;
     }
@@ -1018,8 +1018,8 @@ int16_t kria_op_cue(int16_t set, int16_t val) {
 
 int16_t kria_op_pos(int16_t track, int16_t param, int16_t set, int16_t val) {
     km_init_once();
-    if (track < 0 || track >= KRIA_NUM_TRACKS || param < 0 ||
-        param >= KRIA_NUM_PARAMS)
+    if (track < 0 || track >= KR_NUM_TRACKS || param < 0 ||
+        param >= KR_NUM_PARAMS)
         return 0;
     if (set) {
         eng.rt.pos[track][param] = (uint8_t)(val & 0x0f);
@@ -1031,8 +1031,8 @@ int16_t kria_op_pos(int16_t track, int16_t param, int16_t set, int16_t val) {
 int16_t kria_op_loop_start(int16_t track, int16_t param, int16_t set,
                            int16_t val) {
     km_init_once();
-    if (track < 0 || track >= KRIA_NUM_TRACKS || param < 0 ||
-        param >= KRIA_NUM_PARAMS)
+    if (track < 0 || track >= KR_NUM_TRACKS || param < 0 ||
+        param >= KR_NUM_PARAMS)
         return 0;
     if (set) {
         kria_engine_set_loop_start(&eng, (uint8_t)track, (uint8_t)param,
@@ -1046,8 +1046,8 @@ int16_t kria_op_loop_start(int16_t track, int16_t param, int16_t set,
 int16_t kria_op_loop_len(int16_t track, int16_t param, int16_t set,
                          int16_t val) {
     km_init_once();
-    if (track < 0 || track >= KRIA_NUM_TRACKS || param < 0 ||
-        param >= KRIA_NUM_PARAMS)
+    if (track < 0 || track >= KR_NUM_TRACKS || param < 0 ||
+        param >= KR_NUM_PARAMS)
         return 0;
     if (set) {
         kria_engine_set_loop_len(&eng, (uint8_t)track, (uint8_t)param,
@@ -1060,7 +1060,7 @@ int16_t kria_op_loop_len(int16_t track, int16_t param, int16_t set,
 
 int16_t kria_op_cv(int16_t track) {
     km_init_once();
-    if (track < 0 || track >= KRIA_NUM_TRACKS) return 0;
+    if (track < 0 || track >= KR_NUM_TRACKS) return 0;
     uint8_t combined = eng.rt.note[track] + eng.rt.alt_note[track];
     uint8_t nis = combined % 7;
     uint8_t ob = combined / 7;
@@ -1070,14 +1070,14 @@ int16_t kria_op_cv(int16_t track) {
 
 int16_t kria_op_dur(int16_t track) {
     km_init_once();
-    if (track < 0 || track >= KRIA_NUM_TRACKS) return 0;
+    if (track < 0 || track >= KR_NUM_TRACKS) return 0;
     kria_track_t* t = &eng.cfg.p[eng.cfg.pattern].t[track];
     return t->dur[eng.rt.pos[track][KR_P_DUR]];
 }
 
 int16_t kria_op_ii(int16_t follower, int16_t set, int16_t val) {
     km_init_once();
-    if (follower < 0 || follower >= KRIA_I2C_FOLLOWERS) return 0;
+    if (follower < 0 || follower >= KR_I2C_FOLLOWERS) return 0;
     if (set) {
         kria_i2c_set_active((uint8_t)follower, val ? 1 : 0);
         mode_flush_i2c_if_dirty();  // persist immediately (global follower

@@ -129,11 +129,11 @@ static void upd_loop_start(kria_engine_t* e, kria_grid_state_t* g, uint8_t t,
     uint8_t i, j;
     switch (g->loop_sync) {
         case 1:
-            for (i = 0; i < KRIA_NUM_PARAMS; i++) adj_loop_start(e, g, t, x, i);
+            for (i = 0; i < KR_NUM_PARAMS; i++) adj_loop_start(e, g, t, x, i);
             break;
         case 2:
-            for (j = 0; j < KRIA_NUM_TRACKS; j++)
-                for (i = 0; i < KRIA_NUM_PARAMS; i++)
+            for (j = 0; j < KR_NUM_TRACKS; j++)
+                for (i = 0; i < KR_NUM_PARAMS; i++)
                     adj_loop_start(e, g, j, x, i);
             break;
         default: adj_loop_start(e, g, t, x, m); break;
@@ -145,11 +145,11 @@ static void upd_loop_end(kria_engine_t* e, kria_grid_state_t* g, uint8_t t,
     uint8_t i, j;
     switch (g->loop_sync) {
         case 1:
-            for (i = 0; i < KRIA_NUM_PARAMS; i++) adj_loop_end(e, g, t, x, i);
+            for (i = 0; i < KR_NUM_PARAMS; i++) adj_loop_end(e, g, t, x, i);
             break;
         case 2:
-            for (j = 0; j < KRIA_NUM_TRACKS; j++)
-                for (i = 0; i < KRIA_NUM_PARAMS; i++)
+            for (j = 0; j < KR_NUM_TRACKS; j++)
+                for (i = 0; i < KR_NUM_PARAMS; i++)
                     adj_loop_end(e, g, j, x, i);
             break;
         default: adj_loop_end(e, g, t, x, m); break;
@@ -216,7 +216,7 @@ static void set_track_tmul(kria_track_t* t, uint8_t mode, uint8_t nt,
     }
     else {
         uint8_t i;
-        for (i = 0; i < KRIA_NUM_PARAMS; i++) t->tmul[i] = nt;
+        for (i = 0; i < KR_NUM_PARAMS; i++) t->tmul[i] = nt;
     }
 }
 
@@ -229,7 +229,7 @@ static void set_tmul(kria_engine_t* e, kria_grid_state_t* g, uint8_t track,
             set_track_tmul(&e->cfg.p[ep].t[track], mode, nt, g->note_div_sync);
             break;
         case 2:
-            for (i = 0; i < KRIA_NUM_TRACKS; i++)
+            for (i = 0; i < KR_NUM_TRACKS; i++)
                 set_track_tmul(&e->cfg.p[ep].t[i], mode, nt, g->note_div_sync);
             break;
         default:
@@ -248,13 +248,13 @@ static void draw_tr(kria_engine_t* e, kria_grid_state_t* g, uint8_t* led) {
     uint8_t ep = edit_pat(e, g);
     int ph = playhead_ok(e, g);
     uint8_t i, j;
-    for (i = 0; i < KRIA_NUM_TRACKS; i++) {
+    for (i = 0; i < KR_NUM_TRACKS; i++) {
         kria_track_t* t = &e->cfg.p[ep].t[i];
         for (j = 0; j < 16; j++)
             if (t->tr[j]) led[i * 16 + j] = 3;
         if (ph) led[i * 16 + e->rt.pos[i][KR_P_TR]] += 4;
     }
-    for (i = 0; i < KRIA_NUM_TRACKS; i++) {
+    for (i = 0; i < KR_NUM_TRACKS; i++) {
         kria_track_t* t = &e->cfg.p[ep].t[i];
         uint8_t add = 2 + (g->mod_mode == KR_MOD_LOOP);
         if (t->lswap[KR_P_TR]) {
@@ -424,7 +424,7 @@ static void draw_scale(kria_engine_t* e, kria_grid_state_t* g, uint8_t* led) {
     }
     if (g->scale_bank) {
         uint8_t ps = e->cfg.p[e->cfg.pattern].scale;
-        for (i = 0; i < KRIA_NUM_TRACKS; i++) {
+        for (i = 0; i < KR_NUM_TRACKS; i++) {
             if (e->cfg.p[e->cfg.pattern].t[i].tr[e->rt.pos[i][KR_P_TR]]) {
                 uint8_t nd = e->rt.note[i] % 7;
                 uint8_t sp = (uint8_t)(g->scale_bank[ps][nd] + 8 +
@@ -503,7 +503,7 @@ static int draw_mod_overlay(kria_engine_t* e, kria_grid_state_t* g,
         case KR_MOD_TIME:
             led[R7 + 11] = L1;
             memset(led + R1, 3, 16);
-            if (mode < KRIA_NUM_PARAMS) {
+            if (mode < KR_NUM_PARAMS) {
                 uint8_t tm = e->cfg.p[ep].t[track].tmul[mode];
                 if (tm >= 1 && tm <= 16) led[R1 + tm - 1] = L1;
             }
@@ -514,7 +514,7 @@ static int draw_mod_overlay(kria_engine_t* e, kria_grid_state_t* g,
         case KR_MOD_PROB:
             led[R7 + 12] = L1;
             memset(led + R5, 3, 16);
-            if (mode < KRIA_NUM_PARAMS) {
+            if (mode < KR_NUM_PARAMS) {
                 for (i = 0; i < 16; i++) {
                     uint8_t w = e->cfg.p[ep].t[track].p[mode][i];
                     if (w) {
@@ -536,12 +536,12 @@ static void draw_bottom_row(kria_engine_t* e, kria_grid_state_t* g,
     memset(led + R7 + 5, L0, 4);  // x=5..8
     led[R7 + 10] = L0;
     led[R7 + 11] = L0;
-    if (mode < KRIA_NUM_PARAMS) led[R7 + 12] = L0;  // PROB selector (not on MPseq)
+    if (mode < KR_NUM_PARAMS) led[R7 + 12] = L0;  // PROB selector (not on MPseq)
     led[R7 + 14] = L0;
     led[R7 + 15] =
         (e->cfg.meta && g->meta_lock && g->meta_lock_blink) ? L1 : L0;
 
-    for (i = 0; i < KRIA_NUM_TRACKS; i++) {
+    for (i = 0; i < KR_NUM_TRACKS; i++) {
         if (e->rt.mutes[i])
             led[R7 + i] = (g->track == i) ? L1 : 2;
         else
@@ -626,7 +626,7 @@ static void key_bottom_row(kria_engine_t* e, kria_grid_state_t* g, uint8_t x,
         else if (x == 11 && mode != KR_MODE_MPSEQ)
             g->mod_mode = KR_MOD_TIME;
         else if (x == 12) {
-            if (mode < KRIA_NUM_PARAMS) g->mod_mode = KR_MOD_PROB;
+            if (mode < KR_NUM_PARAMS) g->mod_mode = KR_MOD_PROB;
         }
         else if (x == 14)
             g->mode = KR_MODE_SCALE;
@@ -849,7 +849,7 @@ void kria_grid_process_key(kria_engine_t* e, kria_grid_state_t* g, uint8_t x,
             // straight to the reused MP grid key handler; MP's own col0/col1
             // hold-gestures switch its positions/speed/rules views. Mods are
             // ignored here (blocked in key_bottom_row).
-            if (g->mpseq && y < KRIA_SCRIPT_LANES) {
+            if (g->mpseq && y < KR_SCRIPT_LANES) {
                 // In the rules view MP picks the rule by ROW (rules[er] = y),
                 // which needs rows 6/7 -- rows Kria doesn't own -- so POLE(6)
                 // and STOP(7) are unreachable. Select the rule by COLUMN
@@ -962,7 +962,7 @@ uint8_t kria_grid_pattern_hold_fire(kria_engine_t* e, kria_grid_state_t* g) {
     if (!g->hold_pending) return 0;
     uint8_t slot = g->hold_x;
     g->hold_pending = 0;
-    if (slot >= KRIA_NUM_PATTERNS) return 0;
+    if (slot >= KR_NUM_PATTERNS) return 0;
     // Copy the playing pattern into the held slot, then switch to it (Ansible
     // grid_keytimer_kria mPattern). Skip the self-copy when the slot is already
     // current -- a plain overlapping memcpy would be undefined.
