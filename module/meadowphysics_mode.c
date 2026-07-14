@@ -195,7 +195,10 @@ static void mp_out_tr(void* c, uint8_t ch, uint8_t on) {
     // drives outputs -- so MP claims no channel (see mp_owned_channels) and the
     // off-edge is a no-op (scripts are momentary).
     if (mp_eng.cfg.voice_mode == MP_SCRIPT) {
-        if (on && ch < REGULAR_SCRIPT_COUNT) run_script(&scene_state, ch);
+        // Respect the per-script mute (ctrl-F1..F8 / MUTE op), as trigger
+        // inputs, grid buttons and the keyboard do.
+        if (on && ch < REGULAR_SCRIPT_COUNT && !ss_get_mute(&scene_state, ch))
+            run_script(&scene_state, ch);
         return;
     }
     tele_tr(ch, on);

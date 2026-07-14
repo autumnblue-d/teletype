@@ -185,7 +185,10 @@ static void km_mp_tr(void* c, uint8_t ch, uint8_t on) {
     (void)c;
     if (!on || ch >= KR_SCRIPT_LANES || (km_mp_mute & (1 << ch))) return;
     uint8_t script = km_mp_script_base + ch;
-    if (script < REGULAR_SCRIPT_COUNT) run_script(&scene_state, script);
+    // Respect the per-script mute (ctrl-F1..F8 / MUTE op), like trigger inputs,
+    // grid buttons and the keyboard do -- a muted script must not fire.
+    if (script < REGULAR_SCRIPT_COUNT && !ss_get_mute(&scene_state, script))
+        run_script(&scene_state, script);
 }
 static void km_mp_cv(void* c, uint8_t ch, int16_t note) {
     (void)c;
