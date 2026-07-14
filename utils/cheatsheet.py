@@ -88,12 +88,16 @@ OPS_SECTIONS = {
 }
 
 def latex_safe(s):
-    # backslash must be first, otherwise it will duplicate itself
-    unsafe = ["\\", "&", "%", "$", "#", "_", "{", "}", "^"]
-    for u in unsafe:
+    # \ ^ ~ can't be escaped as "\" + char: \\ is a line break, \^ and \~ are
+    # accent commands that eat the next char (\^ emitted a stray U+0302). Their
+    # correct escapes contain braces, which the { } pass below would re-escape,
+    # so stash them as sentinels first, escape the simple chars, then expand.
+    s = s.replace("\\", "\x00").replace("^", "\x01").replace("~", "\x02")
+    for u in ["&", "%", "$", "#", "_", "{", "}"]:
         s = s.replace(u, "\\" + u)
-    # ~ is special
-    s = s.replace("~", "\\~{}")
+    s = s.replace("\x00", "\\textbackslash{}")
+    s = s.replace("\x01", "\\textasciicircum{}")
+    s = s.replace("\x02", "\\~{}")
     return s
 
 
