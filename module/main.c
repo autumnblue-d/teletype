@@ -502,46 +502,44 @@ void handler_MscConnect(int32_t data) {
     }
 }
 
+// Fire the script bound to trigger input `input`, honoring its mute state and
+// edge polarity (script_pol: bit0 = rising, bit1 = falling). Shared by the
+// normal trigger dispatch and Kria's external clock/reset paths.
+static void run_trigger_script(u8 input, bool level) {
+    if (ss_get_mute(&scene_state, input)) return;
+    u8 pol = scene_state.variables.script_pol[input];
+    if ((level && (pol & 1)) || (!level && (pol & 2)))
+        run_script(&scene_state, input);
+}
+
 void handler_Trigger(int32_t data) {
     u8 input = device_config.flip ? 7 - data : data;
+    bool level = gpio_get_pin_value(A00 + data);
     // external clock (jack 1, index 0): route it to whichever native engine is
     // engaged with external clocking; a consumed edge skips the normal script
-    // dispatch. Kria, Meadowphysics and Earthsea all share this jack.
-    if (input == MP_EXT_CLOCK_INPUT &&
-        meadowphysics_external_clock(gpio_get_pin_value(A00 + data)))
+    // dispatch. Kria, Meadowphysics and Earthsea all share this jack. Kria is
+    // the exception -- it also forwards the edge as script 1, so an external
+    // clock patched here can be distributed onward from that script.
+    if (input == MP_EXT_CLOCK_INPUT && meadowphysics_external_clock(level))
         return;
-    if (input == KR_EXT_CLOCK_INPUT &&
-        kria_external_clock(gpio_get_pin_value(A00 + data)))
+    if (input == KR_EXT_CLOCK_INPUT && kria_external_clock(level)) {
+        run_trigger_script(input, level);
         return;
-    if (input == ES_EXT_CLOCK_INPUT &&
-        es_external_clock(gpio_get_pin_value(A00 + data)))
-        return;
-    if (input == ES_PLAY_INPUT &&
-        es_play_trigger(gpio_get_pin_value(A00 + data)))
-        return;
-    // reset / restart (jack 2, index 1): Earthsea's play input (re)starts its
-    // playback (checked just above, in the clock block); Meadowphysics and Kria
-    // re-arm their counters when they own the external clock. A consumed edge
-    // skips the normal script dispatch (as the clock does).
-    if (input == MP_EXT_RESET_INPUT &&
-        meadowphysics_external_reset(gpio_get_pin_value(A00 + data)))
-        return;
-    if (input == KR_EXT_RESET_INPUT &&
-        kria_external_reset(gpio_get_pin_value(A00 + data)))
-        return;
-    if (!ss_get_mute(&scene_state, input)) {
-        bool tr_state = gpio_get_pin_value(A00 + data);
-        if (tr_state) {
-            if (scene_state.variables.script_pol[input] & 1) {
-                run_script(&scene_state, input);
-            }
-        }
-        else {
-            if (scene_state.variables.script_pol[input] & 2) {
-                run_script(&scene_state, input);
-            }
-        }
     }
+    if (input == ES_EXT_CLOCK_INPUT && es_external_clock(level)) return;
+    if (input == ES_PLAY_INPUT && es_play_trigger(level)) return;
+    // reset / restart (jack 2, index 1): Earthsea's play input (re)starts its
+    // playback (checked just above); Meadowphysics and Kria re-arm their
+    // counters when they own the external clock. A consumed edge skips the
+    // normal script dispatch -- except Kria, which also forwards the reset as
+    // script 2, matching its clock behavior above.
+    if (input == MP_EXT_RESET_INPUT && meadowphysics_external_reset(level))
+        return;
+    if (input == KR_EXT_RESET_INPUT && kria_external_reset(level)) {
+        run_trigger_script(input, level);
+        return;
+    }
+    run_trigger_script(input, level);
 }
 
 void handler_ScreenRefresh(int32_t data) {
