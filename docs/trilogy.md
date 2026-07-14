@@ -108,6 +108,13 @@ script 3, … lane 6 → script 8 — so the sequencer drives your scripts inste
 CV/TR. It rides Kria's clock, and each lane's *speed* divides that clock. The
 MP-SEQ pattern is stored **per Kria pattern**, alongside the rest of the song.
 
+The whole cascade is also reachable from scripts: **`KR.MP`** gets/sets any lane
+parameter (count, speed, min/max, rule and destination, the trigger/toggle/reset
+masks, speed range), **`KR.MP.POS`** reads or jumps a lane's playhead,
+**`KR.MP.MUTE`** silences a lane's script without disturbing its pattern, and
+**`KR.MP.SCR`** moves the six-lane window within scripts 1–8 (set it from your
+`INIT` script). See the **Ansible** op section for prototypes.
+
 The page reuses the Meadowphysics grid verbatim, so editing is three held
 views (grid **row 6** and Kria's LOOP / TIME / PROB mods are unused here):
 
@@ -214,14 +221,18 @@ grid use; the op tables give the full prototypes and value ranges.
 - **`KR.*`** — drive the native Kria engine from scripts (documented in the
   **Ansible** section, since Kria originates there): `KR.RUN`, `KR.PAT`,
   `KR.SCALE`, `KR.PERIOD`, `KR.POS`, `KR.CUE`, `KR.MUTE` / `KR.TMUTE`, `KR.CLK`,
-  `KR.PG`, `KR.DIR`, `KR.DUR`, `KR.CV`, `KR.II`, and more.
+  `KR.PG`, `KR.DIR`, `KR.DUR`, `KR.TMUL` (per-param clock divider), `KR.RES`
+  (per-track reset), `KR.CV`, `KR.II`, and more. The DUR-page cascade is
+  scriptable via `KR.MP`, `KR.MP.POS`, `KR.MP.MUTE` and `KR.MP.SCR`.
 - **`MP.*`** — drive the native Meadowphysics engine (see the **Meadowphysics**
   section): `MP.RUN`, `MP.STOP`, `MP.RESET`, `MP.SYNC`, `MP.CLK`, `MP.VOICE`,
-  `MP.PERIOD`, `MP.SCALE`, `MP.SCL`, `MP.PRESET`.
+  `MP.PERIOD`, `MP.SCALE`, `MP.SCL`, `MP.CFG` (per-row cascade config, the same
+  accessor as `KR.MP`), `MP.CV` (read a row's output CV), `MP.PRESET`.
 - **`ES.*`** — drive the native Earthsea engine (see the **Earthsea** section):
   `ES.RUN`, `ES.MODE`, `ES.CLOCK`, `ES.RESET`, `ES.PATTERN`, `ES.TRANS`,
-  `ES.STOP`, `ES.CV`, `ES.MAGIC`. (`ES.PRESET` and `ES.TRIPLE` instead target an
-  external Earthsea/Ansible over i2c.)
+  `ES.STOP`, `ES.CV`, `ES.MAGIC`. `ES.RUN` and `ES.PATTERN` are get/set — read
+  the play state / active pattern, or set them. (`ES.PRESET` and `ES.TRIPLE`
+  instead target an external Earthsea/Ansible over i2c.)
 
 `KR.II` enables or disables i2c follower output for the native Kria and
 Meadowphysics engines.
