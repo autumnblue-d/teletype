@@ -23,7 +23,7 @@ Switch modes from the USB keyboard with `Alt` + a letter. Each combo is a
 | `Alt-M`  | Meadowphysics            |
 | `Alt-E`  | Earthsea                 |
 
-Note that the `Tab` cycle (Live → Edit → Pattern) does **not** reach these
+Note that the `Tab` cycle (Live -> Edit -> Pattern) does **not** reach these
 apps — `Alt` + letter is the only way in. `Alt-?` / `Alt-H` opens the on-device
 help, whose last three pages document these apps.
 
@@ -103,8 +103,8 @@ toggles.
 
 **MP-SEQ sub-tab (x8 again).** Tapping the DUR selector a second time switches
 the page to a **six-lane Meadowphysics-style cascade sequencer** on rows 0–5.
-Each lane is a counter that, on rollover, **fires a script** — lane 1 →
-script 3, … lane 6 → script 8 — so the sequencer drives your scripts instead of
+Each lane is a counter that, on rollover, **fires a script** — lane 1 ->
+script 3, … lane 6 -> script 8 — so the sequencer drives your scripts instead of
 CV/TR. It rides Kria's clock, and each lane's *speed* divides that clock. The
 MP-SEQ pattern is stored **per Kria pattern**, alongside the rest of the song.
 
@@ -184,7 +184,7 @@ the working config. `S` saves the working config and glyph to the selected slot
 Meadowphysics uses the **global preset bank**, not per-scene storage.
 
 The same cascading-counter engine is also embedded in **Kria's DUR sub-tab** as a
-six-lane script sequencer (lanes → scripts 3–8) — see *Kria*, above.
+six-lane script sequencer (lanes -> scripts 3–8) — see *Kria*, above.
 
 ## Earthsea
 
@@ -210,7 +210,7 @@ while a pattern is playing.
 **Edge modes** determine how held notes behave: pattern, drone, and fixed
 (select via the EDGE overlay or `ES.MODE`).
 
-**Outputs:** up to four voices, voice *n* → CV *n* + TR *n* gate; Earthsea only
+**Outputs:** up to four voices, voice *n* -> CV *n* + TR *n* gate; Earthsea only
 claims those jacks while engaged. State is saved per scene.
 
 ## Scripting the apps
