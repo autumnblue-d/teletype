@@ -15,9 +15,12 @@
 // while the view is front-most or a pattern is playing (playback survives
 // leaving the mode; exiting kills live/drone notes if nothing is playing).
 
-// Trigger inputs (0-indexed). MP owns 0, Kria owns 1.
-#define ES_EXT_CLOCK_INPUT 2  // stepped playback while clock_external
-#define ES_PLAY_INPUT 3       // rising edge (re)starts playback
+// Trigger inputs (0-indexed), shared with the other native engines for a
+// consistent layout: jack 1 (index 0) = external clock, jack 2 (index 1) =
+// reset/restart. Kria (KR_EXT_*) and Meadowphysics (MP_EXT_*) use the same two
+// jacks; only the engaged mode consumes the edge (see handler_Trigger).
+#define ES_EXT_CLOCK_INPUT 0  // stepped playback while clock_external
+#define ES_PLAY_INPUT 1       // rising edge (re)starts playback (= reset)
 
 // handler_AppCustom event codes: our ISR timers post these, main.c dispatches
 // them. Single value plus per-voice range [BASE, BASE+ES_NUM_VOICES).

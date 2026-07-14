@@ -504,8 +504,9 @@ void handler_MscConnect(int32_t data) {
 
 void handler_Trigger(int32_t data) {
     u8 input = device_config.flip ? 7 - data : data;
-    // external clock (A3): route the configured Tr input to MP when it owns the
-    // clock; if MP consumes the edge, skip the normal script dispatch.
+    // external clock (jack 1, index 0): route it to whichever native engine is
+    // engaged with external clocking; a consumed edge skips the normal script
+    // dispatch. Kria, Meadowphysics and Earthsea all share this jack.
     if (input == MP_EXT_CLOCK_INPUT &&
         meadowphysics_external_clock(gpio_get_pin_value(A00 + data)))
         return;
@@ -518,8 +519,10 @@ void handler_Trigger(int32_t data) {
     if (input == ES_PLAY_INPUT &&
         es_play_trigger(gpio_get_pin_value(A00 + data)))
         return;
-    // reset (jack 2): route to MP/Kria when they own the external clock; a
-    // consumed edge skips the normal script dispatch (as the clock does).
+    // reset / restart (jack 2, index 1): Earthsea's play input (re)starts its
+    // playback (checked just above, in the clock block); Meadowphysics and Kria
+    // re-arm their counters when they own the external clock. A consumed edge
+    // skips the normal script dispatch (as the clock does).
     if (input == MP_EXT_RESET_INPUT &&
         meadowphysics_external_reset(gpio_get_pin_value(A00 + data)))
         return;
