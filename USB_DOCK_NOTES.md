@@ -44,6 +44,16 @@ pipes total). Background on the hub port itself lives in `libavr32/`
 
 4. **Bulk NAK throttle** and **enumeration/grid serialization** — see below.
 
+5. **Hub-class hardening** (`libavr32/src/usb/hub/uhi_hub.c`): hub-level
+   status changes are serviced (an over-current trip is acked and ports are
+   automatically re-powered); up to 7 ports are powered and watched (was 4;
+   all reported ports get PORT_POWER even beyond 7); the `bPwrOn2PwrGood`
+   settle time is honoured before the first status poll; GetHubDescriptor
+   sends the descriptor type in wValue (some hubs STALL a zero wValue); the
+   config-descriptor walk guards against malformed descriptors; and every
+   transfer-error / submit-failure path now retries via a 1 ms SOF engine
+   (`uhi_hub_sof`) instead of silently dead-stalling hub servicing.
+
 ## Grid + MIDI through a hub: root cause & fix (was: plug-order constraint)
 
 **Resolved.** Grid + composite MIDI device (e.g. Elektron Analog Rytm) on one
@@ -88,7 +98,9 @@ cd module && make clean && make USB_TOPO_DEBUG=1
 builds a firmware with a USB trace ring on the OLED (`libavr32/src/usb_dbg.c`;
 normal builds are unaffected — everything is compile-gated). **ALT+F10**
 toggles between the trace overlay and the normal UI. **ALT+F9** dumps the
-live USBB pipe table. Newest trace line at the bottom.
+live USBB pipe table. Newest trace line at the bottom. Debug builds omit the
+on-module HELP text (`help_mode.c` stubs the page tables) — program flash
+cannot hold both it and the trace facility.
 
 Trace legend:
 

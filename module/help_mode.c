@@ -1961,6 +1961,17 @@ const char* help21[HELP21_LENGTH] = { "21/21 EARTHSEA",
 ////////////////////////////////////////////////////////////////////////////////
 // Help mode ///////////////////////////////////////////////////////////////////
 
+#ifdef USB_TOPO_DEBUG
+// Debug builds trade the on-module help text (tens of KB of const strings)
+// for the USB trace facility — program flash cannot hold both. Leaving the
+// page tables pointing at this stub lets --gc-sections drop every helpN
+// array above.
+static const char* help_dbg_stub[] = { "1/1 HELP", "USB_TOPO_DEBUG BUILD",
+                                       "HELP TEXT OMITTED" };
+const char** help_pages[HELP_PAGES] = { [0 ... HELP_PAGES - 1] =
+                                            help_dbg_stub };
+const uint8_t help_length[HELP_PAGES] = { [0 ... HELP_PAGES - 1] = 3 };
+#else
 const char** help_pages[HELP_PAGES] = { help1,  help2,  help3,  help4,  help5,
                                         help6,  help7,  help8,  help9,  help10,
                                         help19, help11, help12, help13, help14,
@@ -1973,6 +1984,7 @@ const uint8_t help_length[HELP_PAGES] = {
     HELP15_LENGTH, HELP16_LENGTH, HELP17_LENGTH, HELP18_LENGTH, HELP20_LENGTH,
     HELP21_LENGTH
 };
+#endif
 
 static uint8_t page_no;
 static uint8_t offset;
