@@ -284,7 +284,10 @@ CFLAGS = -fshort-enums -fno-common
 # The most relevant symbols to define for the preprocessor are:
 #   BOARD      Target board in use, see boards/board.h for a list.
 #   EXT_BOARD  Optional extension board in use, see boards/board.h for a list.
-CPPFLAGS = -D BOARD=USER_BOARD -D UHD_ENABLE
+# USB_HOST_HUB_SUPPORT: hub-aware USB host (uhi_hub.c + hub paths in uhc.c).
+# The flag is an application opt-in so the same libavr32 branch still builds
+# vanilla consumers (see libavr32/conf/conf_usb_host.h).
+CPPFLAGS = -D BOARD=USER_BOARD -D UHD_ENABLE -D USB_HOST_HUB_SUPPORT
 
 # USB enumeration/topology trace on the OLED (see USB_DOCK_NOTES.md):
 #   make USB_TOPO_DEBUG=1
