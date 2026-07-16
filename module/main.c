@@ -56,6 +56,10 @@
 #include "usb_disk_mode.h"
 #include "uhi_msc_mem.h" // uhi_msc_mem_test_unit_ready() — media-present check
 
+#ifdef USB_TOPO_DEBUG
+#include "usb_dbg.h" // USB enumeration trace, rendered over the OLED
+#endif
+
 #ifdef TELETYPE_PROFILE
 #include "profile.h"
 
@@ -306,6 +310,9 @@ void metroTimer_callback(void* o) {
 
 // monome polling callback
 static void monome_poll_timer_callback(void* obj) {
+    // keep grid bulk traffic off the bus while another device enumerates —
+    // a pending grid IN does not survive a concurrent heavy enumeration
+    if (usb_enumeration_active) return;
     // asynchronous, non-blocking read
     // UHC callback spawns appropriate events
     serial_read();
@@ -563,7 +570,42 @@ void handler_Trigger(int32_t data) {
     run_trigger_script(input, level);
 }
 
+#ifdef USB_TOPO_DEBUG
+// Trace overlay on the OLED; ALT+F10 toggles it so the normal UI stays
+// usable for functional testing (grid/MIDI) in the debug build.
+static bool usb_dbg_overlay = true;
+static uint8_t usb_dbg_overlay_seq = 0xFF;
+
+// IRQ-context, last-resort draw: the main loop is dead (that's why this
+// fires), so racing its SPI traffic is acceptable in a debug build.
+void usb_dbg_emergency_render(const char* s) {
+    region_fill(&line[0], 0);
+    font_string_region_clip(&line[0], s, 0, 0, 0xf, 0);
+    region_draw(&line[0]);
+}
+#endif
+
 void handler_ScreenRefresh(int32_t data) {
+#ifdef USB_TOPO_DEBUG
+    // Main loop is breathing: reset the USB IRQ-storm detector.
+    usb_dbg_irq_calm();
+    // Trace overlay (newest line at the bottom); ALT+F10 switches back to
+    // the normal UI. Bypasses the screensaver — reading the trace IS the
+    // point.
+    if (usb_dbg_overlay) {
+        if (usb_dbg_seq() != usb_dbg_overlay_seq) {
+            usb_dbg_overlay_seq = usb_dbg_seq();
+            for (uint8_t i = 0; i < 8; i++) {
+                region_fill(&line[i], 0);
+                if (i < usb_dbg_count())
+                    font_string_region_clip(&line[i], usb_dbg_line(i), 0, 0,
+                                            0xf, 0);
+                region_draw(&line[i]);
+            }
+        }
+        return;
+    }
+#endif
 #ifdef TELETYPE_PROFILE
     profile_update(&prof_ScreenRefresh);
 #endif
@@ -596,7 +638,24 @@ void handler_ScreenRefresh(int32_t data) {
 #endif
 }
 
+// Defer the monome setup dialogue until USB enumeration has been quiet for
+// this many RATE_CLOCK (10 ms) ticks. Running it concurrently with a
+// following device's enumeration (grid on a lower hub port than a composite
+// device like the Analog Rytm) corrupts the grid's bulk traffic and leaves
+// the grid dark. See USB_DOCK_NOTES.md.
+#define MONOME_SETUP_QUIET_TICKS 5
+static u8 monome_setup_pending;
+
 void handler_EventTimer(int32_t data) {
+    // pending monome setup: wait for MONOME_SETUP_QUIET_TICKS consecutive
+    // ticks with no enumeration in flight, then run the setup dialogue
+    if (monome_setup_pending) {
+        if (usb_enumeration_active)
+            monome_setup_pending = MONOME_SETUP_QUIET_TICKS;
+        else if (--monome_setup_pending == 0)
+            monome_setup_mext();
+    }
+
     tele_tick(&scene_state, RATE_CLOCK);
 
     if (ss_counter < SS_TIMEOUT) {
@@ -674,7 +733,7 @@ static void handler_FtdiConnect(s32 data) {
 }
 
 static void handler_SerialConnect(s32 data) {
-    monome_setup_mext();
+    monome_setup_pending = MONOME_SETUP_QUIET_TICKS;
 }
 
 static void handler_FtdiDisconnect(s32 data) {
@@ -683,6 +742,9 @@ static void handler_FtdiDisconnect(s32 data) {
 }
 
 static void handler_MonomeConnect(s32 data) {
+#ifdef USB_TOPO_DEBUG
+    usb_dbg_push("mcon"); // monome connect event reached the module
+#endif
     hold_key = 0;
     timers_set_monome();
     grid_connected = 1;
@@ -962,6 +1024,29 @@ void process_keypress(uint8_t key, uint8_t mod_key, bool is_held_key,
         return;
     }
     ss_counter = 0;
+
+#ifdef USB_TOPO_DEBUG
+    // ALT+F9: dump the live USBB pipe table into the trace ring.
+    if (!is_release && !is_held_key && key == HID_F9 &&
+        mod_only_alt(mod_key)) {
+        uhd_dbg_dump_pipes();
+        return;
+    }
+    // ALT+F10: flip between the USB trace overlay and the normal UI.
+    if (!is_release && !is_held_key && key == HID_F10 &&
+        mod_only_alt(mod_key)) {
+        usb_dbg_overlay = !usb_dbg_overlay;
+        if (usb_dbg_overlay) { usb_dbg_overlay_seq = 0xFF; } // force redraw
+        else {
+            // wipe the trace pixels; the active mode repaints as it dirties
+            for (uint8_t i = 0; i < 8; i++) {
+                region_fill(&line[i], 0);
+                region_draw(&line[i]);
+            }
+        }
+        return;
+    }
+#endif
 
     // release is a special case for live mode
     if (is_release) {

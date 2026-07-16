@@ -1,13 +1,15 @@
 # USB dock / hub notes
 
-Behaviour, fixes, and one open investigation for running a grid + HID + MIDI
-through a USB hub or USB-C dock on the Teletype (AVR32 UC3B0512, full-speed-only
-USB host, 7 pipes total). Background on the hub port itself lives in
-`libavr32/` (`USB_HUB_PORT_PLAN.md`, `HUB_RETRO.md`, `TELETYPE_HUB_PATCH.md`).
+Behaviour and fixes for running a grid + HID + MIDI through a USB hub or
+USB-C dock on the Teletype (AVR32 UC3B0512, full-speed-only USB host, 7
+pipes total). Background on the hub port itself lives in `libavr32/`
+(`USB_HUB_PORT_PLAN.md`, `HUB_RETRO.md`, `TELETYPE_HUB_PATCH.md`).
 
 ## What works
 
-- **Single-tier USB-2 hubs**: grid + HID, or grid + HID + MIDI, enumerate.
+- **Single-tier USB-2 hubs**: grid + HID, or grid + HID + MIDI, enumerate
+  and run — in **any port order** (the old "grid on the highest port" rule
+  is obsolete, see below), and survive hot-plugging the MIDI device.
 - **USB-C docks** (e.g. Genesys-Logic-based): the USB-2 side is used; the
   SuperSpeed side is dead (the UC3B host is USB-2 full-speed only).
 - **Cascaded (hub-behind-hub) docks** such as the Elektron Overhub: only the
@@ -20,74 +22,113 @@ USB host, 7 pipes total). Background on the hub port itself lives in
 ## Fixes in this change set
 
 1. **Hub-unplug teardown** (`libavr32/.../uhc/uhc.c`, `uhc_connection_tree`):
-   when the dock/hub on the **root port** is removed, its downstream devices are
-   torn down too, instead of being left orphaned in the device list (dangling
-   `->hub`, still holding USB addresses/pipes). Without this, switching from one
-   dock to another required a power cycle.
+   when the dock/hub on the **root port** is removed, its downstream devices
+   are torn down too, instead of being left orphaned in the device list.
+   Without this, switching from one dock to another required a power cycle.
+   The sweep is guarded to the root device only: a downstream device that
+   bounces mid-enumeration also disconnects through the same path, and
+   sweeping there frees a device that is still enumerating.
 
-   The sweep is guarded to the **root device only**. A downstream device that
-   merely bounces mid-enumeration also disconnects through the same path
-   (`uhc_hub_port_change -> uhc_connection_tree(false, d)`, `d != root`); running
-   the recursive sweep there frees a device that is still enumerating and
-   corrupts it — that broke 3-device enumeration on the Overhub. The root device
-   only disconnects when the whole dock is physically removed (an idle moment),
-   so sweeping its children there is safe.
+2. **Duplicate-connect guard** (`uhc.c`, `uhc_hub_port_change`): a connector
+   bounce can latch one connection change while port status already shows
+   connected again. The stale device on that (hub, port) is torn down first,
+   then the new arrival enumerates — previously the old `uhc_device_t` was
+   orphaned still holding its pipes and USB address.
 
-2. **USB-disk media gate** (`module/main.c`, `handler_MscConnect`): an empty
-   card reader (common in USB-C docks) still enumerates as USB mass storage, and
-   enumeration discards the read-capacity result — so a bare MSC connect does not
-   mean a drive is present. The module now runs `uhi_msc_mem_test_unit_ready()`
-   per LUN and only opens the USB-disk dialog when a LUN reports ready media.
-   Previously an empty reader hijacked the UI and blocked grid/HID until it was
-   physically unplugged.
+3. **USB-disk media gate** (`module/main.c`, `handler_MscConnect`): an empty
+   card reader (common in USB-C docks) still enumerates as USB mass storage.
+   The module now runs `uhi_msc_mem_test_unit_ready()` per LUN and only opens
+   the USB-disk dialog when a LUN reports ready media. Note: the check runs
+   once at connect — a card inserted *later* is not detected until the reader
+   is replugged.
 
-## Plug-order constraint (grid + MIDI through a hub)
+4. **Bulk NAK throttle** and **enumeration/grid serialization** — see below.
 
-With a monome **grid + a composite MIDI device (e.g. Elektron Analog Rytm)** on
-one hub, **enumeration order matters**:
+## Grid + MIDI through a hub: root cause & fix (was: plug-order constraint)
 
-- **Works:** grid on the **highest**-numbered hub port; MIDI/Rytm on a lower
-  port. (The hub is serviced lowest-port-first, so the Rytm enumerates first and
-  the grid last.)
-- **Fails:** grid on a lower port than the Rytm (grid enumerates first).
+**Resolved.** Grid + composite MIDI device (e.g. Elektron Analog Rytm) on one
+hub now work in any port order, and survive hot-plugging the MIDI device
+while the grid runs. The failure was never a Rytm *enumeration* problem — the
+Rytm enumerated fine; the victim was the **grid**, dark whenever the Rytm was
+present in the wrong pipe order.
 
-**Rule of thumb: put the grid on the highest hub port; MIDI/other devices on
-lower ports.** This is a one-time cabling choice and is reliable.
+Root cause, in layers (found with the `USB_TOPO_DEBUG` trace, below):
 
-## Open investigation (B) — grid-first -> Rytm enumeration failure
+1. **The USBB host retries a NAKed bulk pipe continuously**: a NAK does not
+   decrement UPINRQ and bulk pipes have no interval, so an idle bulk-IN poll
+   (the MIDI driver's read, armed essentially 100% of the time) monopolizes
+   the bus. Which device starved depended on pipe allocation order — hence
+   the port-order dependence. Enumeration behaves the same way (slow control
+   responses NAK-spam the shared pipe 0), which is why the grid died before
+   the Rytm's enumeration even completed.
+2. **The grid shows starvation as total darkness**: its LED writes ride a
+   20 ms transfer timeout (`UHI_MCDC_TIMEOUT`) and `cdc_write()` silently
+   drops frames while one is pending. MIDI, with a 20 s timeout and a TX
+   ring, shrugged the same contention off — so it always "worked".
+3. **The grid's setup dialogue ran concurrently with the next device's
+   enumeration**, exposing the connect-time window to the same contention.
 
-Not yet root-caused. Documented here so it can be picked up later.
+Fixes:
 
-**Symptom:** grid + Rytm (+ HID) on one hub. Enumerating **grid first, Rytm
-second** fails; **Rytm first, grid second** works. Pre-existing (predates the
-fixes above).
+- `libavr32/asf/avr32/drivers/usbb/usbb_host.c` — **bulk NAK throttle**: on
+  the first NAK of a bulk transfer the pipe is frozen and retried at the next
+  SOF (one token per ms per idle pipe instead of a continuous hammer). This
+  is the root-cause fix.
+- `module/main.c` + `libavr32/src/usb.{c,h}` — grid traffic serialized
+  against enumeration via `usb_enumeration_active`: the monome poll skips
+  while any device is enumerating, and the monome setup dialogue is deferred
+  until enumeration has been quiet for 50 ms (`MONOME_SETUP_QUIET_TICKS`).
 
-**Ruled out by `ioreg` on the actual hardware** (Overhub with all three devices):
+## USB debug facility (USB_TOPO_DEBUG)
 
-- *Not* an EP0 / control-pipe resize + DPRAM-shift issue: every device reports
-  `bMaxPacketSize0 = 64`, so the shared control pipe 0 never resizes.
-- *Not* pipe-count exhaustion: the grid is a **CDC** device (monome VID 0xCAFE,
-  class 2) whose host driver claims only the CDC **data** interface = 2 bulk
-  pipes (not 3 — the notification interrupt is not allocated,
-  `libavr32/src/usb/cdc/uhi_cdc.c`). Tally: hub 1 + grid 2 + Rytm MIDI 2 + HID 1
-  = **6 of 7** pipes.
-- *Not* a stray vendor-interface grab: the Rytm is a composite device (class
-  239) with an Overbridge vendor interface (class 255, 2 endpoints), but
-  `uhi_ftdi` matches FTDI by VID/PID only (`libavr32/src/usb/ftdi/uhi_ftdi.c`),
-  so it does not claim it. Only the Rytm's MIDI interface (2 bulk) is allocated.
+```bash
+cd module && make clean && make USB_TOPO_DEBUG=1
+```
 
-**Remaining hypothesis:** the one real asymmetry is that the **Rytm is a heavy
-composite device** (5 interfaces — 3 vendor + audio-control + MIDI — with IADs
-and a large config descriptor), whereas the grid is a simple 2-interface CDC
-device. The failure is therefore likely in the **enumeration path for that
-composite device through the shared-pipe-0 multi-device control stack**,
-sensitive to what enumerated immediately before it — not in pipe or memory
-budgeting.
+builds a firmware with a USB trace ring on the OLED (`libavr32/src/usb_dbg.c`;
+normal builds are unaffected — everything is compile-gated). **ALT+F10**
+toggles between the trace overlay and the normal UI. **ALT+F9** dumps the
+live USBB pipe table. Newest trace line at the bottom.
 
-**How to investigate:** re-add the on-module enumeration logging used earlier
-(per-step transfer status to the OLED: `usb_enum` status + `uhc_enumeration_stepN`
-`uhd_trans_status_t` for step6/step10/step12/step13; see git history of
-`libavr32/src/usb.c` and `uhc.c` for the `USB_TOPO_DEBUG` instrumentation).
-Reproduce grid-first -> Rytm and read exactly which control transfer fails and
-its status code, then trace the shared-pipe-0 handling
-(`libavr32/asf/avr32/drivers/usbb/usbb_host.c`) for that transfer.
+Trace legend:
+
+- `P+ <port>` / `P- <port>` — hub reported connect/disconnect on that port
+- `s14 t<S> n<L>` / `s15 t<S> n<L>` — enumeration transfer completions (full
+  config-descriptor read / SET_CONFIGURATION) with status S and length L.
+  `n` on s14 identifies the device by descriptor size: grid ≈ 75, Analog
+  Rytm ≈ 414, HID dongle ≈ 59, hub 25.
+  Status (`uhd_trans_status_t`): 0 ok, 1 disconnect, 2 CRC, 3 data-toggle,
+  4 STALL, 5 not responding, 6 PID failure, 7 timeout, 8 aborted.
+- `ERR <status> <try>` — enumeration attempt failed
+  (`uhc_enum_status_t`: 1 unsupported, 3 fail, 4 hardware limit) on retry
+  `<try>` (gives up after 4); `E <addr> <status>` — enumeration finished
+  (0 = success)
+- `rstTO p<port>` — hub port reset timed out
+- `sc t <status>` / `sc ok <n>` — hub status-poll error streak / recovery;
+  `poll!` — the status poll could not be re-armed
+- `cdcC a<addr>` / `cdcB a<addr>` / `cdcU a<addr>` — monome CDC driver
+  claimed / turned away / released that device; `cdc m` + `chg+` — CDC
+  enable matched its device, serial-connect event posted
+- `mset` / `mrx <v>` / `mcon` — grid setup dialogue started / size reply
+  (3 = proper SIZE answer) / monome connect event reached the module
+- `gW <n>` — grid write attempts (1st + every 64th); `TXok <n>` /
+  `TXE <status> <n>` — grid bulk-OUT clean/error completions (1st + every
+  64th); `RXE <status>` — grid bulk-IN error streaks (status 7 = the idle
+  20 ms poll timeout, benign)
+- `evQ!` — event queue overflowed; an event was silently dropped
+- `STORM <UHINT> <UHINTE>` (hex, top line) — USB IRQ-storm detector, drawn
+  directly from interrupt context so it works even when the main loop is
+  dead. Bit 5 = SOF, bit 8+p = pipe p. Tripping within ~a second of a freeze
+  = interrupt storm; tripping only after ~100 s with just the SOF bit = the
+  main loop died while USB stayed healthy.
+- ALT+F9 pipe dump: `p<N> a<addr> e<ep> [E][F][C]` — per-pipe target
+  address, endpoint address, Enabled / Frozen / Config-OK.
+
+## Reporting a hub compatibility issue
+
+Screen a candidate hub/dock on a computer first: plug it in and check the
+topology (`ioreg -p IOUSB -w 0` on macOS, `lsusb -t` on Linux). One hub
+device (or a USB3/USB2 pair at the same level) is compatible; a hub nested
+under another hub means only the outer tier will be serviced. Then reproduce
+with a `USB_TOPO_DEBUG` build and include the visible trace lines and the
+ALT+F9 pipe table in the report.
