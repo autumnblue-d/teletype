@@ -54,6 +54,7 @@
 #include "teletype.h"
 #include "teletype_io.h"
 #include "usb_disk_mode.h"
+#include "uhi_msc_mem.h" // uhi_msc_mem_test_unit_ready() — media-present check
 
 #ifdef TELETYPE_PROFILE
 #include "profile.h"
@@ -492,6 +493,26 @@ void handler_HidTimer(int32_t data) {
 }
 
 void handler_MscConnect(int32_t data) {
+    // A mass-storage device (e.g. an SD card reader) enumerates even with NO
+    // media inserted, and enumeration discards the read-capacity result — so a
+    // bare connect event doesn't mean there's a drive to use. Only enter the
+    // USB-disk dialog if a LUN reports ready media; otherwise an empty reader
+    // (common in USB-C docks) would hijack the UI and block grid/HID until it's
+    // physically unplugged. test-unit-ready is blocking; bound the BUSY spin so
+    // a misbehaving drive can't hang the module.
+    bool media_ready = false;
+    for (uint8_t lun = 0; lun < uhi_msc_mem_get_lun(); lun++) {
+        Ctrl_status s = CTRL_BUSY;
+        for (uint8_t tries = 0; tries < 20 && s == CTRL_BUSY; tries++) {
+            s = uhi_msc_mem_test_unit_ready(lun);
+        }
+        if (s == CTRL_GOOD) {
+            media_ready = true;
+            break;
+        }
+    }
+    if (!media_ready) return; // no media: stay in the normal app UI
+
     // disable event handlers while doing USB write
     assign_msc_event_handlers();
 
