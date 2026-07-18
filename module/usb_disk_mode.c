@@ -4,9 +4,6 @@
 #include <stdint.h>
 #include <string.h>
 
-#ifdef USB_TOPO_DEBUG
-#include "usb_dbg.h" // disk-mode failure probes; read via ALT+F10 after exit
-#endif
 
 #include "flash.h"
 #include "globals.h"
@@ -26,31 +23,18 @@
 #include "fs_com.h"
 #include "navigation.h"
 #include "print_funcs.h"
+#include "uhd.h"
 #include "uhi_msc.h"
 #include "uhi_msc_mem.h"
 #include "usb_protocol_msc.h"
 
-#ifdef USB_TOPO_DEBUG
-// Stage marker drawn IMMEDIATELY on the bottom OLED line: if the disk code
-// blocks forever (the FAT/MSC layers busy-wait on USB completions), the last
-// marker on screen names the exact call it never returned from.
-// Also calms the IRQ-storm detector: disk operations run for minutes inside
-// the front-button handler where the normal calm site (ScreenRefresh) never
-// runs, and a false STORM trip draws over the disk UI from interrupt context.
-static void dsk_mark(const char* s) {
-    usb_dbg_irq_calm();
-    region_fill(&line[7], 0);
-    font_string_region_clip_tab(&line[7], (char*)s, 2, 0, 0xa, 0);
-    region_draw(&line[7]);
-}
-#else
-#define dsk_mark(s)
-#endif
 
 // Local declarations
 void draw_usb_menu_item(uint8_t item_num, const char* text);
 bool tele_usb_disk_write_operation(uint8_t* plun_state, uint8_t* plun);
 void tele_usb_disk_read_operation(void);
+void tele_usb_disk_raw_write_operation(void);
+void tele_usb_disk_raw_read_operation(void);
 
 
 // Local functions to implement the usb filesystem serialization contract
@@ -59,33 +43,13 @@ void tele_usb_write_buf(void* self_data, uint8_t* buffer, uint16_t size);
 uint16_t tele_usb_getc(void* self_data);
 bool tele_usb_eof(void* self_data);
 
-#ifdef USB_TOPO_DEBUG
-// First serialize-write failure of a streak: "pcE <fs_g_status>". file_putc
-// errors are otherwise swallowed and produce silently truncated files.
-static uint8_t usb_dbg_putc_failed;
-static void usb_dbg_putc_check(bool ok) {
-    if (ok) { usb_dbg_putc_failed = 0; }
-    else if (!usb_dbg_putc_failed) {
-        usb_dbg_putc_failed = 1;
-        usb_dbg_log_val("pcE", fs_g_status);
-    }
-}
-#endif
 
 void tele_usb_putc(void* self_data, uint8_t c) {
-#ifdef USB_TOPO_DEBUG
-    usb_dbg_putc_check(file_putc(c) != 0);
-#else
     file_putc(c);
-#endif
 }
 
 void tele_usb_write_buf(void* self_data, uint8_t* buffer, uint16_t size) {
-#ifdef USB_TOPO_DEBUG
-    usb_dbg_putc_check(file_write_buf(buffer, size) == size);
-#else
     file_write_buf(buffer, size);
-#endif
 }
 
 uint16_t tele_usb_getc(void* self_data) {
@@ -103,13 +67,18 @@ typedef enum {
     USB_MENU_COMMAND_WRITE = 0,
     USB_MENU_COMMAND_READ = 1,
     USB_MENU_COMMAND_BOTH = 2,
-    USB_MENU_COMMAND_EXIT = 3,
+    USB_MENU_COMMAND_RAW_WRITE = 3,
+    USB_MENU_COMMAND_RAW_READ = 4,
+    USB_MENU_COMMAND_EXIT = 5,
 } usb_menu_command_t;
+
+#define USB_MENU_ITEM_COUNT (USB_MENU_COMMAND_EXIT + 1)
 
 usb_menu_command_t usb_menu_command;
 
 void draw_usb_menu_item(uint8_t item_num, const char* text) {
-    uint8_t line_num = 4 + item_num;
+    // Six items now fill lines 2..7, leaving lines 0..1 for operation status.
+    uint8_t line_num = 2 + item_num;
     uint8_t fg = usb_menu_command == item_num ? 0 : 0xa;
     uint8_t bg = usb_menu_command == item_num ? 0xa : 0;
     region_fill(&line[line_num], bg);
@@ -120,9 +89,14 @@ void draw_usb_menu_item(uint8_t item_num, const char* text) {
 void handler_usb_PollADC(int32_t data) {
     uint16_t adc[4];
     adc_convert(&adc);
-    uint8_t cursor = adc[1] >> 9;
-    uint8_t deadzone = cursor & 1;
-    cursor >>= 1;
+    // Map the 12-bit PARAM knob across USB_MENU_ITEM_COUNT items. Odd raw
+    // values are a deadzone between adjacent items so a knob resting near a
+    // boundary doesn't flicker (matches the original >>9 scheme, generalised
+    // from 4 items to the current count).
+    uint32_t raw = ((uint32_t)adc[1] * (USB_MENU_ITEM_COUNT * 2)) >> 12;
+    if (raw > USB_MENU_ITEM_COUNT * 2 - 1) raw = USB_MENU_ITEM_COUNT * 2 - 1;
+    uint8_t deadzone = raw & 1;
+    uint8_t cursor = raw >> 1;
     if (!deadzone || abs(cursor - usb_menu_command) > 1) {
         usb_menu_command = cursor;
     }
@@ -149,13 +123,12 @@ void handler_usb_Front(int32_t data) {
 }
 
 void handler_usb_ScreenRefresh(int32_t data) {
-#ifdef USB_TOPO_DEBUG
-    usb_dbg_irq_calm(); // main loop alive at the disk menu; see dsk_mark
-#endif
     draw_usb_menu_item(0, "WRITE TO USB");
     draw_usb_menu_item(1, "READ FROM USB");
     draw_usb_menu_item(2, "DO BOTH");
-    draw_usb_menu_item(3, "EXIT");
+    draw_usb_menu_item(3, "RAW BACKUP");
+    draw_usb_menu_item(4, "RAW RESTORE");
+    draw_usb_menu_item(5, "EXIT");
 }
 
 
@@ -174,29 +147,34 @@ void tele_usb_disk() {
     // FAT layer ever runs, so that accidental reset no longer happens.
     nav_reset();
 
-    dsk_mark("d:lun"); // hang here = uhi_msc_mem_get_lun/is_available wait
     // uhi_msc_mem_* calls spin forever on uhi_msc_is_available() if the stick
     // vanished (bounce / unplug / re-enumeration). Bound the wait once here
     // and bail out cleanly instead of hanging the module inside the handler.
     uint16_t avail_wait = 0;
     while (!uhi_msc_is_available()) {
         if (++avail_wait > 3000) {
-            dsk_mark("d:gone"); // MSC device left and never came back
             return;
         }
         delay_ms(1);
     }
+
+    // The USBB bulk NAK throttle freezes a NAKed bulk pipe until the next SOF,
+    // which serializes MSC scene read/write to one token per 1 ms frame. Disk
+    // mode is exclusive -- the grid/MIDI handlers are swapped out
+    // (assign_msc_event_handlers), so nothing else is on the bus here and the
+    // throttle only slows us down. Run full-speed for the mount/read/write
+    // below, then restore it so the grid/MIDI starvation cure is back for
+    // normal operation. Scoped after the early "d:gone" return above so that
+    // bail-out path leaves the throttle in its default (enabled) state.
+    uhd_bulk_nak_throttle_set(false);
+
     for (uint8_t lun = 0; (lun < uhi_msc_mem_get_lun()) && (lun < 8); lun++) {
         // print_dbg("\r\nlun: ");
         // print_dbg_ulong(lun);
 
         // Mount drive
         nav_drive_set(lun);
-        dsk_mark("d:mnt"); // hang here = mount reads never complete
         if (!nav_partition_mount()) {
-#ifdef USB_TOPO_DEBUG
-            usb_dbg_log2("mnt", lun, fs_g_status);
-#endif
             if (fs_g_status == FS_ERR_HW_NO_PRESENT) {
                 // The test can not be done, if LUN is not present
                 lun_state &= ~(1 << lun);  // LUN test reseted
@@ -210,7 +188,6 @@ void tele_usb_disk() {
         // Check if LUN has been already tested
         if (lun_state & (1 << lun)) { continue; }
 
-        dsk_mark("d:mok"); // mount succeeded
         if (usb_menu_command == USB_MENU_COMMAND_WRITE ||
             usb_menu_command == USB_MENU_COMMAND_BOTH) {
             if (!tele_usb_disk_write_operation(&lun_state, &lun)) { continue; }
@@ -219,12 +196,19 @@ void tele_usb_disk() {
             usb_menu_command == USB_MENU_COMMAND_BOTH) {
             tele_usb_disk_read_operation();
         }
+        if (usb_menu_command == USB_MENU_COMMAND_RAW_WRITE) {
+            tele_usb_disk_raw_write_operation();
+        }
+        if (usb_menu_command == USB_MENU_COMMAND_RAW_READ) {
+            tele_usb_disk_raw_read_operation();
+        }
 
-        dsk_mark("d:ex"); // hang here = nav_exit (FAT/dir flush writes)
         nav_exit();
-        dsk_mark("d:nx"); // hang here = next-LUN availability wait
     }
-    dsk_mark("d:end"); // disk operation complete; returning to the menu exit
+
+    // restore the bulk NAK throttle disabled before the loop
+    uhd_bulk_nak_throttle_set(true);
+
 }
 
 bool tele_usb_disk_write_operation(uint8_t* plun_state, uint8_t* plun) {
@@ -257,12 +241,7 @@ bool tele_usb_disk_write_operation(uint8_t* plun_state, uint8_t* plun) {
 
         flash_read(i, &scene_state, &scene_text, 1, 1, 1);
 
-        dsk_mark("w:cr"); // hang here = file create never completes
         if (!nav_file_create((FS_STRING)filename)) {
-#ifdef USB_TOPO_DEBUG
-            if (fs_g_status != FS_ERR_FILE_EXIST)
-                usb_dbg_log2("crE", i, fs_g_status);
-#endif
             if (fs_g_status != FS_ERR_FILE_EXIST) {
                 if (fs_g_status == FS_LUN_WP) {
                     // Test can be done only on no write protected
@@ -275,11 +254,7 @@ bool tele_usb_disk_write_operation(uint8_t* plun_state, uint8_t* plun) {
             }
         }
 
-        dsk_mark("w:op");
         if (!file_open(FOPEN_MODE_W)) {
-#ifdef USB_TOPO_DEBUG
-            usb_dbg_log2("opE", i, fs_g_status);
-#endif
             if (fs_g_status == FS_LUN_WP) {
                 // Test can be done only on no write protected
                 // device
@@ -290,7 +265,6 @@ bool tele_usb_disk_write_operation(uint8_t* plun_state, uint8_t* plun) {
             return false;
         }
 
-        dsk_mark("w:sz"); // hang here = serialize write never completes
         tt_serializer_t tele_usb_writer;
         tele_usb_writer.write_char = &tele_usb_putc;
         tele_usb_writer.write_buffer = &tele_usb_write_buf;
@@ -300,7 +274,6 @@ bool tele_usb_disk_write_operation(uint8_t* plun_state, uint8_t* plun) {
         serialize_scene(&tele_usb_writer, &scene_state, &scene_text);
 
         file_close();
-        dsk_mark("w:cl"); // scene file closed
         *plun_state |= (1 << *plun);  // LUN test is done.
 
         if (filename[3] == '9') {
@@ -313,10 +286,6 @@ bool tele_usb_disk_write_operation(uint8_t* plun_state, uint8_t* plun) {
         print_dbg(".");
     }
 
-#ifdef USB_TOPO_DEBUG
-    usb_dbg_push("wrOK"); // all scenes serialized and closed without bailing
-#endif
-    dsk_mark("w:fl"); // hang here = nav_filelist_reset directory ops
     nav_filelist_reset();
     return true;
 }
@@ -373,4 +342,92 @@ void tele_usb_disk_read_operation() {
         else
             filename[3]++;
     }
+}
+
+// --- Raw NVRAM image backup / restore -----------------------------------
+//
+// One binary file holding the entire nvram_data_t exactly as it sits in flash:
+// every scene PLUS every global bank (cal, device_config, kria/es/mp/tuning),
+// which the per-scene tt##.txt path does not capture. The image is welded to
+// this firmware's layout (see flash.c), so a restore is length- and tag-gated
+// before any flash is erased. Streamed in 512 B chunks — the ~127 KB image
+// can't be buffered in the 8 KB stack or the 64 KB SRAM.
+
+// Distinct from the per-scene tt##.txt files (FAT 8.3).
+#define RAW_IMAGE_FILENAME "ttnvram.bin"
+#define RAW_CHUNK 512
+
+static void raw_status(uint8_t line_num, const char* text) {
+    region_fill(&line[line_num], 0);
+    font_string_region_clip_tab(&line[line_num], (char*)text, 2, 0, 0xa, 0);
+    region_draw(&line[line_num]);
+}
+
+void tele_usb_disk_raw_write_operation() {
+    char filename[13];
+    strcpy(filename, RAW_IMAGE_FILENAME);
+
+    if (!nav_file_create((FS_STRING)filename) &&
+        fs_g_status != FS_ERR_FILE_EXIST) {
+        raw_status(1, "FAILED");
+        return;
+    }
+    if (!file_open(FOPEN_MODE_W)) {
+        raw_status(1, "FAILED");
+        return;
+    }
+
+    const uint8_t* img = (const uint8_t*)flash_nvram_image();
+    uint32_t size = flash_nvram_size();
+    for (uint32_t off = 0; off < size;) {
+        uint16_t want =
+            (size - off) > RAW_CHUNK ? RAW_CHUNK : (uint16_t)(size - off);
+        // img is memory-mapped flash; read it straight into the file buffer.
+        file_write_buf((uint8_t*)(img + off), want);
+        off += want;
+    }
+    file_set_eof(); // truncate to exactly the image size
+    file_close();
+    nav_filelist_reset();
+    raw_status(1, "DONE");
+}
+
+void tele_usb_disk_raw_read_operation() {
+    char filename[13];
+    strcpy(filename, RAW_IMAGE_FILENAME);
+
+    uint32_t size = flash_nvram_size();
+    if (!nav_filelist_findname((FS_STRING)filename, 0) ||
+        nav_file_lgt() != size || !file_open(FOPEN_MODE_R)) {
+        // Missing, wrong length (not our image / different layout), or unreadable
+        raw_status(1, "NO IMAGE");
+        return;
+    }
+
+    // Compatibility gate: read the image's validity tag and refuse a foreign
+    // image BEFORE erasing any flash, so a mismatched build can't corrupt the
+    // running NVRAM. A matching image already carries the correct tag.
+    file_seek(flash_nvram_fresh_offset(), FS_SEEK_SET);
+    if (!flash_nvram_image_compatible((uint8_t)file_getc())) {
+        file_close();
+        raw_status(1, "BAD VERSION");
+        return;
+    }
+    file_seek(0, FS_SEEK_SET);
+
+    uint8_t buf[RAW_CHUNK];
+    uint32_t off = 0;
+    while (off < size) {
+        uint16_t want =
+            (size - off) > RAW_CHUNK ? RAW_CHUNK : (uint16_t)(size - off);
+        uint16_t got = file_read_buf(buf, want);
+        if (got == 0) break; // short read: partial restore (not power-atomic)
+        flash_nvram_write_chunk(off, buf, got);
+        off += got;
+    }
+    file_close();
+    nav_filelist_reset();
+    // Scenes reload from the restored flash when disk mode exits
+    // (handler_usb_Front); the global banks in RAM refresh on the next boot.
+    raw_status(1, off == size ? "OK - REBOOT" : "FAILED");
 }

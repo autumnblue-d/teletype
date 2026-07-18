@@ -62,7 +62,7 @@ while the grid runs. The failure was never a Rytm *enumeration* problem — the
 Rytm enumerated fine; the victim was the **grid**, dark whenever the Rytm was
 present in the wrong pipe order.
 
-Root cause, in layers (found with the `USB_TOPO_DEBUG` trace, below):
+Root cause, in layers:
 
 1. **The USBB host retries a NAKed bulk pipe continuously**: a NAK does not
    decrement UPINRQ and bulk pipes have no interval, so an idle bulk-IN poll
@@ -114,63 +114,43 @@ bugs (July 2026):
 Also hardened: the LUN-count query at disk entry is bounded (3 s) so a stick
 that vanishes mid-operation aborts cleanly instead of hanging the module.
 
-## USB debug facility (USB_TOPO_DEBUG)
+## Raw NVRAM image backup / restore (`RAW BACKUP` / `RAW RESTORE`)
 
-```bash
-cd module && make clean && make USB_TOPO_DEBUG=1
-```
+Two extra USB-disk menu items save and reload the **entire** `nvram_data_t` as
+one binary blob, `ttnvram.bin`. Unlike the per-scene `tt##.txt` path, the raw
+image also captures every global bank the text serializer never touches — cal,
+device_config, and the kria / earthsea / mp / tuning / scale banks. It is a
+same-firmware *snapshot/clone* tool, not a portable or editable backup: the
+image is a byte-for-byte copy of flash, welded to this exact layout.
 
-builds a firmware with a USB trace ring on the OLED (`libavr32/src/usb_dbg.c`;
-normal builds are unaffected — everything is compile-gated). **ALT+F10**
-toggles between the trace overlay and the normal UI. **ALT+F9** dumps the
-live USBB pipe table. Newest trace line at the bottom. Debug builds omit the
-on-module HELP text (`help_mode.c` stubs the page tables) — program flash
-cannot hold both it and the trace facility.
+Mechanics (`module/flash.c` accessors + `module/usb_disk_mode.c`):
 
-Trace legend:
+- `flash_nvram_image()` returns `&f` (memory-mapped flash), so BACKUP streams it
+  straight into the file; RESTORE streams file → `flash_nvram_write_chunk()`
+  (`flashc_memcpy`). Both go in 512 B chunks — the ~127 KB image fits in neither
+  the 8 KB stack nor 64 KB SRAM.
+- RESTORE is gated **before any flash is erased**: the file length must equal
+  `flash_nvram_size()`, and the image's `FIRSTRUN_KEY` tag (read at
+  `flash_nvram_fresh_offset()`) must satisfy `flash_nvram_image_compatible()`.
+  Wrong length → `NO IMAGE`; wrong tag → `BAD VERSION`. This is what stops a
+  foreign-layout image from corrupting NVRAM. A compatible image already carries
+  the correct tag, so there is no separate commit step.
+- Like the per-scene restore, the write itself is **not power-atomic** — a
+  power loss mid-restore leaves a partial image (`FAILED`). Global banks in RAM
+  only refresh on the next boot, hence the `OK - REBOOT` result message; scenes
+  reload immediately via `handler_usb_Front`.
 
-- `P+ <port>` / `P- <port>` — hub reported connect/disconnect on that port
-- `s14 t<S> n<L>` / `s15 t<S> n<L>` — enumeration transfer completions (full
-  config-descriptor read / SET_CONFIGURATION) with status S and length L.
-  `n` on s14 identifies the device by descriptor size: grid ≈ 75, Analog
-  Rytm ≈ 414, HID dongle ≈ 59, hub 25.
-  Status (`uhd_trans_status_t`): 0 ok, 1 disconnect, 2 CRC, 3 data-toggle,
-  4 STALL, 5 not responding, 6 PID failure, 7 timeout, 8 aborted.
-- `ERR <status> <try>` — enumeration attempt failed
-  (`uhc_enum_status_t`: 1 unsupported, 3 fail, 4 hardware limit) on retry
-  `<try>` (gives up after 4); `E <addr> <status>` — enumeration finished
-  (0 = success)
-- `rstTO p<port>` — hub port reset timed out
-- `sc t <status>` / `sc ok <n>` — hub status-poll error streak / recovery;
-  `poll!` — the status poll could not be re-armed
-- `cdcC a<addr>` / `cdcB a<addr>` / `cdcU a<addr>` — monome CDC driver
-  claimed / turned away / released that device; `cdc m` + `chg+` — CDC
-  enable matched its device, serial-connect event posted
-- `mset` / `mrx <v>` / `mcon` — grid setup dialogue started / size reply
-  (3 = proper SIZE answer) / monome connect event reached the module
-- `gW <n>` — grid write attempts (1st + every 64th); `TXok <n>` /
-  `TXE <status> <n>` — grid bulk-OUT clean/error completions (1st + every
-  64th); `RXE <status>` — grid bulk-IN error streaks (status 7 = the idle
-  20 ms poll timeout, benign)
-- `evQ!` — event queue overflowed; an event was silently dropped
-- Disk mode: `mnt <lun> <status>` mount failed (`fs_g_status`, FAIL=1: 2 =
-  not formatted, 3 = no partition, 20 = write-protected, 24 = not present);
-  `crE`/`opE <slot> <status>` file create/open failed; `pcE <status>`
-  serialize writes failing (silently truncated files); `wrOK` all scenes
-  written; `epA <ep> <maxpkt>` endpoint declared size at pipe alloc;
-  `s0a`/`s0z <b> <b>` first/last sector-buffer bytes at a failed signature
-  check. Stage markers paint the bottom line live (`d:lun`/`d:mnt`/`d:mok`/
-  `w:cr`/`w:op`/`w:sz`/`w:cl`/`w:fl`/`d:ex`/`d:nx`/`d:end`; `d:gone` = the
-  MSC device left and the bounded wait bailed out).
-- `make USB_TOPO_DEBUG=1 NAK_THROTTLE_OFF=1` additionally compiles the bulk
-  NAK throttle out (A/B diagnostic; the grid-dark starvation returns).
-- `STORM <UHINT> <UHINTE>` (hex, top line) — USB IRQ-storm detector, drawn
-  directly from interrupt context so it works even when the main loop is
-  dead. Bit 5 = SOF, bit 8+p = pipe p. Tripping within ~a second of a freeze
-  = interrupt storm; tripping only after ~100 s with just the SOF bit = the
-  main loop died while USB stayed healthy.
-- ALT+F9 pipe dump: `p<N> a<addr> e<ep> [E][F][C]` — per-pipe target
-  address, endpoint address, Enabled / Frozen / Config-OK.
+The PARAM-knob menu mapping was generalised from 4 to `USB_MENU_ITEM_COUNT`
+items (now 6, filling OLED lines 2..7; lines 0..1 carry operation status).
+
+**Flash budget:** this feature consumed essentially all remaining program flash
+on this branch — `.data` LMA end now sits exactly at the `.flash_nvram` base
+(`0x80060000`), i.e. ~0 bytes free. It did **not** change the NVRAM layout, so
+`FIRSTRUN_KEY` was not bumped and existing scenes survive the upgrade. To buy
+headroom back, lower `__flash_nvram_size__` (config.mk) to the page boundary
+above `sizeof(nvram_data_t)` (0x1FC98 → 0x1FE00 frees 512 B) and bump
+`FIRSTRUN_KEY` — but that forces a one-time reseed.
+
 
 ## Reporting a hub compatibility issue
 
@@ -178,5 +158,5 @@ Screen a candidate hub/dock on a computer first: plug it in and check the
 topology (`ioreg -p IOUSB -w 0` on macOS, `lsusb -t` on Linux). One hub
 device (or a USB3/USB2 pair at the same level) is compatible; a hub nested
 under another hub means only the outer tier will be serviced. Then reproduce
-with a `USB_TOPO_DEBUG` build and include the visible trace lines and the
-ALT+F9 pipe table in the report.
+on the module and describe the hub/dock, the attached devices, and which ones
+work versus fail.
