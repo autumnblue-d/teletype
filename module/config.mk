@@ -303,10 +303,13 @@ CPPFLAGS += -D INCLUDE_HELP_TEXT=0
 endif
 
 # Flash reclaim (keeps help): byte-pair-pack the help text and decode a line at
-# a time on display -- `make HELP_PACKED=1`. Saves ~17 KB vs the plaintext help
-# arrays. Regenerate module/help_data_packed.h with utils/help_pack.py if the
-# help strings change.
-ifdef HELP_PACKED
+# a time on display. Saves ~20 KB vs the plaintext help arrays -- default ON for
+# this branch, since the full op set + plaintext help overflow program flash.
+# Override with `make HELP_PACKED=0` for the (overflowing) plaintext build, or
+# `make HELP_TEXT_OFF=1` to drop help entirely. Regenerate
+# module/help_data_packed.h with utils/help_pack.py if the help strings change.
+HELP_PACKED ?= 1
+ifeq ($(HELP_PACKED),1)
 CPPFLAGS += -D HELP_PACKED=1
 endif
 
