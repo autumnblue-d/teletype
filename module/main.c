@@ -505,18 +505,26 @@ void handler_MscConnect(int32_t data) {
     // bare connect event doesn't mean there's a drive to use. Only enter the
     // USB-disk dialog if a LUN reports ready media; otherwise an empty reader
     // (common in USB-C docks) would hijack the UI and block grid/HID until it's
-    // physically unplugged. test-unit-ready is blocking; bound the BUSY spin so
-    // a misbehaving drive can't hang the module.
+    // physically unplugged.
+    //
+    // A freshly-connected drive walks through unit-attention sense codes that
+    // ASF's default mapping reports as CTRL_FAIL (e.g. 0x29 power-on reset),
+    // then the LUN-change notification (CTRL_BUSY), before finally answering
+    // CTRL_GOOD — so FAIL and BUSY both mean "poll again". Only
+    // CTRL_NO_PRESENT (medium not present) is a definitive empty reader.
+    // test-unit-ready is blocking; the try budget bounds the wait so a
+    // misbehaving drive can't hang the module.
     bool media_ready = false;
     for (uint8_t lun = 0; lun < uhi_msc_mem_get_lun(); lun++) {
-        Ctrl_status s = CTRL_BUSY;
-        for (uint8_t tries = 0; tries < 20 && s == CTRL_BUSY; tries++) {
-            s = uhi_msc_mem_test_unit_ready(lun);
+        for (uint8_t tries = 0; tries < 20; tries++) {
+            Ctrl_status s = uhi_msc_mem_test_unit_ready(lun);
+            if (s == CTRL_GOOD) {
+                media_ready = true;
+                break;
+            }
+            if (s == CTRL_NO_PRESENT) break; // definitive: no media in this LUN
         }
-        if (s == CTRL_GOOD) {
-            media_ready = true;
-            break;
-        }
+        if (media_ready) break;
     }
     if (!media_ready) return; // no media: stay in the normal app UI
 
