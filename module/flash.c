@@ -352,6 +352,38 @@ void flash_get_device_config(device_config_t* device_config) {
     *device_config = f.device_config;
 }
 
+// --- Raw NVRAM image backup / restore -----------------------------------
+//
+// `f` is memory-mapped flash, so a backup is just a byte copy of the whole
+// struct; usb_disk_mode.c streams it to/from a file. A restore is layout-
+// sensitive, so it is gated BEFORE any flash is erased: the caller checks the
+// file length against flash_nvram_size() and the image's FIRSTRUN_KEY tag (at
+// flash_nvram_fresh_offset) against flash_nvram_image_compatible(). A
+// compatible image already carries the correct tag, so no separate commit is
+// needed. Like the per-scene restore, the write itself is not power-atomic.
+
+const void* flash_nvram_image(void) {
+    return (const void*)&f;
+}
+
+uint32_t flash_nvram_size(void) {
+    return (uint32_t)sizeof(f);
+}
+
+uint32_t flash_nvram_fresh_offset(void) {
+    return (uint32_t)((const uint8_t*)&f.fresh - (const uint8_t*)&f);
+}
+
+bool flash_nvram_image_compatible(uint8_t image_fresh) {
+    return image_fresh == FIRSTRUN_KEY;
+}
+
+void flash_nvram_write_chunk(uint32_t offset, const uint8_t* src,
+                             uint32_t len) {
+    if (offset > sizeof(f) || len > sizeof(f) - offset) return;
+    flashc_memcpy((void*)((uint8_t*)&f + offset), src, len, true);
+}
+
 static void pack_grid(scene_state_t* scene) {
     uint8_t byte = 0;
     uint8_t byte_count = 0;

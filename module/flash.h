@@ -1,6 +1,7 @@
 #ifndef _FLASH_H_
 #define _FLASH_H_
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "es_engine.h"
@@ -116,5 +117,17 @@ void flash_update_mp_slot(uint8_t slot, const mp_config_t* cfg,
                           const uint8_t glyph[8]);
 uint8_t flash_get_mp_current(void);
 void flash_update_mp_current(uint8_t slot);
+
+// Raw NVRAM image backup / restore (USB disk). The whole nvram_data_t as it
+// sits in flash is a self-contained backup of every scene AND every global
+// bank (cal, device_config, kria/es/mp/tuning...). It is welded to this exact
+// firmware layout and carries the FIRSTRUN_KEY tag, so a restore of an image
+// from an incompatible build is refused rather than misread. See
+// usb_disk_mode.c for the streaming read/write.
+const void* flash_nvram_image(void);  // memory-mapped base of `f` (read directly)
+uint32_t flash_nvram_size(void);      // sizeof(nvram_data_t)
+uint32_t flash_nvram_fresh_offset(void);  // byte offset of the validity tag
+bool flash_nvram_image_compatible(uint8_t image_fresh);  // tag matches this fw?
+void flash_nvram_write_chunk(uint32_t offset, const uint8_t* src, uint32_t len);
 
 #endif
