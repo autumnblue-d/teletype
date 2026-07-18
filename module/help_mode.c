@@ -19,12 +19,22 @@
 #define INCLUDE_HELP_TEXT 1
 #endif
 
+// Byte-pair-pack the help text (utils/help_pack.py -> help_data_packed.h) and
+// decode a line at a time on display. Reclaims ~17 KB of flash vs the plaintext
+// arrays (the per-line pointer table + BPE on the text). Build with
+// -D HELP_PACKED=1 (`make HELP_PACKED=1`). Regenerate the header if help
+// strings change. Off by default; ignored when INCLUDE_HELP_TEXT=0.
+#ifndef HELP_PACKED
+#define HELP_PACKED 0
+#endif
+
 #if INCLUDE_HELP_TEXT
 
+#define HELP_PAGES 21
+
+#if !HELP_PACKED
 ////////////////////////////////////////////////////////////////////////////////
 // Help text ///////////////////////////////////////////////////////////////////
-
-#define HELP_PAGES 21
 
 // clang-format off
 
@@ -1982,6 +1992,59 @@ const uint8_t help_length[HELP_PAGES] = {
     HELP21_LENGTH
 };
 
+#else  // HELP_PACKED
+
+#include "help_data_packed.h"
+#define help_length help_length_packed  // same 21 line-counts, generated
+
+#endif  // !HELP_PACKED
+
+// Scratch buffer size for one decoded help line (packed header defines the
+// exact max; provide a fallback for the plaintext build where it's unused).
+#ifndef HELP_LINE_BUF
+#define HELP_LINE_BUF 40
+#endif
+
+// Fetch help line `line` of `page`. Plaintext: returns the stored pointer
+// (scratch unused). Packed: decodes into scratch (>= HELP_LINE_BUF) and returns
+// it. The pair-BPE decoder walks the left spine, stacking right children; the
+// stack can hold at most one top-level symbol's expansion, bounded by the line
+// length (< HELP_LINE_BUF).
+#if HELP_PACKED
+static const char* help_line(uint8_t page, int line, char* scratch) {
+    const uint8_t* p = help_blob + help_page_off[page];
+    for (int n = 0; n < line; n++) {
+        while (*p) p++;
+        p++;
+    }
+    char* out = scratch;
+    char* const end = scratch + HELP_LINE_BUF - 1;
+    uint8_t stack[HELP_LINE_BUF];
+    uint8_t top = 0;
+    while (out < end) {
+        uint8_t s;
+        if (top)
+            s = stack[--top];
+        else {
+            s = *p++;
+            if (s == 0) break;
+        }
+        while (help_bpe_l[s]) {  // s is a BPE code -> expand its pair
+            stack[top++] = help_bpe_r[s];
+            s = help_bpe_l[s];
+        }
+        *out++ = (char)s;
+    }
+    *out = 0;
+    return scratch;
+}
+#else
+static const char* help_line(uint8_t page, int line, char* scratch) {
+    (void)scratch;
+    return help_pages[page][line];
+}
+#endif
+
 static uint8_t page_no;
 static uint8_t offset;
 static line_editor_t le;
@@ -2008,9 +2071,9 @@ static int prev_hit;
 static bool dirty;
 
 static bool text_search_forward(search_state_t* state, const char* needle,
-                                const char* const* haystack, int haystack_len);
+                                uint8_t page);
 static bool text_search_reverse(search_state_t* state, const char* needle,
-                                const char* const* haystack, int haystack_len);
+                                uint8_t page);
 
 
 void set_help_mode() {
@@ -2020,29 +2083,33 @@ void set_help_mode() {
 }
 
 bool text_search_forward(search_state_t* state, const char* needle,
-                         const char* const* haystack, int haystack_len) {
+                         uint8_t page) {
+    char buf[HELP_LINE_BUF];
     const int needle_len = strlen(needle);
+    const int haystack_len = help_length[page];
     for (; state->line < haystack_len; state->line++) {
-        const int haystack_line_len = strlen(haystack[state->line]);
+        const char* h = help_line(page, state->line, buf);
+        const int haystack_line_len = strlen(h);
         for (state->ch = 0; state->ch < haystack_line_len - needle_len;
              state->ch++) {
-            if (!strncmp(needle, haystack[state->line] + state->ch, needle_len))
-                return true;
+            if (!strncmp(needle, h + state->ch, needle_len)) return true;
         }
     }
     return false;
 }
 
 bool text_search_reverse(search_state_t* state, const char* needle,
-                         const char* const* haystack, int haystack_len) {
+                         uint8_t page) {
+    char buf[HELP_LINE_BUF];
     const int needle_len = strlen(needle);
+    const int haystack_len = help_length[page];
     if (state->line >= haystack_len) { state->line = haystack_len - 1; }
     for (; state->line >= 0; state->line--) {
-        const int haystack_line_len = strlen(haystack[state->line]);
+        const char* h = help_line(page, state->line, buf);
+        const int haystack_line_len = strlen(h);
         for (state->ch = haystack_line_len - needle_len; state->ch >= 0;
              state->ch--) {
-            if (!strncmp(needle, haystack[state->line] + state->ch, needle_len))
-                return true;
+            if (!strncmp(needle, h + state->ch, needle_len)) return true;
         }
     }
     return false;
@@ -2097,9 +2164,7 @@ void process_help_keys(uint8_t k, uint8_t m, bool is_held_key) {
                         }
                     }
                     for (int p = page_no; p < HELP_PAGES; p++) {
-                        if (text_search_forward(&search_state, needle,
-                                                help_pages[p],
-                                                help_length[p])) {
+                        if (text_search_forward(&search_state, needle, p)) {
                             search_result = SEARCH_RESULT_HIT;
                             page_no = p;
                             offset = search_state.line;
@@ -2124,9 +2189,7 @@ void process_help_keys(uint8_t k, uint8_t m, bool is_held_key) {
                         }
                     }
                     for (int p = page_no; p >= 0; p--) {
-                        if (text_search_reverse(&search_state, needle,
-                                                help_pages[p],
-                                                help_length[p])) {
+                        if (text_search_reverse(&search_state, needle, p)) {
                             search_result = SEARCH_RESULT_HIT;
                             page_no = p;
                             offset = search_state.line;
@@ -2184,19 +2247,18 @@ uint8_t screen_refresh_help() {
     if (offset >= help_length[page_no] - help_line_ct)
         offset = help_length[page_no] - help_line_ct;
 
-    const char* const* text = help_pages[page_no];
+    char buf[HELP_LINE_BUF];
 
     for (uint8_t y = 0; y < help_line_ct; y++) {
+        const char* text = help_line(page_no, y + offset, buf);
         if (search_result == SEARCH_RESULT_HIT &&
             (y + offset) == search_state.line) {
             region_fill(&line[y], 2);
-            font_string_region_clip_tab(&line[y], text[y + offset], 2, 0, 0xa,
-                                        2);
+            font_string_region_clip_tab(&line[y], text, 2, 0, 0xa, 2);
         }
         else {
             region_fill(&line[y], 0);
-            font_string_region_clip_tab(&line[y], text[y + offset], 2, 0, 0xa,
-                                        0);
+            font_string_region_clip_tab(&line[y], text, 2, 0, 0xa, 0);
         }
     }
 

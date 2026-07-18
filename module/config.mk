@@ -302,6 +302,14 @@ ifdef HELP_TEXT_OFF
 CPPFLAGS += -D INCLUDE_HELP_TEXT=0
 endif
 
+# Flash reclaim (keeps help): byte-pair-pack the help text and decode a line at
+# a time on display -- `make HELP_PACKED=1`. Saves ~17 KB vs the plaintext help
+# arrays. Regenerate module/help_data_packed.h with utils/help_pack.py if the
+# help strings change.
+ifdef HELP_PACKED
+CPPFLAGS += -D HELP_PACKED=1
+endif
+
 # Extra flags to use when linking
 # NVRAM size may need to change if additional data is to be stored in scenes.
 # Reduced 200K -> 190K alongside SCENE_SLOTS 32 -> 30 (flash.h): the smaller
