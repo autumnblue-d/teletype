@@ -8,8 +8,6 @@
 //    long-press pattern-copy gesture is ported: hold a slot to copy the playing
 //    pattern into it, then switch (kria_grid_pattern_hold_fire, shell-timed).
 //    The mRpt long-press reset is not ported (its row is now the decrement row).
-//  - the mRpt modLoop "vertical range" gesture and the meta-slot loop gesture
-//    fall back to the standard loop-range gesture / no-op (marked TODO).
 
 #include "kria_grid.h"
 
@@ -59,6 +57,7 @@ void kria_grid_state_init(kria_grid_state_t* g) {
     g->track = 0;
     g->edit_pattern = 0;
     g->loop_last = -1;
+    g->vrange_last = -1;
     // Ansible default_kria edit-behavior flags.
     g->note_sync = 1;
     g->loop_sync = 2;
@@ -194,6 +193,60 @@ static void do_loop(kria_engine_t* e, kria_grid_state_t* g, uint8_t trk,
                     upd_loop_start(e, g, trk, g->loop_first, (uint8_t)couple);
             }
         }
+    }
+}
+
+// ---- meta-loop range math (mirror of adj_loop_* over the 64 meta slots) ----
+// The meta pattern-sequence loop spans the whole 64-slot chain and may wrap
+// around the end (meta_lswap), so start/end/len are derived like a track loop
+// but modulo 64 instead of 16.
+
+static void set_meta_loop_start(kria_engine_t* e, uint8_t start) {
+    // Re-anchor the live playhead to the same offset within the moved loop, so
+    // sliding the loop start while playing keeps the running position relative
+    // to the loop (Ansible update_meta_start). Computed against the old start,
+    // before it changes.
+    int pos = (int)e->rt.meta_pos - (int)e->cfg.meta_start + (int)start;
+    if (pos < 0)
+        pos += 64;
+    else if (pos > 63)
+        pos -= 64;
+    e->rt.meta_next = (uint8_t)(pos + 1);
+
+    e->cfg.meta_start = start;
+    int end = (int)start + (int)e->cfg.meta_len - 1;
+    if (end > 63) {
+        e->cfg.meta_end = (uint8_t)(end - 64);
+        e->cfg.meta_lswap = 1;
+    }
+    else {
+        e->cfg.meta_end = (uint8_t)end;
+        e->cfg.meta_lswap = 0;
+    }
+}
+
+static void set_meta_loop_end(kria_engine_t* e, uint8_t end) {
+    e->cfg.meta_end = end;
+    int len = (int)end - (int)e->cfg.meta_start;
+    if (len < 0) {
+        e->cfg.meta_len = (uint8_t)(len + 65);
+        e->cfg.meta_lswap = 1;
+    }
+    else {
+        e->cfg.meta_len = (uint8_t)(len + 1);
+        e->cfg.meta_lswap = 0;
+    }
+
+    // Snap the live playhead back to the loop start if the resized range no
+    // longer contains it (Ansible update_meta_end).
+    uint8_t pos = e->rt.meta_pos;
+    if (e->cfg.meta_lswap) {
+        if (pos < e->cfg.meta_start && pos > e->cfg.meta_end)
+            e->rt.meta_next = e->cfg.meta_start + 1;
+    }
+    else {
+        if (pos < e->cfg.meta_start || pos > e->cfg.meta_end)
+            e->rt.meta_next = e->cfg.meta_start + 1;
     }
 }
 
@@ -451,12 +504,14 @@ static void draw_pattern(kria_engine_t* e, kria_grid_state_t* g, uint8_t* led) {
         }
         led[e->cfg.pattern] = L0;
         led[e->cfg.meta_pat[g->meta_edit]] = L1;
-        if (!e->cfg.meta_lswap) {
-            memset(led + R2, 3, e->cfg.meta_len <= 64 ? e->cfg.meta_len : 64);
+        if (e->cfg.meta_lswap) {
+            for (uint8_t j = 0; j < e->cfg.meta_len && j < 64; j++)
+                led[R2 + ((j + e->cfg.meta_start) % 64)] = 3;
         }
         else {
-            memset(led + R2, 3, e->cfg.meta_end <= 63 ? e->cfg.meta_end : 63);
-            memset(led + R2 + e->cfg.meta_start, 3, 64 - e->cfg.meta_start);
+            for (uint8_t j = e->cfg.meta_start; j <= e->cfg.meta_end && j < 64;
+                 j++)
+                led[R2 + j] = 3;
         }
         led[R2 + e->rt.meta_pos] = L1;
         led[R2 + g->meta_edit] = L2;
@@ -819,8 +874,52 @@ void kria_grid_process_key(kria_engine_t* e, kria_grid_state_t* g, uint8_t x,
                     }
                     break;
                 case KR_MOD_LOOP:
-                    do_loop(e, g, track, KR_P_RPT, -1, x,
-                            z);  // TODO vrange gesture
+                    // Combined gesture (Ansible mRpt/modLoop): a horizontal drag
+                    // sets the loop range, but two presses (or a single tap) in
+                    // one column set that step's repeat count from the row --
+                    // rpt = 6 - y, guarded to the valid 1..5 range (rows 1..5,
+                    // the repeat-bar rows) so it never writes rpt 0 (which the
+                    // engine div-guards and config_valid rejects).
+                    if (z) {
+                        if (g->loop_count == 0) {
+                            g->loop_first = x;
+                            g->loop_last = -1;
+                            g->vrange_last = -1;
+                        }
+                        else {
+                            g->loop_last = x;
+                            if (x == g->loop_first) {
+                                g->vrange_last = y;
+                                if (y >= 1 && y <= 5) t->rpt[x] = 6 - y;
+                            }
+                            else {
+                                upd_loop_start(e, g, track, g->loop_first,
+                                               KR_P_RPT);
+                                upd_loop_end(e, g, track, g->loop_last,
+                                             KR_P_RPT);
+                            }
+                        }
+                        g->loop_count++;
+                    }
+                    else {
+                        if (g->loop_count > 0) g->loop_count--;
+                        if (g->loop_count == 0 && g->loop_last == -1) {
+                            if (g->loop_first == t->lstart[KR_P_RPT]) {
+                                if (g->vrange_last == -1 && x == g->loop_first) {
+                                    if (y >= 1 && y <= 5) t->rpt[x] = 6 - y;
+                                }
+                                else {
+                                    upd_loop_start(e, g, track, g->loop_first,
+                                                   KR_P_RPT);
+                                    upd_loop_end(e, g, track, g->loop_first,
+                                                 KR_P_RPT);
+                                }
+                            }
+                            else
+                                upd_loop_start(e, g, track, g->loop_first,
+                                               KR_P_RPT);
+                        }
+                    }
                     break;
                 case KR_MOD_TIME:
                     if (z) set_tmul(e, g, track, KR_P_RPT, x + 1);
@@ -934,6 +1033,39 @@ void kria_grid_process_key(kria_engine_t* e, kria_grid_state_t* g, uint8_t x,
                         e->cfg.meta_pat[g->meta_edit] = x;
                 }
             }
+            else if (y >= 2 && y <= 5 && mm == KR_MOD_LOOP && !g->cue) {
+                // Meta pattern-sequence loop gesture. The loop modifier sets the
+                // start and length of the pattern chain in these rows using the
+                // same two-press range gesture as the track loops (Ansible
+                // mMeta + modLoop); the loop wraps around the end of the chain.
+                uint8_t slot = (y - 2) * 16 + x;
+                if (slot < 64) {
+                    if (z) {
+                        if (g->loop_count == 0) {
+                            g->loop_first = slot;
+                            g->loop_last = -1;
+                        }
+                        else {
+                            g->loop_last = slot;
+                            set_meta_loop_start(e, g->loop_first);
+                            set_meta_loop_end(e, slot);
+                        }
+                        g->loop_count++;
+                    }
+                    else {
+                        if (g->loop_count > 0) g->loop_count--;
+                        // single tap: move the loop start (keep length), or
+                        // collapse to one slot when tapping the current start.
+                        // Capture the collapse test before set_meta_loop_start
+                        // overwrites meta_start (Ansible order: start then end).
+                        if (g->loop_count == 0 && g->loop_last == -1) {
+                            bool collapse = (g->loop_first == e->cfg.meta_start);
+                            set_meta_loop_start(e, g->loop_first);
+                            if (collapse) set_meta_loop_end(e, g->loop_first);
+                        }
+                    }
+                }
+            }
             else if (z) {
                 if (y == 1) {
                     if (mm == KR_MOD_TIME)
@@ -946,7 +1078,7 @@ void kria_grid_process_key(kria_engine_t* e, kria_grid_state_t* g, uint8_t x,
                     if (slot < 64) {
                         if (g->cue)
                             e->rt.meta_next = slot + 1;
-                        else if (mm != KR_MOD_LOOP)  // TODO meta loop gesture
+                        else
                             g->meta_edit = slot;
                     }
                 }

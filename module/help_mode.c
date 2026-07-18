@@ -12,6 +12,14 @@
 #include "conf_usb_host.h"  // needed in order to include "usb_protocol_hid.h"
 #include "usb_protocol_hid.h"
 
+// The on-module help text is a large block of const strings. On flash-tight
+// feature builds it can be compiled out to reclaim program flash by building
+// with -D INCLUDE_HELP_TEXT=0 (`make HELP_TEXT_OFF=1`); help mode then no-ops.
+#ifndef INCLUDE_HELP_TEXT
+#define INCLUDE_HELP_TEXT 1
+#endif
+
+#if INCLUDE_HELP_TEXT
 
 ////////////////////////////////////////////////////////////////////////////////
 // Help text ///////////////////////////////////////////////////////////////////
@@ -2209,3 +2217,19 @@ uint8_t screen_refresh_help() {
     dirty = false;
     return 0xFF;
 };
+
+#else  // !INCLUDE_HELP_TEXT
+
+// Help text compiled out for this build. Keep the public entry points as
+// no-ops so main.c still links; HELP mode simply displays nothing.
+void set_help_mode(void) {}
+void process_help_keys(uint8_t key, uint8_t mod_key, bool is_held_key) {
+    (void)key;
+    (void)mod_key;
+    (void)is_held_key;
+}
+uint8_t screen_refresh_help(void) {
+    return 0;
+}
+
+#endif  // INCLUDE_HELP_TEXT

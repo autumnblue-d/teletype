@@ -295,6 +295,13 @@ ifdef NAK_THROTTLE_OFF
 CPPFLAGS += -D UHD_NO_BULK_NAK_THROTTLE
 endif
 
+# Flash reclaim: compile out the on-module help text (~tens of KB of const
+# strings) with `make HELP_TEXT_OFF=1`. Help mode then no-ops; use when a
+# feature build would otherwise overflow program flash into the NVRAM region.
+ifdef HELP_TEXT_OFF
+CPPFLAGS += -D INCLUDE_HELP_TEXT=0
+endif
+
 # Extra flags to use when linking
 # NVRAM size may need to change if additional data is to be stored in scenes.
 # Reduced 200K -> 190K alongside SCENE_SLOTS 32 -> 30 (flash.h): the smaller

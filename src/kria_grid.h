@@ -50,7 +50,8 @@ typedef struct {
     uint8_t loop_count;
     uint8_t loop_first;
     int8_t loop_last;
-    uint8_t loop_edit;  // track row for the mTr per-track loop gesture
+    uint8_t loop_edit;   // track row for the mTr per-track loop gesture
+    int8_t vrange_last;  // row of the mRpt vertical-range (repeat-count) gesture
 
     // mPattern long-press gesture (Ansible grid_keytimer_kria): a plain
     // pattern-select press is deferred -- a quick release switches; holding past

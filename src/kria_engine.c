@@ -303,8 +303,12 @@ void kria_engine_clock(kria_engine_t* e, uint8_t phase) {
                         e->rt.meta_pos = e->rt.meta_next - 1;
                     else if (e->rt.meta_pos == e->cfg.meta_end)
                         e->rt.meta_pos = e->cfg.meta_start;
-                    else
+                    else {
                         e->rt.meta_pos++;
+                        // wrap the 64-slot chain so a meta loop whose start >
+                        // end (meta_lswap) advances past the end back to 0
+                        if (e->rt.meta_pos > 63) e->rt.meta_pos = 0;
+                    }
                     kria_engine_change_pattern(e,
                                                e->cfg.meta_pat[e->rt.meta_pos]);
                     e->rt.meta_next = 0;
@@ -451,6 +455,7 @@ bool kria_engine_config_valid(const kria_config_t* cfg) {
     for (uint8_t i = 0; i < 64; i++)
         if (cfg->meta_pat[i] >= KR_NUM_PATTERNS) return false;
     if (cfg->meta_start >= 64 || cfg->meta_end >= 64) return false;
+    if (cfg->meta_len == 0 || cfg->meta_len > 64) return false;
 
     return true;
 }

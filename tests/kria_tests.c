@@ -12,7 +12,13 @@
 #include "kria_clock.h"
 #include "kria_engine.h"
 #include "kria_grid.h"
+#include "kria_i2c.h"
 #include "music.h"  // ET
+
+// MIDI-out capture (tele_midi_out stub in main.c), for the MO follower test.
+extern size_t test_midi_out_count;
+extern uint8_t test_midi_out_msg[][3];
+void test_midi_out_reset(void);
 
 // ---- recording output vtable ----
 
@@ -285,6 +291,35 @@ TEST meta_sequencer_chains_patterns(void) {
     PASS();
 }
 
+// A meta loop whose start > end (meta_lswap) must advance past the end of the
+// 64-slot chain and wrap back to 0 rather than running meta_pos out of bounds.
+TEST meta_sequencer_wraps_around_chain_end(void) {
+    kria_engine_set_defaults(&E.cfg);
+    E.cfg.meta = 1;
+    E.cfg.cue_div = 0;
+    E.cfg.cue_steps = 0;
+    E.cfg.meta_start = 62;  // loop 62, 63, 0, 1
+    E.cfg.meta_end = 1;
+    E.cfg.meta_len = 4;
+    E.cfg.meta_lswap = 1;
+    memset(E.cfg.meta_steps, 0, 64);  // dwell 1 cue step each
+    E.cfg.meta_pat[62] = 2;
+    E.cfg.meta_pat[63] = 3;
+    E.cfg.meta_pat[0] = 0;
+    E.cfg.meta_pat[1] = 1;
+    kria_engine_init(&E, &OUT, test_rnd, &RND, NULL);  // meta_pos = start = 62
+
+    kria_engine_clock(&E, 1);
+    ASSERT_EQ(3, E.cfg.pattern);  // 62 -> 63
+    kria_engine_clock(&E, 1);
+    ASSERT_EQ(0, E.cfg.pattern);  // 63 -> 0 (wrap past chain end)
+    kria_engine_clock(&E, 1);
+    ASSERT_EQ(1, E.cfg.pattern);  // 0 -> 1
+    kria_engine_clock(&E, 1);
+    ASSERT_EQ(2, E.cfg.pattern);  // 1 == meta_end -> back to start 62
+    PASS();
+}
+
 TEST falling_edge_is_ignored(void) {
     fixture_single_track(0, 3);
     kria_engine_clock(&E, 0);  // phase 0: no work
@@ -442,6 +477,111 @@ TEST grid_loop_gesture_sets_range(void) {
     ASSERT_EQ(5, E.cfg.p[0].t[0].lend[KR_P_NOTE]);
     kria_grid_process_key(&E, &G, 2, 3, 0);
     kria_grid_process_key(&E, &G, 5, 3, 0);
+    PASS();
+}
+
+// The loop modifier on the pattern page sets the meta pattern-sequence loop.
+// Rows 2-5 form the 64-slot chain (slot = (y-2)*16 + x); a two-press gesture
+// sets start .. end.
+TEST grid_meta_loop_gesture_sets_range(void) {
+    kria_grid_state_t G;
+    kria_engine_set_defaults(&E.cfg);
+    kria_engine_init(&E, &OUT, test_rnd, &RND, NULL);
+    kria_grid_state_init(&G);
+    G.mode = KR_MODE_PATTERN;
+    E.cfg.meta = 1;
+    G.mod_mode = KR_MOD_LOOP;
+
+    kria_grid_process_key(&E, &G, 4, 2, 1);   // first press -> slot 4
+    kria_grid_process_key(&E, &G, 10, 3, 1);  // second press -> slot 26
+    ASSERT_EQ(4, E.cfg.meta_start);
+    ASSERT_EQ(26, E.cfg.meta_end);
+    ASSERT_EQ(23, E.cfg.meta_len);
+    ASSERT_EQ(0, E.cfg.meta_lswap);
+    kria_grid_process_key(&E, &G, 4, 2, 0);
+    kria_grid_process_key(&E, &G, 10, 3, 0);
+    PASS();
+}
+
+// A meta loop gesture whose first slot is after its second wraps around the end
+// of the chain (meta_lswap set), mirroring the track loop wrap.
+TEST grid_meta_loop_gesture_wraps(void) {
+    kria_grid_state_t G;
+    kria_engine_set_defaults(&E.cfg);
+    kria_engine_init(&E, &OUT, test_rnd, &RND, NULL);
+    kria_grid_state_init(&G);
+    G.mode = KR_MODE_PATTERN;
+    E.cfg.meta = 1;
+    G.mod_mode = KR_MOD_LOOP;
+
+    kria_grid_process_key(&E, &G, 12, 5, 1);  // first press -> slot 60
+    kria_grid_process_key(&E, &G, 3, 2, 1);   // second press -> slot 3
+    ASSERT_EQ(60, E.cfg.meta_start);
+    ASSERT_EQ(3, E.cfg.meta_end);
+    ASSERT_EQ(8, E.cfg.meta_len);  // 60,61,62,63,0,1,2,3
+    ASSERT_EQ(1, E.cfg.meta_lswap);
+    kria_grid_process_key(&E, &G, 12, 5, 0);
+    kria_grid_process_key(&E, &G, 3, 2, 0);
+    PASS();
+}
+
+// Resizing the meta loop while it plays snaps the live playhead back into the
+// loop (Ansible update_meta_end): a running meta_pos outside the new range
+// queues meta_next = meta_start + 1.
+TEST grid_meta_loop_gesture_snaps_playhead(void) {
+    kria_grid_state_t G;
+    kria_engine_set_defaults(&E.cfg);
+    kria_engine_init(&E, &OUT, test_rnd, &RND, NULL);
+    kria_grid_state_init(&G);
+    G.mode = KR_MODE_PATTERN;
+    E.cfg.meta = 1;
+    G.mod_mode = KR_MOD_LOOP;
+    E.rt.meta_pos = 50;  // playing outside the loop we are about to set
+
+    kria_grid_process_key(&E, &G, 4, 2, 1);   // slot 4
+    kria_grid_process_key(&E, &G, 10, 3, 1);  // slot 26 -> loop 4..26
+    ASSERT_EQ(4, E.cfg.meta_start);
+    ASSERT_EQ(26, E.cfg.meta_end);
+    ASSERT_EQ(5, E.rt.meta_next);  // 50 outside [4,26] -> snap to start (+1)
+    kria_grid_process_key(&E, &G, 4, 2, 0);
+    kria_grid_process_key(&E, &G, 10, 3, 0);
+    PASS();
+}
+
+// mRpt/modLoop vertical range: two presses in the same column set that step's
+// repeat count from the row (rpt = 6 - y), Ansible vrange_last.
+TEST grid_rpt_vrange_gesture_sets_repeat(void) {
+    kria_grid_state_t G;
+    kria_engine_set_defaults(&E.cfg);
+    kria_engine_init(&E, &OUT, test_rnd, &RND, NULL);
+    kria_grid_state_init(&G);
+    G.mode = KR_P_RPT;
+    G.mod_mode = KR_MOD_LOOP;
+
+    kria_grid_process_key(&E, &G, 5, 3, 1);  // first press, column 5
+    kria_grid_process_key(&E, &G, 5, 2, 1);  // second press same column, row 2
+    ASSERT_EQ(4, E.cfg.p[0].t[0].rpt[5]);    // 6 - 2
+    kria_grid_process_key(&E, &G, 5, 3, 0);
+    kria_grid_process_key(&E, &G, 5, 2, 0);
+    PASS();
+}
+
+// mRpt/modLoop across different columns still sets the loop range as before.
+TEST grid_rpt_loop_gesture_still_sets_range(void) {
+    kria_grid_state_t G;
+    kria_engine_set_defaults(&E.cfg);
+    kria_engine_init(&E, &OUT, test_rnd, &RND, NULL);
+    kria_grid_state_init(&G);
+    G.mode = KR_P_RPT;
+    G.mod_mode = KR_MOD_LOOP;
+    G.loop_sync = 0;  // this param only
+
+    kria_grid_process_key(&E, &G, 2, 3, 1);
+    kria_grid_process_key(&E, &G, 6, 3, 1);
+    ASSERT_EQ(2, E.cfg.p[0].t[0].lstart[KR_P_RPT]);
+    ASSERT_EQ(6, E.cfg.p[0].t[0].lend[KR_P_RPT]);
+    kria_grid_process_key(&E, &G, 2, 3, 0);
+    kria_grid_process_key(&E, &G, 6, 3, 0);
     PASS();
 }
 
@@ -637,6 +777,35 @@ TEST grid_mpseq_render_keeps_nav_and_blank_row6(void) {
     PASS();
 }
 
+// kria_i2c MIDI follower: note-on velocity is derived from the step duration
+// (aux) rather than fixed. Drives the MO follower (native USB MIDI, captured by
+// the tele_midi_out stub) end to end. Follower state is static, so this leaves
+// MO inactive again on exit.
+TEST kria_i2c_midi_velocity_from_duration(void) {
+    kria_i2c_set_active(KR_F_MO, 1);
+    kria_i2c_set_channel(KR_F_MO, 0);
+    kria_i2c_set_mode(KR_F_MO, KR_MIDI_PITCH_SINGLE);
+
+    // aux 100 -> aux_to_vel = 100*41 + 3264 = 7364; >>7 = 57
+    test_midi_out_reset();
+    kria_i2c_set_voice(0, 0, 100);
+    kria_i2c_tr(0, 1);
+    ASSERT_EQ(1, (int)test_midi_out_count);
+    ASSERT_EQ(0x90, test_midi_out_msg[0][0]);  // note on, channel 0
+    ASSERT_EQ(57, test_midi_out_msg[0][2]);    // velocity scaled from duration
+    kria_i2c_tr(0, 0);
+
+    // a longer step is louder, saturating at 127
+    test_midi_out_reset();
+    kria_i2c_set_voice(0, 0, 400);  // aux_to_vel = 19664; >>7 = 153 -> clamp
+    kria_i2c_tr(0, 1);
+    ASSERT_EQ(127, test_midi_out_msg[0][2]);
+    kria_i2c_tr(0, 0);
+
+    kria_i2c_set_active(KR_F_MO, 0);  // restore inactive state for other tests
+    PASS();
+}
+
 SUITE(kria_suite) {
     RUN_TEST(defaults_are_valid);
     RUN_TEST(loop_setters_wrap);
@@ -651,6 +820,7 @@ SUITE(kria_suite) {
     RUN_TEST(mute_suppresses_output);
     RUN_TEST(note_maps_through_scale_and_octave);
     RUN_TEST(meta_sequencer_chains_patterns);
+    RUN_TEST(meta_sequencer_wraps_around_chain_end);
     RUN_TEST(falling_edge_is_ignored);
     RUN_TEST(repeat_retriggers_on_set_bits);
     RUN_TEST(note_to_cv_matches_et);
@@ -663,6 +833,12 @@ SUITE(kria_suite) {
     RUN_TEST(grid_bottom_row_selects_mode_and_track);
     RUN_TEST(grid_tr_page_toggles_step);
     RUN_TEST(grid_loop_gesture_sets_range);
+    RUN_TEST(grid_meta_loop_gesture_sets_range);
+    RUN_TEST(grid_meta_loop_gesture_wraps);
+    RUN_TEST(grid_meta_loop_gesture_snaps_playhead);
+    RUN_TEST(grid_rpt_vrange_gesture_sets_repeat);
+    RUN_TEST(grid_rpt_loop_gesture_still_sets_range);
+    RUN_TEST(kria_i2c_midi_velocity_from_duration);
     RUN_TEST(grid_pattern_quick_release_switches);
     RUN_TEST(grid_pattern_hold_copies_and_switches);
     RUN_TEST(grid_pattern_hold_abandoned_on_page_change);

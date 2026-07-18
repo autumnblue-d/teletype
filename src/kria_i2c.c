@@ -491,8 +491,20 @@ static void ii_u16_nop(i2c_follower_t* f, uint8_t track, uint16_t v) {
 
 // ---- MIDI followers: I2M (i2c2midi over i2c) + MO (native USB MIDI) ----
 
-#define I2C2MIDI 0x3F    // i2c2midi module address (see src/ops/i2c2midi.c)
-#define KR_MIDI_VEL 100  // fixed note velocity (velocity-from-duration = TODO)
+#define I2C2MIDI 0x3F  // i2c2midi module address (see src/ops/i2c2midi.c)
+
+// 7-bit MIDI note-on velocity derived from the current step duration: reuse the
+// CV followers' aux_to_vel curve (aux = dur_unscaled, mapped to its ~V2-V5
+// 16-bit range) scaled down to 1..127, so longer steps play louder. Track is
+// clamped like midi_pitched_note so MP's stolen voices (track >= KR_NUM_TRACKS)
+// index kria_i2c_aux in range.
+static uint8_t midi_vel_for(uint8_t track) {
+    uint8_t t = track < KR_NUM_TRACKS ? track : KR_NUM_TRACKS - 1;
+    uint16_t v = aux_to_vel(kria_i2c_aux[t]) >> 7;
+    if (v < 1) v = 1;
+    if (v > 127) v = 127;
+    return (uint8_t)v;
+}
 
 // General MIDI drum map for the 8T fixed-note defaults (kick/snare/hats/...).
 static const uint8_t GM_DRUM[KR_I2C_TRACKS] = {
@@ -551,21 +563,23 @@ static uint8_t midi_resolve(i2c_follower_t* f, uint8_t track, uint8_t* ch_out,
 // KR and MP, incl. MP's stolen voices), so polyphonic-on-one-channel modes and
 // voice stealing are both handled.
 
-static void mo_tx(i2c_follower_t* f, uint8_t ch, uint8_t note, uint8_t on) {
+static void mo_tx(i2c_follower_t* f, uint8_t ch, uint8_t note, uint8_t on,
+                  uint8_t vel) {
     uint8_t pack[3];
     pack[0] = (on ? 0x90 : 0x80) | (ch & 0x0f);
     pack[1] = note;
-    pack[2] = on ? KR_MIDI_VEL : 0;
+    pack[2] = on ? vel : 0;
     tele_midi_out(f->port, pack, 3);
 }
 
-static void i2m_tx(i2c_follower_t* f, uint8_t ch, uint8_t note, uint8_t on) {
+static void i2m_tx(i2c_follower_t* f, uint8_t ch, uint8_t note, uint8_t on,
+                   uint8_t vel) {
     uint8_t d[4];
     if (on) {  // i2c2midi note-on = cmd 20 (ch, note, vel)
         d[0] = 20;
         d[1] = ch;
         d[2] = note;
-        d[3] = KR_MIDI_VEL;
+        d[3] = vel;
         tele_ii_tx(f->addr, d, 4);
     }
     else {  // note-off = cmd 21 (ch, note)
@@ -579,19 +593,19 @@ static void i2m_tx(i2c_follower_t* f, uint8_t ch, uint8_t note, uint8_t on) {
 static void ii_tr_i2m(i2c_follower_t* f, uint8_t track, uint8_t state) {
     if (state) {
         if (f->mo_on & (1 << track)) {  // release prior note on this voice
-            i2m_tx(f, f->mo_ch[track], f->mo_note[track], 0);
+            i2m_tx(f, f->mo_ch[track], f->mo_note[track], 0, 0);
             f->mo_on &= ~(1 << track);
         }
         uint8_t ch, note;
         if (!midi_resolve(f, track, &ch, &note)) return;
-        i2m_tx(f, ch, note, 1);
+        i2m_tx(f, ch, note, 1, midi_vel_for(track));
         f->mo_ch[track] = ch;
         f->mo_note[track] = note;
         f->mo_on |= (1 << track);
     }
     else {
         if (!(f->mo_on & (1 << track))) return;  // nothing sounding
-        i2m_tx(f, f->mo_ch[track], f->mo_note[track], 0);
+        i2m_tx(f, f->mo_ch[track], f->mo_note[track], 0, 0);
         f->mo_on &= ~(1 << track);
     }
 }
@@ -599,19 +613,19 @@ static void ii_tr_i2m(i2c_follower_t* f, uint8_t track, uint8_t state) {
 static void ii_tr_mo(i2c_follower_t* f, uint8_t track, uint8_t state) {
     if (state) {
         if (f->mo_on & (1 << track)) {  // release prior note on this voice
-            mo_tx(f, f->mo_ch[track], f->mo_note[track], 0);
+            mo_tx(f, f->mo_ch[track], f->mo_note[track], 0, 0);
             f->mo_on &= ~(1 << track);
         }
         uint8_t ch, note;
         if (!midi_resolve(f, track, &ch, &note)) return;
-        mo_tx(f, ch, note, 1);
+        mo_tx(f, ch, note, 1, midi_vel_for(track));
         f->mo_ch[track] = ch;
         f->mo_note[track] = note;
         f->mo_on |= (1 << track);
     }
     else {
         if (!(f->mo_on & (1 << track))) return;  // nothing sounding
-        mo_tx(f, f->mo_ch[track], f->mo_note[track], 0);
+        mo_tx(f, f->mo_ch[track], f->mo_note[track], 0, 0);
         f->mo_on &= ~(1 << track);
     }
 }
