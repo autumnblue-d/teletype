@@ -41,8 +41,27 @@ docker
 
 ### On Apple Silicon (arm64) Macs
 
-The `dewb/monome-build` image is `linux/amd64` only, so it runs under
-emulation. Two things differ from the instructions above:
+#### Recommended: native arm64 toolchain (no emulation)
+
+The `dewb/monome-build` image is `linux/amd64` only, so it runs under slow QEMU
+emulation. [`toolchain/`](toolchain/) builds a functionally identical toolchain
+as a **native arm64** image, so firmware builds run at full speed. See
+[`toolchain/README.md`](toolchain/README.md) for details.
+
+```bash
+# native arm64 Docker runtime (Apple Virtualization.Framework, not QEMU)
+colima start --vm-type vz --cpu 4 --memory 8
+
+# one-time: build the native toolchain image (~30–60 min)
+docker build --platform linux/arm64 -t teletype-avr32:arm64 toolchain/
+
+# build the firmware (note: NO --platform amd64 -> runs native)
+docker run --rm -v "$(pwd)":/target teletype-avr32:arm64 'cd module && make'
+```
+
+#### Fallback: the emulated `dewb/monome-build` image
+
+If you prefer the stock image, two things differ from the instructions above:
 
 - Add `--platform linux/amd64` to every `docker run`, otherwise the container
   silently exits without doing anything.
