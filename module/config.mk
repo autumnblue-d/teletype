@@ -296,6 +296,13 @@ ifdef USB_TOPO_DEBUG
 CPPFLAGS += -D USB_TOPO_DEBUG
 endif
 
+# A/B switch: disable the USBB bulk NAK throttle (make NAK_THROTTLE_OFF=1).
+# Diagnostic only — without the throttle an idle bulk-IN poll starves other
+# devices' transfers again (the grid-dark bug).
+ifdef NAK_THROTTLE_OFF
+CPPFLAGS += -D UHD_NO_BULK_NAK_THROTTLE
+endif
+
 # Extra flags to use when linking
 # NVRAM size may need to change if additional data is to be stored in scenes.
 # Reduced 200K -> 190K alongside SCENE_SLOTS 32 -> 30 (flash.h): the smaller

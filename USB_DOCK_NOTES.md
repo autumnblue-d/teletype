@@ -89,6 +89,31 @@ Fixes:
   while any device is enumerating, and the monome setup dialogue is deferred
   until enumeration has been quiet for 50 ms (`MONOME_SETUP_QUIET_TICKS`).
 
+## USB disk mode (scene backup) — two latent bugs fixed
+
+Testing scene WRITE/READ through the new MSC media gate surfaced two dormant
+bugs (July 2026):
+
+1. **Stale FAT sector cache**: the cache descriptor is a zero-initialized
+   global whose "empty" marker is 0xFF, so untouched it claims "LUN 0,
+   sector 0 already loaded" and the first mount reads 512 stale zero bytes
+   instead of the MBR — `FS_ERR_NO_FORMAT` on a perfectly good FAT32/MBR
+   stick. Stock firmware escaped by accident (the first TUR on a fresh drive
+   returned BUSY, whose retry path resets the cache); the media gate walks
+   the LUN to GOOD first and removed the accident. Fix: `nav_reset()` at
+   `tele_usb_disk()` entry.
+2. **Disk-mode stack overflow (this branch only)**: the write/read
+   operations stack-allocated a `scene_state_t`, which the Kria/MP/ES work
+   grew to ~18.7 KB — an ~11 KB dive past the 8 KB stack. Symptoms: firmware
+   memory sprayed into scene files (0x8005xxxx pointer tables), hangs after
+   writing, no files at all, varying run to run. Fix: both operations stage
+   through the global `scene_state`/`scene_text` and the live scene is
+   restored from flash on exit. **Trade-off: unsaved live-scene edits are
+   lost across a USB disk operation** (no RAM exists for a private copy).
+
+Also hardened: the LUN-count query at disk entry is bounded (3 s) so a stick
+that vanishes mid-operation aborts cleanly instead of hanging the module.
+
 ## USB debug facility (USB_TOPO_DEBUG)
 
 ```bash
@@ -128,6 +153,17 @@ Trace legend:
   64th); `RXE <status>` — grid bulk-IN error streaks (status 7 = the idle
   20 ms poll timeout, benign)
 - `evQ!` — event queue overflowed; an event was silently dropped
+- Disk mode: `mnt <lun> <status>` mount failed (`fs_g_status`, FAIL=1: 2 =
+  not formatted, 3 = no partition, 20 = write-protected, 24 = not present);
+  `crE`/`opE <slot> <status>` file create/open failed; `pcE <status>`
+  serialize writes failing (silently truncated files); `wrOK` all scenes
+  written; `epA <ep> <maxpkt>` endpoint declared size at pipe alloc;
+  `s0a`/`s0z <b> <b>` first/last sector-buffer bytes at a failed signature
+  check. Stage markers paint the bottom line live (`d:lun`/`d:mnt`/`d:mok`/
+  `w:cr`/`w:op`/`w:sz`/`w:cl`/`w:fl`/`d:ex`/`d:nx`/`d:end`; `d:gone` = the
+  MSC device left and the bounded wait bailed out).
+- `make USB_TOPO_DEBUG=1 NAK_THROTTLE_OFF=1` additionally compiles the bulk
+  NAK throttle out (A/B diagnostic; the grid-dark starvation returns).
 - `STORM <UHINT> <UHINTE>` (hex, top line) — USB IRQ-storm detector, drawn
   directly from interrupt context so it works even when the main loop is
   dead. Bit 5 = SOF, bit 8+p = pipe p. Tripping within ~a second of a freeze
