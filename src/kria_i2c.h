@@ -91,7 +91,9 @@ uint8_t kria_i2c_chan_max(uint8_t index);  // MIDI channel count (16/32)
 // Bank-dirty flag: any follower setting changed since the last flush. Set by
 // the setters above (and by the grid view in kria_i2c_view.c, which drives them)
 // and by KR.II; take_dirty() returns+clears it (call at view-leave / mode-exit
-// to decide whether to flash). The grid view itself lives in kria_i2c_view.h.
+// to decide whether to flash). peek_dirty() reads it without clearing (for an
+// unsaved indicator). The grid view itself lives in kria_i2c_view.h.
 uint8_t kria_i2c_take_dirty(void);
+uint8_t kria_i2c_peek_dirty(void);
 
 #endif

@@ -877,3 +877,7 @@ uint8_t kria_i2c_take_dirty(void) {
     bank_dirty = 0;
     return d;
 }
+
+uint8_t kria_i2c_peek_dirty(void) {
+    return bank_dirty;
+}

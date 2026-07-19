@@ -367,7 +367,8 @@ static void km_load_flash(void) {
 static void km_init_once(void) {
     if (initialized) return;
     flash_get_scale_bank(kria_scale_bank);
-    kria_engine_init(&eng, &KM_OUT, &km_rnd, NULL, kria_scale_bank);
+    kria_engine_init(&eng, &KM_OUT, &km_rnd, NULL,
+                     (const uint8_t(*)[8])kria_scale_bank);
     // MP-seq engine: bind outputs + RNG once; its cfg is loaded per-pattern by
     // km_load_flash / km_mp_load_active below.
     km_mp.out = KM_MP_OUT;
@@ -393,9 +394,13 @@ void set_kria_mode(void) {
 }
 
 void kria_mode_exit(void) {
-    // Persist edits (song is a global bank, not per-scene). ~18 KB flash write
-    // only when something changed; may briefly stall -- prefer saving stopped.
-    kria_flush_if_dirty();  // song + scale + i2c follower bank
+    // NOTE: we intentionally do NOT flush edits here. The ~18 KB flash write
+    // stalls the CPU (code executes from the same internal flash), which
+    // delays the timer ISRs clocking the sequencer and causes an audible
+    // hiccup when tabbing away while running. Edits (cfg_dirty) persist only
+    // on explicit save -- the S key (kria_flush_if_dirty) or a scene/preset
+    // save (mode_persist_flush_all_dirty). They survive a mode switch in RAM
+    // and are still written by either save path.
     kria_i2c_oled_exit();   // don't leave the MIDI editor open across mode exit
     if (km_view == KM_VIEW_TUNING) km_tuning_leave();  // drop preview gates
     km_view = KM_VIEW_SEQ;  // next entry starts on the sequencer
@@ -1183,6 +1188,12 @@ int16_t kria_op_mp_scr(int16_t set, int16_t val) {
 uint8_t screen_refresh_kria(void) {
     uint8_t mask;
     if (!mode_screen_begin(&dirty, "KRIA", &mask)) return mask;
+
+    // unsaved indicator: a '*' by the title when a save would flush something
+    // (song/scale edits or a changed i2c follower bank). Edits no longer flush
+    // on mode exit -- press S (or save a scene/preset) to persist and clear it.
+    if (cfg_dirty || kria_i2c_peek_dirty())
+        font_string_region_clip(&line[0], "*", 36, 0, MODE_S_TITLE, 0);
 
     font_string_region_clip(&line[0], km_view_name[km_view], 54, 0, MODE_S_VALUE,
                             0);
