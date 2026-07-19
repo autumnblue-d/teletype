@@ -189,13 +189,20 @@ def main():
             p.write_text(pdf_output)
         elif ext == ".html":
             html_output = "# " + VERSION_STR + "\n\n" + html_output
+            # --self-contained was renamed --embed-resources in pandoc 2.19 and
+            # is deprecated in newer releases; keep the old flag for pandoc < 2.19.
+            pandoc_ver = tuple(
+                int(n) for n in pypandoc.get_pandoc_version().split("."))
+            embed_flag = ("--embed-resources"
+                          if pandoc_ver >= (2, 19)
+                          else "--self-contained")
             pypandoc.convert_text(
                 html_output,
                 format=input_format,
                 to="html5",
                 outputfile=str(p),
                 extra_args=["--standalone",
-                            "--self-contained",
+                            embed_flag,
                             "--toc",
                             "--toc-depth=2",
                             "--css=" + str(TEMPLATE_DIR / "docs.css"),
