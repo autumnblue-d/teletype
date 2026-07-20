@@ -76,9 +76,20 @@ FROM ubuntu:22.04
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        make git ragel python3 zip bash ca-certificates \
+        make git ragel python3 python3-venv python3-pip zip bash ca-certificates \
         libmpfr6 libgmp10 libmpc3 \
+        pandoc latexmk fontconfig lmodern \
+        texlive-xetex texlive-latex-extra texlive-latex-recommended \
+        texlive-fonts-recommended texlive-plain-generic \
     && rm -rf /var/lib/apt/lists/*
+
+# Python venv for the docs build (utils/docs.py, utils/cheatsheet.py). Lives at
+# /opt/venv -- NOT under /target, which the bind mount replaces at runtime. Keep
+# these in sync with utils/requirements.pip. Activate it in the run command:
+#   docker run ... teletype-avr32:arm64 'source /opt/venv/bin/activate && make release'
+RUN python3 -m venv /opt/venv \
+    && /opt/venv/bin/pip install --no-cache-dir \
+        'Jinja2>=2.9.6' 'pypandoc>=1.4' 'pytoml>=0.1.12'
 
 COPY --from=toolchain /avr32-tools /avr32-tools
 ENV PATH="/avr32-tools/bin:${PATH}"

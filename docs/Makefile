@@ -1,10 +1,17 @@
-.PHONY: build clean
+.PHONY: build docs clean
 
-# Use the project venv's Python if it exists (created via `uv venv` at the repo
-# root), otherwise fall back to the system python3 (e.g. on CI, where deps are
-# installed globally).
+# Pick the Python interpreter in priority order:
+#   1. An explicitly activated virtualenv ($VIRTUAL_ENV) -- e.g. the /opt/venv
+#      baked into the AVR32 Docker image, activated in the run command. This
+#      must win over ../.venv, which the bind mount exposes as the host's
+#      (macOS, unrunnable-on-Linux) venv inside the container.
+#   2. A repo-root .venv created via `uv venv` on the host.
+#   3. The system python3 (e.g. on CI, where deps are installed globally).
 VENV_PY := $(wildcard ../.venv/bin/python)
-PYTHON := $(if $(VENV_PY),$(VENV_PY),python3)
+PYTHON := $(if $(VIRTUAL_ENV),$(VIRTUAL_ENV)/bin/python,$(if $(VENV_PY),$(VENV_PY),python3))
+
+# `docs` is an alias for the default build (all four doc artifacts).
+docs: build
 
 build: teletype.pdf teletype.html cheatsheet.pdf cheatsheet-i2c.pdf
 

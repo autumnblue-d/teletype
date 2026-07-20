@@ -1,0 +1,36 @@
+# Overlay image: add the docs toolchain (pandoc + XeLaTeX + a Python venv) on
+# top of an ALREADY-BUILT teletype-avr32:arm64, WITHOUT rebuilding the AVR32
+# cross-toolchain from source. Stage 1 of ./Dockerfile compiles binutils/gcc/
+# newlib from upstream tarballs -- slow, and dependent on flaky mirrors (the
+# newlib download in particular fails a checksum when sourceware hiccups). This
+# overlay reuses the existing /avr32-tools layer and only adds the docs bits.
+#
+# Build (retags the same name in place):
+#   docker build --platform linux/arm64 -f toolchain/Dockerfile.docs \
+#     -t teletype-avr32:arm64 toolchain/
+#
+# The full-scratch ./Dockerfile also carries these same docs deps, so a clean
+# rebuild (warm cache / healthy mirrors) produces an equivalent image.
+FROM teletype-avr32:arm64
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        python3-venv python3-pip \
+        pandoc latexmk fontconfig \
+        texlive-xetex texlive-latex-extra texlive-latex-recommended \
+        texlive-fonts-recommended \
+    && rm -rf /var/lib/apt/lists/*
+
+# Docs venv at /opt/venv (NOT under /target, which the bind mount replaces at
+# runtime). Keep in sync with utils/requirements.pip. Activate in the run cmd:
+#   docker run ... teletype-avr32:arm64 'source /opt/venv/bin/activate && make release'
+RUN python3 -m venv /opt/venv \
+    && /opt/venv/bin/pip install --no-cache-dir \
+        'Jinja2>=2.9.6' 'pypandoc>=1.4' 'pytoml>=0.1.12'
+
+# pandoc's default LaTeX template \usepackage{lmodern}; texlive-plain-generic
+# carries assorted .sty pandoc/latexmk reach for. (Separate layer so the big
+# texlive download above stays cached during iteration.)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        lmodern texlive-plain-generic \
+    && rm -rf /var/lib/apt/lists/*

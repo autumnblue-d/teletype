@@ -51,6 +51,35 @@ docker run --rm -it -v "$(pwd)":/target --entrypoint bash teletype-avr32:arm64
 
 Note there is **no** `--platform linux/amd64` — the container runs native arm64.
 
+## Docs and full release in the container
+
+The image also carries the docs toolchain (pandoc, XeLaTeX via `texlive-xetex` +
+friends, `latexmk`) and a Python venv at `/opt/venv` with the
+[`utils/requirements.pip`](../utils/requirements.pip) deps. **Activate the venv**
+so the docs build finds the right Python — `docs/Makefile` prefers an activated
+`$VIRTUAL_ENV` over the repo-root `.venv`, which the bind mount otherwise exposes
+as the host's (macOS, unrunnable-on-Linux) venv inside the container:
+
+```bash
+# docs only
+docker run --rm -v "$(pwd)":/target teletype-avr32:arm64 \
+  'source /opt/venv/bin/activate && cd docs && make docs'
+
+# full release (firmware + docs + teletype.zip) in one shot
+docker run --rm -v "$(pwd)":/target teletype-avr32:arm64 \
+  'source /opt/venv/bin/activate && make release'
+```
+
+The venv lives at `/opt/venv` (not under `/target`) precisely because the bind
+mount replaces `/target` at runtime; anything baked at `/target/.venv` would be
+hidden. If you already have a built image and only need to add the docs layer
+without recompiling the cross-toolchain, build the overlay instead:
+
+```bash
+docker build --platform linux/arm64 -f toolchain/Dockerfile.docs \
+  -t teletype-avr32:arm64 toolchain/
+```
+
 ## Verifying equivalence to the emulated toolchain
 
 From the same commit, build in both images and compare — sizes should match:
@@ -71,3 +100,11 @@ docker run --rm --platform linux/amd64 -v "$(pwd)":/target dewb/monome-build \
   to the recipe, ensure it is extracted before the sweep.
 - **Build too slow / OOM** — give the VM more resources: `colima stop && colima
   start --vm-type vz --cpu 6 --memory 10`.
+- **Docs build: `File 'foo.sty' not found`** — a LaTeX package pandoc/the doc
+  preamble needs isn't in the installed `texlive-*` set. Add the providing
+  package (find it with `apt-file search foo.sty`) to the docs apt list in both
+  `Dockerfile` and `Dockerfile.docs` and rebuild.
+- **Docs build: `../.venv/bin/python: No such file or directory` (Error 127)** —
+  you forgot `source /opt/venv/bin/activate`, so `docs/Makefile` fell back to the
+  bind-mounted host (macOS) `.venv`, which can't exec under Linux. Activate the
+  container venv.
