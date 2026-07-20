@@ -1,6 +1,6 @@
 # Changelog
 
-## v5.0.1
+## v5.T.0
 
 - **NEW**: Kria's DUR page has a second sub-tab — a 6-lane Meadowphysics-style cascade sequencer (six counters fire scripts 3–8 on rollover, edited with Meadowphysics' own grid UI, stored per Kria pattern)
 - **NEW**: script control for that cascade and more engine state: `KR.MP` / `KR.MP.POS` / `KR.MP.MUTE` / `KR.MP.SCR` (per-lane cascade config, playhead, per-lane script mute, and the base script the lanes fire), `MP.CFG` (the same cascade accessor for standalone Meadowphysics), `KR.TMUL` (Kria per-parameter clock divider), `MP.CV` (read a Meadowphysics row's CV), and `ES.PATTERN` / `ES.RUN` now also read back the active pattern / play state
